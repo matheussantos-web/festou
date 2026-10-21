@@ -9,6 +9,10 @@ on:
 jobs:
   build-e-teste:
     runs-on: ubuntu-latest
+    # O contexto `secrets` nao pode ser usado no `if` dos passos; o booleano e
+    # resolvido aqui (env do job) e consultado como env.HAS_DATABASE_URL.
+    env:
+      HAS_DATABASE_URL: ${{ secrets.DATABASE_URL != '' }}
 
     steps:
       - name: Copia o codigo
@@ -32,14 +36,14 @@ jobs:
       # Os testes de API e o smoke usam o mesmo Neon configurado em .env. Sem a
       # variavel DATABASE_URL no repositorio, esses passos sao ignorados.
       - name: Testes de API
-        if: ${{ secrets.DATABASE_URL != '' }}
+        if: env.HAS_DATABASE_URL == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NODE_ENV: test
         run: npm run test:api
 
       - name: Verificacao de ponta a ponta
-        if: ${{ secrets.DATABASE_URL != '' }}
+        if: env.HAS_DATABASE_URL == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NODE_ENV: test
