@@ -1,4 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
+import request from 'supertest'
+import { app } from '../../server/index.js'
 import { cleanupTestData, createAccount, createClient } from '../helpers/api.js'
 
 afterAll(cleanupTestData)
@@ -108,5 +110,41 @@ describe('autenticação', () => {
       .send({ email: 'alguem@exemplo.com', senha: 'SenhaDeTeste123' })
 
     expect(response.status).toBe(403)
+  })
+
+  it('aceita requisições de mesma origem do proprio servidor', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .set('Host', 'festou.local')
+      .set('Origin', 'http://festou.local')
+      .send({ email: 'alguem@exemplo.com', senha: 'SenhaDeTeste123' })
+
+    expect(response.status).not.toBe(403)
+  })
+
+  it('aceita a mesma origem quando o proxy termina o TLS', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .set('Host', 'festou.local')
+      .set('X-Forwarded-Proto', 'https')
+      .set('Origin', 'https://festou.local')
+      .send({ email: 'alguem@exemplo.com', senha: 'SenhaDeTeste123' })
+
+    expect(response.status).not.toBe(403)
+  })
+
+  it('aceita clientes sem cabecalho Origin', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'alguem@exemplo.com', senha: 'SenhaDeTeste123' })
+
+    expect(response.status).not.toBe(403)
+  })
+
+  it('devolve 404 em JSON para endpoints inexistentes', async () => {
+    const response = await request(app).get('/api/rota-que-nao-existe')
+
+    expect(response.status).toBe(404)
+    expect(response.body.message).toBeTruthy()
   })
 })

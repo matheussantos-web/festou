@@ -49,7 +49,7 @@ Categorias de produto: bolos, doces, brinquedos e convites digitais. Estados do 
 - **API:** Node.js com Express; endpoints REST sob `/api`.
 - **Banco:** PostgreSQL hospedado no Neon, acessado pelo pacote `@neondatabase/serverless`.
 - **Validação:** Zod no servidor para validar os dados recebidos.
-- **Segurança:** sessões com cookies HttpOnly, senhas com scrypt, validação de origem em requisições mutáveis, Helmet e rate limiting para autenticação e RSVP.
+- **Segurança:** sessões com cookies HttpOnly, senhas com scrypt, validação de origem em requisições mutáveis, Helmet e rate limiting para autenticação e RSVP. A validação de origem aceita `APP_ORIGIN`, a própria origem do servidor (quando o Express também serve o SPA) e requisições sem cabeçalho `Origin` (o cookie de sessão é `SameSite=Lax`, o que já impede o envio em requisições de terceiros).
 - **Integração local:** Vite encaminha `/api` ao Express; `npm run dev` inicia ambos.
 - **Produção:** `npm run build` gera `dist/` e `npm start` passa a servir o SPA compilado com fallback de rota, mantendo a API no mesmo processo. O endereço de escuta vem de `HOST` (padrão `127.0.0.1`; use `0.0.0.0` atrás de proxy).
 
@@ -136,6 +136,7 @@ Comandos disponíveis:
 | `npm run test:watch` | Roda os testes em modo interativo |
 | `npm run test:unit` | Roda apenas os testes unitários do frontend |
 | `npm run test:api` | Roda apenas os testes de integração da API |
+| `npm run smoke` | Percorre o fluxo real ponta a ponta contra um servidor em execução |
 
 ## API atual
 
@@ -175,15 +176,18 @@ A suíte usa Vitest e roda contra o mesmo banco Neon configurado em `.env`. Os t
 
 Variáveis usadas nos testes: `AUTH_RATE_LIMIT` e `RSVP_RATE_LIMIT` são elevadas para 1000 em `tests/setup.js`, para que a suíte não seja bloqueada pelo limitador de requisições.
 
+Além da suíte automatizada, `scripts/smoke.mjs` (`npm run smoke`) percorre o fluxo real contra um servidor já em execução: cadastro de fornecedor e cliente, publicação de produto, consulta da vitrine, criação de pedido, negociação de status pelo fornecedor, criação de convite, RSVP com atualização pelo mesmo e-mail, checagem de autorização, rotas do SPA e limpeza dos dados criados.
+
 ## Validação executada na etapa de estabilização
 
 - `npm run build` concluído com sucesso (39 módulos).
-- `npm test` com 45 testes aprovados em 7 arquivos.
+- `npm test` com 49 testes aprovados em 7 arquivos.
+- `npm run smoke` com 27 verificações aprovadas no fluxo ponta a ponta.
 - `npm start` verificado servindo o SPA compilado (`/`, rota de convite e `/api/health` respondendo 200).
 - Auditoria de encoding dos fontes: nenhum caractere corrompido ou BOM indevido.
 - Banco conferido ao final da suíte: apenas os dados de origem permanecem, sem resíduos de teste.
 
-Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de item na criação de pedido (quebravam a tela do carrinho), `aceita_rsvp` na criação de convite, agregados de confirmação convertidos para número, limites de requisição configuráveis por ambiente, duplicação de requisição na vitrine, `APP_ORIGIN` deixado de ser fixo no código e cabeçalho global com navegação acessível.
+Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de item na criação de pedido (quebravam a tela do carrinho), `aceita_rsvp` na criação de convite, agregados de confirmação convertidos para número, limites de requisição configuráveis por ambiente, duplicação de requisição na vitrine, `APP_ORIGIN` deixado de ser fixo no código, aceitação de requisições de mesma origem (a validação anterior bloqueava toda a aplicação quando o Express servia o SPA), 404 de API em JSON e cabeçalho global com navegação acessível.
 
 ## Próximos passos
 

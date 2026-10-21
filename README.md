@@ -33,9 +33,10 @@ O pacote de identidade visual da marca — paleta, tipografia, uso de grafismos 
 npm test            # suíte completa (unitários + integração da API)
 npm run test:unit   # apenas as libs do frontend
 npm run test:api    # apenas os endpoints, com supertest
+npm run smoke       # fluxo real ponta a ponta, com o servidor em execução
 ```
 
-Os testes de integração usam o mesmo banco Neon do `.env`, criam contas com e-mail `teste.*@festou.test` e removem os dados ao final de cada arquivo.
+Os testes de integração usam o mesmo banco Neon do `.env`, criam contas com e-mail `teste.*@festou.test` e removem os dados ao final de cada arquivo. O `npm run smoke` cria contas `smoke.*@festou.test` e também limpa tudo ao terminar.
 
 ## Autenticação e dados
 

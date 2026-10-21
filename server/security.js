@@ -46,3 +46,26 @@ export function clearSessionCookie(response) {
     path: '/',
   })
 }
+
+export function isAllowedOrigin(request, configuredOrigin) {
+  const origin = request.get('origin')
+
+  // Sem Origin nao ha como identificar uma aplicacao web como origem da
+  // solicitacao. O cookie de sessao e SameSite=Lax, entao o navegador nao o
+  // envia em requisicoes de terceiros, o que mantem a protecao contra CSRF.
+  if (!origin) return true
+
+  if (configuredOrigin && origin === configuredOrigin) return true
+
+  // Mesma origem do proprio servidor: acontece quando o Express tambem serve
+  // o SPA compilado, caso em que o Origin do navegador e o host acessado.
+  const host = request.get('host')
+  if (!host) return false
+
+  const candidates = new Set([`${request.protocol}://${host}`])
+
+  const forwardedProto = request.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  if (forwardedProto) candidates.add(`${forwardedProto}://${host}`)
+
+  return candidates.has(origin)
+}

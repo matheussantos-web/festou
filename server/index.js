@@ -19,6 +19,7 @@ import {
   sessionDurationMs,
   setSessionCookie,
   verifyPassword,
+  isAllowedOrigin,
 } from './security.js'
 
 const app = express()
@@ -33,7 +34,7 @@ app.use(cookieParser())
 app.use('/api', (request, response, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return next()
 
-  if (request.get('origin') !== appOrigin) {
+  if (!isAllowedOrigin(request, appOrigin)) {
     return response.status(403).json({ message: 'Origem da solicitacao nao permitida.' })
   }
 
@@ -767,6 +768,10 @@ app.patch('/api/orders/:id/status', requireUser, async (request, response, next)
   } catch (error) {
     next(error)
   }
+})
+
+app.use('/api', (request, response) => {
+  response.status(404).json({ message: 'Endpoint nao encontrado.' })
 })
 
 const distDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
