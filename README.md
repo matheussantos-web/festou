@@ -1,5 +1,18 @@
-# Vue 3 + Vite
+# Festou!
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Plataforma para organizar festas, encontrar fornecedores e montar orcamentos.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Desenvolvimento
+
+```sh
+npm install
+npm run dev
+```
+
+Crie um arquivo `.env` na raiz usando `.env.example` como modelo e preencha as credenciais publicas do projeto Supabase.
+
+## Autenticacao e perfis
+
+Execute o SQL de `supabase/migrations/20261021000000_create_perfis.sql` no SQL Editor do Supabase. A migration cria a tabela `public.perfis`, ativa RLS e cria automaticamente um perfil para cada novo usuario autenticado.
+
+O cadastro suporta os perfis `cliente` e `fornecedor`. Quando a confirmacao de e-mail estiver ativa, o usuario recebe uma mensagem para confirmar o endereco antes de entrar.
