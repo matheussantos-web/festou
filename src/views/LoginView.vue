@@ -108,6 +108,12 @@ async function signIn() {
         </button>
       </form>
 
+      <p class="mt-4 text-right text-xs">
+        <RouterLink to="/recuperar-senha" class="font-semibold text-slate-600 hover:text-festou-primary hover:underline">
+          Esqueci minha senha
+        </RouterLink>
+      </p>
+
       <div class="mt-8 border-t border-slate-200/80 pt-6 text-center text-xs text-slate-500">
         Ainda não tem uma conta no Festou!?
         <RouterLink to="/cadastro" class="ml-1 font-bold text-festou-primary hover:underline">

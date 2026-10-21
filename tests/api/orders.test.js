@@ -138,4 +138,24 @@ describe('pedidos de orcamento', () => {
     expect(mine.status).toBe(200)
     expect(mine.body.orders).toEqual([])
   })
+
+  it('mascara o e-mail do cliente ate o pedido ser confirmado', async () => {
+    const supplier = await createAccount('fornecedor')
+    const customer = await createAccount('cliente')
+    const product = await createProduct(supplier)
+
+    const created = await customer.client.post('/api/orders').send({
+      items: [{ produto_id: product.id, quantidade: 1 }],
+    })
+    const orderId = created.body.order.id
+
+    const pendente = await supplier.client.get('/api/orders')
+    const pedidoPendente = pendente.body.orders.find((o) => o.id === orderId)
+    expect(pedidoPendente.cliente_email).toBe(`t***${customer.email.slice(customer.email.indexOf('@'))}`)
+
+    await supplier.client.patch(`/api/orders/${orderId}/status`).send({ status: 'confirmado' })
+
+    const confirmado = await supplier.client.get('/api/orders')
+    expect(confirmado.body.orders.find((o) => o.id === orderId).cliente_email).toBe(customer.email)
+  })
 })

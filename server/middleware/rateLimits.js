@@ -40,3 +40,21 @@ export const rsvpLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Muitas tentativas de confirmacao. Aguarde alguns minutos.' },
 })
+
+// Recuperação de senha: evita que o formulário vire ferramenta de spam de
+// e-mail ou de força bruta contra o token.
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: authRateLimit,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitos pedidos de recuperacao. Aguarde alguns minutos.' },
+})
+
+export const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: authRateLimit,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas. Aguarde alguns minutos.' },
+})

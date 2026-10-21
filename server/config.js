@@ -29,3 +29,9 @@ export const isProduction = process.env.NODE_ENV === 'production'
 export const authRateLimit = readInteger(process.env.AUTH_RATE_LIMIT, 10)
 export const rsvpRateLimit = readInteger(process.env.RSVP_RATE_LIMIT, 30)
 export const jsonBodyLimit = process.env.JSON_BODY_LIMIT || '16kb'
+
+// Provedor de e-mail para recuperação de senha. Sem a chave, o servidor
+// registra a mensagem no console (útil em desenvolvimento) e não envia nada.
+export const resendApiKey = process.env.RESEND_API_KEY || ''
+export const mailFrom = process.env.MAIL_FROM || 'Festou! <nao-responda@festou.app>'
+export const passwordResetTtlMs = readInteger(process.env.PASSWORD_RESET_TTL_MINUTES, 60) * 60 * 1000

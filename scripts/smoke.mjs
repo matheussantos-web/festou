@@ -129,6 +129,9 @@ check('cadastro do cliente', cliente.status === 201, `status ${cliente.status}`)
 const login = await call('POST', '/api/auth/login', { email: clienteEmail, senha })
 check('login do cliente', login.status === 200 && login.data.user.email === clienteEmail, `status ${login.status}`)
 
+const recuperacao = await call('POST', '/api/auth/forgot-password', { email: clienteEmail })
+check('pedido de recuperacao aceito', recuperacao.status === 202, `status ${recuperacao.status}`)
+
 console.log('\n== 3. Publicacao de produto ==')
 cookies.clear()
 await call('POST', '/api/auth/login', { email: fornecedorEmail, senha })
@@ -198,11 +201,18 @@ await call('POST', '/api/auth/login', { email: fornecedorEmail, senha })
 const pedidosFornecedor = await call('GET', '/api/orders')
 check('fornecedor ve o pedido recebido', pedidosFornecedor.status === 200 && pedidosFornecedor.data.orders.some((o) => o.id === pedidoId), `total=${pedidosFornecedor.data?.orders?.length}`)
 
+const pedidoRecebido = pedidosFornecedor.data.orders.find((o) => o.id === pedidoId)
+check('e-mail do cliente mascarado antes da confirmacao', String(pedidoRecebido?.cliente_email).includes('***'), pedidoRecebido?.cliente_email)
+
 const negociacao = await call('PATCH', `/api/orders/${pedidoId}/status`, { status: 'em_negociacao' })
 check('fornecedor negocia o pedido', negociacao.status === 200 && negociacao.data?.order?.status === 'em_negociacao', `status ${negociacao.status}`)
 
 const confirmado = await call('PATCH', `/api/orders/${pedidoId}/status`, { status: 'confirmado' })
 check('fornecedor confirma o pedido', confirmado.status === 200 && confirmado.data?.order?.status === 'confirmado', `status ${confirmado.status}`)
+
+const aposConfirmar = await call('GET', '/api/orders')
+const pedidoConfirmado = aposConfirmar.data?.orders?.find((o) => o.id === pedidoId)
+check('e-mail do cliente liberado apos a confirmacao', pedidoConfirmado?.cliente_email === clienteEmail, pedidoConfirmado?.cliente_email)
 
 const catalogo = await call('GET', '/api/supplier/products')
 check('catalogo do fornecedor', catalogo.status === 200 && catalogo.data.products.some((p) => p.id === produtoId))

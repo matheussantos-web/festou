@@ -18,9 +18,14 @@ NODE_ENV=development
 TRUST_PROXY=0
 AUTH_RATE_LIMIT=10
 RSVP_RATE_LIMIT=30
+RESEND_API_KEY=
+MAIL_FROM=Festou! <nao-responda@festou.app>
+PASSWORD_RESET_TTL_MINUTES=60
 ```
 
 `TRUST_PROXY` é o número de proxies reversos na frente da aplicação (0 = nenhum, 1 = nginx padrão). Sem essa variável o Express ignora o `X-Forwarded-For` e o limitador de requisições passa a contar o IP do proxy, o que transforma o limite em um teto global. `LOGIN_EMAIL_RATE_LIMIT` limita as tentativas de login por e-mail, e `JSON_BODY_LIMIT` define o tamanho máximo do corpo aceito.
+
+`RESEND_API_KEY`, `MAIL_FROM` e `PASSWORD_RESET_TTL_MINUTES` controlam o e-mail de recuperação de senha. Sem a chave, o link é impresso no console do servidor (fora de produção) em vez de ser enviado — é o suficiente para testar o fluxo localmente.
 
 3. Execute `npm run db:setup` para criar as tabelas no Neon.
 4. Execute `npm install` e `npm run dev`.
@@ -59,10 +64,12 @@ O smoke sobe o próprio servidor na porta `3100`, com os limitadores de requisi�
 
 O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt (parâmetros fixos no código, hash versionado e rehash automático no login) e usa sessões aleatórias em cookies HttpOnly. Produtos são lidos pela vitrine pública — em páginas de 12, com filtro por categoria e botão de carregar mais — e só fornecedores autenticados podem anunciá-los. A autorização ocorre na API; o Neon não é acessado pelo navegador.
 
+Quem esquece a senha usa `/recuperar-senha`: o backend gera um token de uso único (guardado como hash, com validade configurável), envia o link por e-mail e, ao redefinir em `/redefinir-senha`, troca a senha e encerra todas as sessões daquela conta. A resposta do pedido é sempre a mesma, exista ou não o e-mail, para não revelar quem tem conta.
+
 Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orçamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transação. Se um preço tiver mudado desde que o item entrou no carrinho, a tela avisa e atualiza o valor antes do envio. O histórico do cliente também aparece nessa tela.
 
 Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites, edita o convite, encerra ou reabre as confirmações e exclui o convite quando a festa passa. Ao compartilhar o link, o servidor injeta as tags Open Graph no HTML, então o WhatsApp e as redes sociais mostram o título do evento, a data, o local e a imagem da marca na prévia.
 
-Fornecedores anunciam produtos em `/fornecedor/produtos/novo` e os editam, pausam ou excluem em `/fornecedor/painel`. Os orçamentos recebidos ficam na aba "Orçamentos Recebidos", onde o fornecedor negocia, confirma ou recusa cada pedido. Toda rota de fornecedor confere a posse do recurso: um fornecedor não alcança o produto nem o pedido de outro.
+Fornecedores anunciam produtos em `/fornecedor/produtos/novo` e os editam, pausam ou excluem em `/fornecedor/painel`. Os orçamentos recebidos ficam na aba "Orçamentos Recebidos", onde o fornecedor negocia, confirma ou recusa cada pedido. Toda rota de fornecedor confere a posse do recurso: um fornecedor não alcança o produto nem o pedido de outro. O e-mail do cliente só é liberado depois que o pedido é confirmado; antes disso o fornecedor vê o endereço mascarado (`t***@dominio`).
 
 Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express — nesse cenário, ajuste `TRUST_PROXY` para o número de proxies na frente da aplicação.

@@ -29,6 +29,7 @@ Festou! é uma plataforma web para ajudar clientes a organizar festas: descobrir
 | 10. Arquitetura do backend | Rotas, esquemas, middlewares e queries separados; migrations versionadas; CI no GitHub Actions | Implementada |
 | 11. Sessão e integridade | Sessão compartilhada no frontend, hash de senha versionado com rehash, RSVP bloqueado após o evento e aviso de preço no carrinho | Implementada |
 | 12. Vitrine paginada e prévia | Paginação da vitrine e metadados Open Graph no link público do convite | Implementada |
+| 13. Recuperação de senha e LGPD | Link de redefinição por e-mail, sessões encerradas na troca e e-mail do cliente mascarado até a confirmação | Implementada |
 
 Este quadro descreve o que existe no repositório hoje, não um compromisso com um cronograma. Novas etapas e prioridades devem ser definidas conforme o produto evoluir.
 
@@ -39,6 +40,8 @@ Este quadro descreve o que existe no repositório hoje, não um compromisso com 
 | `/` | Público | Página inicial e acesso à vitrine |
 | `/cadastro` | Público | Criação de perfil de cliente ou fornecedor |
 | `/login` | Público | Entrada na conta |
+| `/recuperar-senha` | Público | Pedido do link de redefinição de senha |
+| `/redefinir-senha` | Público | Criação de nova senha a partir do token do link |
 | `/vitrine` | Público | Busca e filtro por categoria de produto |
 | `/carrinho` | Cliente autenticado | Ajuste de itens, envio de orçamento e histórico |
 | `/fornecedor/painel` | Fornecedor autenticado | Gestão de orçamentos recebidos e catálogo de produtos |
@@ -84,9 +87,10 @@ server/
   db.js                 Conexão Neon
   migrate.js            Aplicação das migrations versionadas
   security.js           Senhas, sessões e validação de origem
+  mailer.js             Envio de e-mail (Resend por HTTP, console sem chave)
   meta.js               Metadados Open Graph das páginas públicas
   migrations/           Migrations SQL numeradas
-  routes/               Rotas por domínio (auth, products, orders, invitations, health)
+  routes/               Rotas por domínio (auth, passwordReset, products, orders, invitations, health)
   schemas/              Esquemas Zod por domínio
   middleware/           Sessão, origem, limitadores e tratamento de erros
   queries/              Consultas reutilizadas entre rotas
@@ -115,6 +119,7 @@ docs/
 - `itens_pedido`: itens e valores registrados em cada pedido.
 - `convites`: informações do evento, tema, slug público e estado de RSVP.
 - `confirmacoes_presenca`: resposta por convite, com nome, e-mail, quantidade e mensagem.
+- `recuperacao_senha`: hash do token de redefinição, validade e marcação de uso.
 - `schema_migrations`: migrations já aplicadas, com o nome do arquivo e o checksum do conteúdo.
 
 O schema versionado está em [`../server/migrations/`](../server/migrations/), em arquivos SQL numerados. Para aplicar a estrutura no banco configurado, use `npm run db:setup`: o comando cria `schema_migrations`, aplica apenas as migrations pendentes, cada uma em uma transação, e recusa continuar se um arquivo já aplicado tiver sido editado — nesse caso, crie uma nova migration com o próximo número.
@@ -145,9 +150,12 @@ Requisitos: Node.js compatível com o projeto e uma base PostgreSQL Neon.
    AUTH_RATE_LIMIT=10
    RSVP_RATE_LIMIT=30
    JSON_BODY_LIMIT=100kb
+   RESEND_API_KEY=
+   MAIL_FROM=Festou! <nao-responda@festou.app>
+   PASSWORD_RESET_TTL_MINUTES=60
    ```
 
-   `TRUST_PROXY` é o número de proxies reversos na frente da aplicação (0 = nenhum, 1 = nginx padrão). `LOGIN_EMAIL_RATE_LIMIT` limita as tentativas de login por e-mail. `JSON_BODY_LIMIT` define o tamanho máximo do corpo aceito.
+   `TRUST_PROXY` é o número de proxies reversos na frente da aplicação (0 = nenhum, 1 = nginx padrão). `LOGIN_EMAIL_RATE_LIMIT` limita as tentativas de login por e-mail. `JSON_BODY_LIMIT` define o tamanho máximo do corpo aceito. `RESEND_API_KEY` habilita o envio do e-mail de recuperação de senha; sem ela, o link aparece no console fora de produção. `PASSWORD_RESET_TTL_MINUTES` define a validade do link (60 minutos por padrão).
 
 2. Instale as dependências com `npm install`.
 3. Crie/atualize as tabelas com `npm run db:setup`.
@@ -179,6 +187,8 @@ Comandos disponíveis:
 | `POST` | `/api/auth/login` | Iniciar sessão |
 | `GET` | `/api/auth/me` | Consultar sessão |
 | `POST` | `/api/auth/logout` | Encerrar sessão |
+| `POST` | `/api/auth/forgot-password` | Enviar link de recuperação de senha; responde igual exista ou não o e-mail |
+| `POST` | `/api/auth/reset-password` | Trocar a senha com o token do link e encerrar as sessões da conta |
 | `GET` | `/api/products` | Consultar vitrine; aceita `categoria`, `pagina` e `limite` e devolve `pagination` com total e total de páginas |
 | `POST` | `/api/products` | Publicar produto como fornecedor |
 | `GET` | `/api/supplier/products` | Consultar catálogo completo do fornecedor autenticado (ativos e pausados) |
@@ -212,7 +222,8 @@ A suíte usa Vitest 5 e roda contra o mesmo banco Neon configurado em `.env`. Os
 | `tests/unit/config.test.js` | Leitura e validação das variáveis de ambiente do servidor |
 | `tests/api/auth.test.js` | Cadastro, login, sessão, origem e rotas protegidas |
 | `tests/api/products.test.js` | Vitrine pública, filtro por categoria, permissões de fornecedor e edição/exclusão de produto |
-| `tests/api/orders.test.js` | Criação e listagem de pedidos, negociação de status e isolamento entre perfis |
+| `tests/api/orders.test.js` | Criação e listagem de pedidos, negociação de status, isolamento entre perfis e e-mail mascarado até a confirmação |
+| `tests/api/passwordReset.test.js` | Pedido de recuperação sem revelar cadastro, troca de senha, reuso do link e encerramento das sessões |
 | `tests/api/invitations.test.js` | Convites, RSVP, reabertura, edição/exclusão e listagem das respostas |
 | `tests/api/errors.test.js` | Corpo inválido (400), corpo grande demais (413) e rotas inexistentes |
 | `tests/api/rateLimit.test.js` | Contagem por IP real atrás de proxy e limites de login e cadastro |
@@ -285,15 +296,25 @@ Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de
 - A vitrine renderizou em navegador real com os produtos ativos e sem erro; o botão "Carregar mais" só aparece quando há próxima página.
 - `/convite/:slug` passou a entregar `og:title`, `og:description`, `og:url`, `og:image` e as tags do Twitter, com escape de HTML; um slug inexistente continua servindo o SPA sem metadados.
 
+## Validação executada na etapa de recuperação de senha e LGPD
+
+- `npm run build` concluído com sucesso (45 módulos).
+- `npm test` com 106 testes aprovados em 14 arquivos.
+- `npm run smoke` com 46 verificações aprovadas no fluxo ponta a ponta.
+- `POST /api/auth/forgot-password` responde 202 com a mesma mensagem para e-mail existente e inexistente; o pedido invalida links anteriores e o link expira em 60 minutos.
+- `POST /api/auth/reset-password` troca a senha, marca o token como usado (reuso responde 400) e encerra todas as sessões da conta — a sessão aberta antes da troca deixa de autenticar.
+- Sem `RESEND_API_KEY`, o e-mail é registrado no console fora de produção; com a chave, usa a API HTTP do Resend em `server/mailer.js`.
+- O fornecedor recebe o e-mail do cliente mascarado (`t***@dominio`) até o pedido ser confirmado; depois vê o endereço completo.
+
 ## Próximos passos
 
 Não há um roadmap fechado neste documento. Ao priorizar a continuação, considerar:
 
 - revisar a interface responsiva em telas pequenas e a camada de decoração nos convites públicos;
 - avaliar migração do Tailwind 3 para 4 quando houver folga, para sair do `braces` flagrado no `npm audit`;
-- avaliar verificação de e-mail e recuperação de senha;
-- revisar a exposição do e-mail do cliente para o fornecedor, dentro da LGPD;
-- mover a sessão para um store externo se a aplicação passar a rodar em mais de uma instância;
+- avaliar verificação de e-mail no cadastro (hoje a conta já entra direto) e confirmação de troca de e-mail;
+- mover o limitador de requisições para um store compartilhado se a API passar a rodar em mais de uma instância (as sessões já ficam no banco);
+- definir status por item se pedidos com vários fornecedores passarem a precisar de negociação independente;
 - planejar deploy, observabilidade, backups e configuração de produção.
 
 ## Como manter este documento

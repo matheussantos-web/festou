@@ -31,7 +31,12 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
           o.observacao,
           o.created_at,
           c.nome as cliente_nome,
-          c.email as cliente_email,
+          -- O contato completo só é liberado depois que o pedido é confirmado;
+          -- antes disso o fornecedor vê o e-mail mascarado (LGPD).
+          case
+            when o.status in ('confirmado', 'concluido') then c.email
+            else regexp_replace(c.email, '^(.)[^@]*(@.*)$', '\\1***\\2')
+          end as cliente_email,
           sum(i.subtotal) as total_fornecedor,
           json_agg(json_build_object(
             'id', i.id,

@@ -22,6 +22,14 @@ const pendingOrdersCount = computed(() => {
   return orders.value.filter((o) => o.status === 'solicitado').length
 })
 
+// O backend mascara o e-mail até a confirmação; só libera o mailto quando o
+// endereço completo chega na resposta.
+function canContactClient(order) {
+  const email = order.cliente_email || ''
+  const confirmed = order.status === 'confirmado' || order.status === 'concluido'
+  return confirmed && email !== '' && !email.includes('***')
+}
+
 async function loadOrders() {
   isLoadingOrders.value = true
   ordersError.value = ''
@@ -232,7 +240,16 @@ onMounted(loadOrders)
                   Solicitado em {{ formatDate(order.created_at) }} por
                   <strong class="text-slate-900">{{ order.cliente_nome }}</strong>
                   <span v-if="order.cliente_email" class="ml-1 text-slate-500">
-                    (<a :href="`mailto:${order.cliente_email}`" class="text-festou-primary hover:underline">{{ order.cliente_email }}</a>)
+                    (<a
+                      v-if="canContactClient(order)"
+                      :href="`mailto:${order.cliente_email}`"
+                      class="text-festou-primary hover:underline"
+                    >{{ order.cliente_email }}</a>
+                    <span
+                      v-else
+                      title="O contato completo é liberado quando o pedido é confirmado."
+                      class="text-slate-400"
+                    >{{ order.cliente_email }}</span>)
                   </span>
                 </p>
               </div>
@@ -332,12 +349,15 @@ onMounted(loadOrders)
               </div>
 
               <a
-                v-if="order.cliente_email"
+                v-if="canContactClient(order)"
                 :href="`mailto:${order.cliente_email}?subject=Festou! - Orçamento #${order.id.slice(0, 8)}`"
                 class="text-xs font-bold text-festou-primary hover:underline"
               >
                 Falar com o cliente por e-mail ↗
               </a>
+              <span v-else-if="order.cliente_email" class="text-xs text-slate-400">
+                O e-mail do cliente aparece aqui após a confirmação do pedido.
+              </span>
             </div>
           </article>
         </div>
