@@ -122,7 +122,7 @@ docs/
 - `recuperacao_senha`: hash do token de redefinição, validade e marcação de uso.
 - `schema_migrations`: migrations já aplicadas, com o nome do arquivo e o checksum do conteúdo.
 
-O schema versionado está em [`../server/migrations/`](../server/migrations/), em arquivos SQL numerados. Para aplicar a estrutura no banco configurado, use `npm run db:setup`: o comando cria `schema_migrations`, aplica apenas as migrations pendentes, cada uma em uma transação, e recusa continuar se um arquivo já aplicado tiver sido editado — nesse caso, crie uma nova migration com o próximo número.
+O schema versionado está em [`../server/migrations/`](../server/migrations/), em arquivos SQL numerados. Para aplicar a estrutura no banco configurado, use `npm run db:setup`: o comando cria `schema_migrations`, aplica apenas as migrations pendentes, cada uma em uma transação, e recusa continuar se um arquivo já aplicado tiver sido editado — nesse caso, crie uma nova migration com o próximo número. O checksum ignora o fim de linha (CRLF no Windows, LF no Linux), então o mesmo banco funciona nos dois sistemas e registros antigos são normalizados na próxima execução.
 
 ## Identidade visual
 

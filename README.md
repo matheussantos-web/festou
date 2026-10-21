@@ -56,7 +56,7 @@ npm run test:api    # apenas os endpoints, com supertest
 npm run smoke       # fluxo real ponta a ponta, com servidor próprio
 ```
 
-Os testes de integração usam o mesmo banco Neon do `.env`, criam contas com e-mail `teste.*@festou.test` e removem os dados ao final de cada arquivo. O `npm run smoke` cria contas `smoke.*@festou.test` e também limpa tudo ao terminar.
+Os testes de integração usam o mesmo banco Neon do `.env`, criam contas com e-mail `teste.*@festou.test` e removem os dados ao final de cada arquivo. O `npm run smoke` cria contas `smoke.*@festou.test` e também limpa tudo ao terminar. No GitHub Actions, os passos de API e smoke só rodam quando existe o secret `DATABASE_URL` — use um branch do Neon dedicado ao CI — e aplicam as migrations com `npm run db:setup` antes dos testes.
 
 O smoke sobe o próprio servidor na porta `3100`, com os limitadores de requisição elevados, e o encerra ao final. Para apontá-lo para outro alvo, defina `SMOKE_PORT` (porta do servidor próprio) ou `SMOKE_BASE_URL` (URL de um servidor já em execução, por exemplo `http://127.0.0.1:3000`); `SMOKE_ORIGIN` ajusta a origem enviada nas requisições.
 
