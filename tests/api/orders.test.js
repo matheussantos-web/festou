@@ -158,4 +158,56 @@ describe('pedidos de orcamento', () => {
     const confirmado = await supplier.client.get('/api/orders')
     expect(confirmado.body.orders.find((o) => o.id === orderId).cliente_email).toBe(customer.email)
   })
+
+  it('pagina os pedidos do cliente e informa o total', async () => {
+    const supplier = await createAccount('fornecedor')
+    const customer = await createAccount('cliente')
+    const product = await createProduct(supplier)
+
+    for (let index = 0; index < 3; index += 1) {
+      await customer.client.post('/api/orders').send({
+        items: [{ produto_id: product.id, quantidade: 1 }],
+      })
+    }
+
+    const primeira = await customer.client.get('/api/orders?pagina=1&limite=2')
+    expect(primeira.status).toBe(200)
+    expect(primeira.body.orders).toHaveLength(2)
+    expect(primeira.body.pagination).toMatchObject({
+      pagina: 1,
+      limite: 2,
+      total: 3,
+      totalPaginas: 2,
+      temMais: true,
+    })
+
+    const segunda = await customer.client.get('/api/orders?pagina=2&limite=2')
+    expect(segunda.body.orders).toHaveLength(1)
+    expect(segunda.body.pagination.temMais).toBe(false)
+    expect(segunda.body.orders[0].id).not.toBe(primeira.body.orders[0].id)
+  })
+
+  it('pagina os pedidos do fornecedor e conta os pendentes', async () => {
+    const supplier = await createAccount('fornecedor')
+    const customer = await createAccount('cliente')
+    const product = await createProduct(supplier)
+
+    const criados = []
+    for (let index = 0; index < 2; index += 1) {
+      const created = await customer.client.post('/api/orders').send({
+        items: [{ produto_id: product.id, quantidade: 1 }],
+      })
+      criados.push(created.body.order.id)
+    }
+
+    await supplier.client.patch(`/api/orders/${criados[0]}/status`).send({ status: 'confirmado' })
+
+    const pagina = await supplier.client.get('/api/orders?pagina=1&limite=1')
+    expect(pagina.body.orders).toHaveLength(1)
+    expect(pagina.body.pagination).toMatchObject({ total: 2, totalPaginas: 2, temMais: true })
+    expect(pagina.body.summary.pendentes).toBe(1)
+
+    const invalida = await supplier.client.get('/api/orders?pagina=0')
+    expect(invalida.status).toBe(400)
+  })
 })

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getDatabase } from '../db.js'
 import { requireUser } from '../middleware/session.js'
 import { buildUpdate } from '../sql/buildUpdate.js'
+import { buildPagination, readPagination } from '../schemas/pagination.js'
 import { categorySchema, productSchema, productUpdateSchema } from '../schemas/products.js'
 
 export const productsRouter = Router()
@@ -11,8 +12,6 @@ export const supplierProductsRouter = Router()
 const productIdSchema = z.string().uuid('Identificador do produto inválido.')
 
 const defaultPageSize = 24
-const pageSchema = z.coerce.number().int('A pagina precisa ser um numero inteiro.').min(1).max(10_000)
-const limitSchema = z.coerce.number().int('O limite precisa ser um numero inteiro.').min(1).max(60)
 
 const toggleActiveSchema = z.object({
   ativo: z.boolean().optional(),
@@ -31,9 +30,7 @@ productsRouter.get('/', async (request, response, next) => {
     const category = request.query.categoria
       ? categorySchema.parse(request.query.categoria)
       : null
-    const pagina = pageSchema.parse(request.query.pagina ?? 1)
-    const limite = limitSchema.parse(request.query.limite ?? defaultPageSize)
-    const offset = (pagina - 1) * limite
+    const { pagina, limite, offset } = readPagination(request.query, { defaultLimit: defaultPageSize })
     const sql = getDatabase()
 
     const [{ total }] = category
@@ -64,17 +61,9 @@ productsRouter.get('/', async (request, response, next) => {
         limit ${limite} offset ${offset}
       `
 
-    const totalPaginas = Math.max(1, Math.ceil(total / limite))
-
     response.json({
       products,
-      pagination: {
-        pagina,
-        limite,
-        total,
-        totalPaginas,
-        temMais: pagina < totalPaginas,
-      },
+      pagination: buildPagination({ pagina, limite, total }),
     })
   } catch (error) {
     next(error)

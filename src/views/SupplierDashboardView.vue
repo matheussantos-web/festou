@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { api, asArray } from '../lib/api'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
@@ -8,6 +8,7 @@ const activeTab = ref('pedidos') // 'pedidos' | 'produtos'
 const orders = ref([])
 const products = ref([])
 const isLoadingOrders = ref(true)
+const isLoadingMoreOrders = ref(false)
 const isLoadingProducts = ref(true)
 const ordersError = ref('')
 const productsError = ref('')
@@ -17,10 +18,12 @@ const updatingOrderId = ref(null)
 const togglingProductId = ref(null)
 const deletingProductId = ref(null)
 const loadedTabs = new Set()
+const ordersPage = ref(1)
+const ordersPagination = ref(null)
+const ordersTotal = ref(0)
+const pendingCount = ref(0)
 
-const pendingOrdersCount = computed(() => {
-  return orders.value.filter((o) => o.status === 'solicitado').length
-})
+const ordersPageSize = 10
 
 // O backend mascara o e-mail até a confirmação; só libera o mailto quando o
 // endereço completo chega na resposta.
@@ -30,19 +33,37 @@ function canContactClient(order) {
   return confirmed && email !== '' && !email.includes('***')
 }
 
-async function loadOrders() {
-  isLoadingOrders.value = true
+async function loadOrders({ append = false } = {}) {
+  if (append) {
+    isLoadingMoreOrders.value = true
+  } else {
+    isLoadingOrders.value = true
+    ordersPage.value = 1
+  }
   ordersError.value = ''
 
   try {
-    const result = await api('/orders')
-    orders.value = asArray(result.orders)
+    const result = await api(`/orders?pagina=${ordersPage.value}&limite=${ordersPageSize}`)
+    const items = asArray(result.orders)
+
+    orders.value = append ? [...orders.value, ...items] : items
+    ordersPagination.value = result.pagination ?? null
+    ordersTotal.value = result.pagination?.total ?? items.length
+    pendingCount.value = result.summary?.pendentes ?? 0
     loadedTabs.add('pedidos')
   } catch (error) {
     ordersError.value = error.message || 'Não foi possível carregar os pedidos recebidos.'
   } finally {
     isLoadingOrders.value = false
+    isLoadingMoreOrders.value = false
   }
+}
+
+async function loadMoreOrders() {
+  if (isLoadingMoreOrders.value || !ordersPagination.value?.temMais) return
+
+  ordersPage.value += 1
+  await loadOrders({ append: true })
 }
 
 async function loadProducts() {
@@ -82,6 +103,10 @@ async function updateOrderStatus(order, nextStatus) {
       method: 'PATCH',
       body: JSON.stringify({ status: nextStatus }),
     })
+
+    if (order.status === 'solicitado' && nextStatus !== 'solicitado') {
+      pendingCount.value = Math.max(0, pendingCount.value - 1)
+    }
     order.status = nextStatus
     successMessage.value = result.message || 'Status do pedido atualizado com sucesso.'
   } catch (error) {
@@ -178,13 +203,13 @@ onMounted(loadOrders)
         >
           <span>Orçamentos Recebidos</span>
           <span
-            v-if="pendingOrdersCount > 0"
+            v-if="pendingCount > 0"
             class="rounded-full bg-festou-yellow/20 px-2 py-0.5 text-xs font-bold text-festou-accent"
           >
-            {{ pendingOrdersCount }} novo{{ pendingOrdersCount > 1 ? 's' : '' }}
+            {{ pendingCount }} novo{{ pendingCount > 1 ? 's' : '' }}
           </span>
           <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-            {{ orders.length }}
+            {{ ordersTotal }}
           </span>
         </button>
         <button
@@ -360,6 +385,20 @@ onMounted(loadOrders)
               </span>
             </div>
           </article>
+
+          <div v-if="ordersPagination?.temMais" class="flex flex-col items-center gap-2 pt-2">
+            <p class="text-xs font-semibold text-slate-500">
+              Mostrando {{ orders.length }} de {{ ordersTotal }} pedidos
+            </p>
+            <button
+              type="button"
+              :disabled="isLoadingMoreOrders"
+              class="btn-festou-secondary text-sm disabled:opacity-60"
+              @click="loadMoreOrders"
+            >
+              {{ isLoadingMoreOrders ? 'Carregando...' : 'Carregar mais pedidos' }}
+            </button>
+          </div>
         </div>
       </section>
 

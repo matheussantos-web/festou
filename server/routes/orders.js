@@ -5,25 +5,46 @@ import { getDatabase } from '../db.js'
 import { requireUser } from '../middleware/session.js'
 import { clientOrderSelect, findClientOrderById } from '../queries/orders.js'
 import { orderSchema, updateOrderStatusSchema } from '../schemas/orders.js'
+import { buildPagination, readPagination } from '../schemas/pagination.js'
 
 export const ordersRouter = Router()
 
 const orderIdSchema = z.string().uuid('Identificador do pedido inválido.')
+const defaultPageSize = 20
 
 ordersRouter.get('/', requireUser, async (request, response, next) => {
   try {
     const sql = getDatabase()
+    const { pagina, limite, offset } = readPagination(request.query, { defaultLimit: defaultPageSize })
 
     if (request.user.tipo_perfil === 'cliente') {
+      const [{ total }] = await sql`
+        select count(*)::int as total
+        from public.pedidos
+        where cliente_id = ${request.user.id}
+      `
+
       const orders = await sql.query(
-        `${clientOrderSelect} where o.cliente_id = $1 group by o.id order by o.created_at desc limit 100`,
-        [request.user.id],
+        `${clientOrderSelect} where o.cliente_id = $1 group by o.id order by o.created_at desc, o.id limit $2 offset $3`,
+        [request.user.id, limite, offset],
       )
 
-      return response.json({ orders })
+      return response.json({
+        orders,
+        pagination: buildPagination({ pagina, limite, total }),
+      })
     }
 
     if (request.user.tipo_perfil === 'fornecedor') {
+      const [{ total, pendentes }] = await sql`
+        select
+          count(distinct o.id)::int as total,
+          count(distinct o.id) filter (where o.status = 'solicitado')::int as pendentes
+        from public.pedidos o
+        join public.itens_pedido i on i.pedido_id = o.id
+        where i.fornecedor_id = ${request.user.id}
+      `
+
       const orders = await sql`
         select
           o.id,
@@ -51,11 +72,15 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
         join public.itens_pedido i on i.pedido_id = o.id
         where i.fornecedor_id = ${request.user.id}
         group by o.id, c.nome, c.email
-        order by o.created_at desc
-        limit 100
+        order by o.created_at desc, o.id
+        limit ${limite} offset ${offset}
       `
 
-      return response.json({ orders })
+      return response.json({
+        orders,
+        pagination: buildPagination({ pagina, limite, total }),
+        summary: { pendentes },
+      })
     }
 
     return response.status(403).json({ message: 'Este perfil nao pode consultar pedidos.' })

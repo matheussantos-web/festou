@@ -19,8 +19,13 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const priceNotice = ref('')
 const isLoadingOrders = ref(true)
+const isLoadingMore = ref(false)
 const isSubmitting = ref(false)
 const updatingOrderId = ref(null)
+const page = ref(1)
+const pagination = ref(null)
+
+const pageSize = 10
 
 async function updateOrderStatus(order, nextStatus) {
   if (nextStatus === 'cancelado') {
@@ -46,16 +51,33 @@ async function updateOrderStatus(order, nextStatus) {
   }
 }
 
-async function loadOrders() {
-  isLoadingOrders.value = true
+async function loadOrders({ append = false } = {}) {
+  if (append) {
+    isLoadingMore.value = true
+  } else {
+    isLoadingOrders.value = true
+    page.value = 1
+  }
+
   try {
-    const result = await api('/orders')
-    orders.value = asArray(result.orders)
+    const result = await api(`/orders?pagina=${page.value}&limite=${pageSize}`)
+    const items = asArray(result.orders)
+
+    orders.value = append ? [...orders.value, ...items] : items
+    pagination.value = result.pagination ?? null
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível carregar seus pedidos.'
   } finally {
     isLoadingOrders.value = false
+    isLoadingMore.value = false
   }
+}
+
+async function loadMoreOrders() {
+  if (isLoadingMore.value || !pagination.value?.temMais) return
+
+  page.value += 1
+  await loadOrders({ append: true })
 }
 
 async function requestQuote() {
@@ -76,6 +98,7 @@ async function requestQuote() {
     clearCart()
     note.value = ''
     successMessage.value = `Solicitação enviada! Total estimado: ${formatPrice(order.total_estimado)}.`
+    await loadOrders()
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível enviar a solicitação.'
   } finally {
@@ -344,6 +367,20 @@ onMounted(() => {
               <span class="text-xs text-slate-400">Status atualizado pelo fornecedor</span>
             </div>
           </article>
+
+          <div v-if="pagination?.temMais" class="flex flex-col items-center gap-2 pt-2">
+            <p class="text-xs font-semibold text-slate-500">
+              Mostrando {{ orders.length }} de {{ pagination.total }} solicitações
+            </p>
+            <button
+              type="button"
+              :disabled="isLoadingMore"
+              class="btn-festou-secondary text-sm disabled:opacity-60"
+              @click="loadMoreOrders"
+            >
+              {{ isLoadingMore ? 'Carregando...' : 'Carregar mais solicitações' }}
+            </button>
+          </div>
         </div>
       </section>
     </main>

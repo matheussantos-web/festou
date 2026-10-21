@@ -30,6 +30,7 @@ Festou! é uma plataforma web para ajudar clientes a organizar festas: descobrir
 | 11. Sessão e integridade | Sessão compartilhada no frontend, hash de senha versionado com rehash, RSVP bloqueado após o evento e aviso de preço no carrinho | Implementada |
 | 12. Vitrine paginada e prévia | Paginação da vitrine e metadados Open Graph no link público do convite | Implementada |
 | 13. Recuperação de senha e LGPD | Link de redefinição por e-mail, sessões encerradas na troca e e-mail do cliente mascarado até a confirmação | Implementada |
+| 14. Paginação dos pedidos | Histórico e painel do fornecedor em páginas, com total e contagem de pendentes no servidor | Implementada |
 
 Este quadro descreve o que existe no repositório hoje, não um compromisso com um cronograma. Novas etapas e prioridades devem ser definidas conforme o produto evoluir.
 
@@ -196,7 +197,7 @@ Comandos disponíveis:
 | `PATCH` | `/api/supplier/products/:id` | Editar produto do fornecedor autenticado |
 | `DELETE` | `/api/supplier/products/:id` | Excluir produto do fornecedor autenticado |
 | `PATCH` | `/api/supplier/products/:id/toggle-active` | Alternar visibilidade (pausar ou reativar) de produto na vitrine |
-| `GET` | `/api/orders` | Consultar pedidos conforme perfil autenticado |
+| `GET` | `/api/orders` | Consultar pedidos conforme perfil autenticado; aceita `pagina` e `limite`, devolve `pagination` e, para fornecedor, `summary.pendentes` |
 | `POST` | `/api/orders` | Criar pedido/orçamento como cliente |
 | `POST` | `/api/invitations` | Criar convite como cliente |
 | `GET` | `/api/invitations/mine` | Listar convites e respostas do anfitrião |
@@ -219,6 +220,8 @@ A suíte usa Vitest 5 e roda contra o mesmo banco Neon configurado em `.env`. Os
 | `tests/unit/session.test.js` | Cache da sessão, requisições simultâneas, login e logout |
 | `tests/unit/security.test.js` | Hash de senha, formato antigo, rehash e comparação de tempo |
 | `tests/unit/meta.test.js` | Título, descrição e escape das tags Open Graph do convite |
+| `tests/unit/pagination.test.js` | Leitura de pagina/limite, cálculo do offset e metadados de paginação |
+| `tests/unit/migrationChecksum.test.js` | Checksum das migrations igual em CRLF e LF e sensível a mudança real no SQL |
 | `tests/unit/config.test.js` | Leitura e validação das variáveis de ambiente do servidor |
 | `tests/api/auth.test.js` | Cadastro, login, sessão, origem e rotas protegidas |
 | `tests/api/products.test.js` | Vitrine pública, filtro por categoria, permissões de fornecedor e edição/exclusão de produto |
@@ -305,6 +308,15 @@ Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de
 - `POST /api/auth/reset-password` troca a senha, marca o token como usado (reuso responde 400) e encerra todas as sessões da conta — a sessão aberta antes da troca deixa de autenticar.
 - Sem `RESEND_API_KEY`, o e-mail é registrado no console fora de produção; com a chave, usa a API HTTP do Resend em `server/mailer.js`.
 - O fornecedor recebe o e-mail do cliente mascarado (`t***@dominio`) até o pedido ser confirmado; depois vê o endereço completo.
+
+## Validação executada na etapa de paginação dos pedidos
+
+- `npm run build` concluído com sucesso (45 módulos).
+- `npm test` com 115 testes aprovados em 16 arquivos.
+- `npm run smoke` com 48 verificações aprovadas no fluxo ponta a ponta.
+- `GET /api/orders?pagina=1&limite=2` devolve 2 pedidos, `pagination.total` 3 e `temMais`; a página 2 traz o restante sem repetir itens.
+- O painel do fornecedor recebe `summary.pendentes` do banco, então o distintivo de novos pedidos não depende mais de quantos itens foram carregados.
+- `pagina` inválida responde 400 nos dois perfis; o histórico do cliente e a aba de orçamentos mostram o botão "Carregar mais" quando há próxima página.
 
 ## Próximos passos
 

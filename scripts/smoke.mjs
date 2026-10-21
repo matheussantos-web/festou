@@ -169,6 +169,11 @@ const historico = await call('GET', '/api/orders')
 const noHistorico = historico.data?.orders?.find((o) => o.id === pedidoId)
 check('pedido aparece no histórico com o mesmo formato', Boolean(noHistorico?.created_at) && Boolean(noHistorico?.itens?.[0]?.id))
 
+const historicoPaginado = await call('GET', '/api/orders?pagina=1&limite=1')
+check('historico pagina os pedidos', historicoPaginado.status === 200
+  && historicoPaginado.data.orders.length === 1
+  && historicoPaginado.data.pagination?.total >= 1, `pagination=${JSON.stringify(historicoPaginado.data?.pagination)}`)
+
 console.log('\n== 6. Convite e RSVP ==')
 const dataEvento = new Date(Date.now() + 20 * 86400000).toISOString()
 const convite = await call('POST', '/api/invitations', { titulo: 'Aniversário da Marina', anfitriao: 'Família Marina', data_evento: dataEvento, local_evento: 'Casa de campo', mensagem: 'Venham!', tema: 'jardim' })
@@ -203,6 +208,8 @@ check('fornecedor ve o pedido recebido', pedidosFornecedor.status === 200 && ped
 
 const pedidoRecebido = pedidosFornecedor.data.orders.find((o) => o.id === pedidoId)
 check('e-mail do cliente mascarado antes da confirmacao', String(pedidoRecebido?.cliente_email).includes('***'), pedidoRecebido?.cliente_email)
+check('painel informa o total de pedidos e pendentes', pedidosFornecedor.data.pagination?.total >= 1
+  && Number.isInteger(pedidosFornecedor.data.summary?.pendentes), `summary=${JSON.stringify(pedidosFornecedor.data?.summary)}`)
 
 const negociacao = await call('PATCH', `/api/orders/${pedidoId}/status`, { status: 'em_negociacao' })
 check('fornecedor negocia o pedido', negociacao.status === 200 && negociacao.data?.order?.status === 'em_negociacao', `status ${negociacao.status}`)
