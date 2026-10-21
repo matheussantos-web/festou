@@ -4,12 +4,15 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Teste de fumaca ponta a ponta contra um servidor ja em execucao.
-// Uso: npm run smoke. Se nao houver servidor na porta, este script sobe um
-// proprio com os limitadores de requisicao elevados.
-// As contas criadas usam o dominio smoke.*@festou.test e sao removidas ao final.
+// Teste de fumaça ponta a ponta.
+// Uso: npm run smoke. Por padrão este script sobe um servidor próprio, na porta
+// SMOKE_PORT, com os limitadores de requisição elevados, para não depender do
+// ambiente de desenvolvimento e não estourar o rate limit de produção.
+// Defina SMOKE_BASE_URL para usar um servidor já em execução.
+// As contas criadas usam o domínio smoke.*@festou.test e são removidas ao final.
 
-const base = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000'
+const porta = Number(process.env.SMOKE_PORT) || 3100
+const base = process.env.SMOKE_BASE_URL || `http://127.0.0.1:${porta}`
 const origin = process.env.SMOKE_ORIGIN || base
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..')
 const stamp = Date.now()
@@ -69,14 +72,34 @@ async function ping() {
 
 let servidor = null
 
-if (await ping()) {
-  console.log(`Usando o servidor ja em execucao em ${base}.`)
+function encerrarServidor() {
+  if (!servidor) return
+  servidor.kill()
+  servidor = null
+}
+
+process.on('exit', encerrarServidor)
+process.on('SIGINT', () => { encerrarServidor(); process.exit(130) })
+process.on('SIGTERM', () => { encerrarServidor(); process.exit(143) })
+
+if (process.env.SMOKE_BASE_URL) {
+  console.log(`Usando o servidor informado em ${base}.`)
+  if (!(await ping())) {
+    console.error(`FALHA | o servidor em ${base} não respondeu`)
+    process.exit(1)
+  }
 } else {
-  console.log(`Servidor indisponivel em ${base}. Iniciando o proprio servidor...`)
+  console.log(`Subindo servidor próprio em ${base}...`)
 
   servidor = spawn(process.execPath, [join(rootDir, 'server', 'index.js')], {
     cwd: rootDir,
-    env: { ...process.env, AUTH_RATE_LIMIT: '1000', RSVP_RATE_LIMIT: '1000' },
+    env: {
+      ...process.env,
+      PORT: String(porta),
+      HOST: '127.0.0.1',
+      AUTH_RATE_LIMIT: '1000',
+      RSVP_RATE_LIMIT: '1000',
+    },
     stdio: 'ignore',
   })
 
@@ -86,15 +109,13 @@ if (await ping()) {
   }
 
   if (!(await ping())) {
-    console.error('FALHA | o servidor nao subiu a tempo')
-    servidor.kill()
+    console.error('FALHA | o servidor não subiu a tempo')
+    encerrarServidor()
     process.exit(1)
   }
-
-  servidor.unref()
 }
 
-console.log('== 1. Saude da API ==')
+console.log('== 1. Saúde da API ==')
 const health = await call('GET', '/api/health')
 check('GET /api/health', health.status === 200 && health.data.status === 'ok', JSON.stringify(health.data))
 
@@ -115,14 +136,14 @@ const produto = await call('POST', '/api/products', { nome: 'Bolo de chocolate',
 check('fornecedor publica produto', produto.status === 201, `status ${produto.status} ${JSON.stringify(produto.data).slice(0, 120)}`)
 const produtoId = produto.data?.product?.id
 
-console.log('\n== 4. Vitrine publica ==')
+console.log('\n== 4. Vitrine pública ==')
 const vitrine = await call('GET', '/api/products')
 check('vitrine lista o produto', vitrine.status === 200 && vitrine.data.products.some((p) => p.id === produtoId), `total=${vitrine.data?.products?.length}`)
 
 const vitrineFiltrada = await call('GET', '/api/products?categoria=bolos')
 check('filtro por categoria', vitrineFiltrada.status === 200 && vitrineFiltrada.data.products.every((p) => p.categoria === 'bolos'))
 
-console.log('\n== 5. Pedido de orcamento ==')
+console.log('\n== 5. Pedido de orçamento ==')
 cookies.clear()
 await call('POST', '/api/auth/login', { email: clienteEmail, senha })
 const pedido = await call('POST', '/api/orders', { items: [{ produto_id: produtoId, quantidade: 2 }], observacao: 'Entregar no dia 20.' })
@@ -134,11 +155,11 @@ const pedidoId = pedido.data?.order?.id
 
 const historico = await call('GET', '/api/orders')
 const noHistorico = historico.data?.orders?.find((o) => o.id === pedidoId)
-check('pedido aparece no historico com o mesmo formato', Boolean(noHistorico?.created_at) && Boolean(noHistorico?.itens?.[0]?.id))
+check('pedido aparece no histórico com o mesmo formato', Boolean(noHistorico?.created_at) && Boolean(noHistorico?.itens?.[0]?.id))
 
 console.log('\n== 6. Convite e RSVP ==')
 const dataEvento = new Date(Date.now() + 20 * 86400000).toISOString()
-const convite = await call('POST', '/api/invitations', { titulo: 'Aniversario da Marina', anfitriao: 'Familia Marina', data_evento: dataEvento, local_evento: 'Casa de campo', mensagem: 'Venhayler', tema: 'jardim' })
+const convite = await call('POST', '/api/invitations', { titulo: 'Aniversário da Marina', anfitriao: 'Família Marina', data_evento: dataEvento, local_evento: 'Casa de campo', mensagem: 'Venham!', tema: 'jardim' })
 check('criacao do convite', convite.status === 201, `status ${convite.status}`)
 check('convite devolve aceita_rsvp', convite.data?.invitation?.aceita_rsvp === true, String(convite.data?.invitation?.aceita_rsvp))
 const slug = convite.data?.invitation?.slug
@@ -148,15 +169,15 @@ cookies.clear()
 const visitante = { email: `smoke.convidado.${stamp}@festou.test`, nome: 'Convidado' }
 const rsvp = await call('POST', `/api/invitations/${slug}/rsvp`, { nome: visitante.nome, email: visitante.email, resposta: 'confirmado', quantidade_pessoas: 3 })
 check('RSVP registrado', rsvp.status === 200, `status ${rsvp.status}`)
-check('resumo devolve numero', rsvp.data?.summary?.pessoas_confirmadas === 3, `valor=${rsvp.data?.summary?.pessoas_confirmadas} (tipo ${typeof rsvp.data?.summary?.pessoas_confirmadas})`)
+check('resumo devolve número', rsvp.data?.summary?.pessoas_confirmadas === 3, `valor=${rsvp.data?.summary?.pessoas_confirmadas} (tipo ${typeof rsvp.data?.summary?.pessoas_confirmadas})`)
 
 const rsvp2 = await call('POST', `/api/invitations/${slug}/rsvp`, { nome: visitante.nome, email: visitante.email, resposta: 'talvez', quantidade_pessoas: 1 })
 check('RSVP atualizado pelo mesmo e-mail', rsvp2.status === 200 && rsvp2.data?.summary?.pessoas_confirmadas === 0 && rsvp2.data?.summary?.talvez === 1, JSON.stringify(rsvp2.data?.summary))
 
 const publico = await call('GET', `/api/invitations/${slug}`)
-check('convite publico acessivel', publico.status === 200 && publico.data?.invitation?.titulo === 'Aniversario da Marina')
+check('convite público acessível', publico.status === 200 && publico.data?.invitation?.titulo === 'Aniversário da Marina')
 
-console.log('\n== 7. Gestao do fornecedor ==')
+console.log('\n== 7. Gestão do fornecedor ==')
 cookies.clear()
 await call('POST', '/api/auth/login', { email: fornecedorEmail, senha })
 const pedidosFornecedor = await call('GET', '/api/orders')
@@ -180,7 +201,7 @@ check('produto pausado sai da vitrine', !vitrinePausado.data.products.some((p) =
 console.log('\n== 8. Autorizacao ==')
 cookies.clear()
 const visitanteSemSessao = await call('GET', '/api/orders')
-check('rota privada exige sessao', visitanteSemSessao.status === 401, `status ${visitanteSemSessao.status}`)
+check('rota privada exige sessão', visitanteSemSessao.status === 401, `status ${visitanteSemSessao.status}`)
 
 const origemInvalida = await fetch(`${base}/api/auth/login`, {
   method: 'POST',
@@ -210,7 +231,4 @@ check('dados de teste removidos', sobras.length === 0, `restantes=${sobras.lengt
 
 console.log(`\nConcluido.${process.exitCode ? ' Houve falhas.' : ' Tudo passou.'}`)
 
-if (servidor) {
-  servidor.kill()
-  servidor.unref()
-}
+encerrarServidor()

@@ -147,4 +147,16 @@ describe('autenticação', () => {
     expect(response.status).toBe(404)
     expect(response.body.message).toBeTruthy()
   })
+
+  it('permite imagens externas no CSP para exibir fotos de produtos', async () => {
+    const response = await request(app).get('/api/health')
+
+    expect(response.status).toBe(200)
+
+    const csp = response.headers['content-security-policy']
+
+    expect(csp).toBeTruthy()
+    expect(csp).toContain("img-src 'self' data: blob: https:")
+    expect(csp).toContain('font-src \'self\' data: https://fonts.gstatic.com')
+  })
 })

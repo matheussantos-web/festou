@@ -104,13 +104,13 @@ onMounted(loadOrders)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen bg-festou-soft text-slate-900">
 
     <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
         <div>
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-festou-purple">
-            <span>💼</span> Gestão do Fornecedor
+          <span class="festou-badge bg-festou-secondary/12 text-festou-secondary">
+            <span aria-hidden="true">💼</span> Gestão do Fornecedor
           </span>
           <h1 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
             Painel de Controle
@@ -121,7 +121,7 @@ onMounted(loadOrders)
         </div>
         <RouterLink
           to="/fornecedor/produtos/novo"
-          class="btn-festou-primary text-xs font-bold shadow-festive"
+          class="btn-festou-primary text-xs font-bold"
         >
           + Cadastrar novo produto
         </RouterLink>
@@ -135,21 +135,21 @@ onMounted(loadOrders)
       </p>
 
       <!-- Abas de navegação -->
-      <div class="mt-8 flex overflow-x-auto border-b border-orange-200" role="tablist" aria-label="Painel do fornecedor">
+      <div class="mt-8 flex overflow-x-auto border-b border-slate-200" role="tablist" aria-label="Painel do fornecedor">
         <button
           id="tab-pedidos"
           type="button"
           role="tab"
           :aria-selected="activeTab === 'pedidos'"
           aria-controls="panel-pedidos"
-          class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition"
-          :class="activeTab === 'pedidos' ? 'border-festou-primary text-festou-primary' : 'border-transparent text-slate-500 hover:text-slate-900'"
+          class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition-all duration-300"
+          :class="activeTab === 'pedidos' ? 'border-festou-magenta text-festou-primary' : 'border-transparent text-slate-500 hover:text-slate-900'"
           @click="selectTab('pedidos')"
         >
           <span>Orçamentos Recebidos</span>
           <span
             v-if="pendingOrdersCount > 0"
-            class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800"
+            class="rounded-full bg-festou-yellow/20 px-2 py-0.5 text-xs font-bold text-festou-accent"
           >
             {{ pendingOrdersCount }} novo{{ pendingOrdersCount > 1 ? 's' : '' }}
           </span>
@@ -163,8 +163,8 @@ onMounted(loadOrders)
           role="tab"
           :aria-selected="activeTab === 'produtos'"
           aria-controls="panel-produtos"
-          class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition"
-          :class="activeTab === 'produtos' ? 'border-festou-primary text-festou-primary' : 'border-transparent text-slate-500 hover:text-slate-900'"
+          class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition-all duration-300"
+          :class="activeTab === 'produtos' ? 'border-festou-magenta text-festou-primary' : 'border-transparent text-slate-500 hover:text-slate-900'"
           @click="selectTab('produtos')"
         >
           <span>Meus Produtos</span>
@@ -185,7 +185,7 @@ onMounted(loadOrders)
             Tentar novamente
           </button>
         </div>
-        <div v-else-if="!orders.length" class="rounded-lg border border-dashed border-orange-200 bg-white/60 px-6 py-12 text-center">
+        <div v-else-if="!orders.length" class="rounded-2xl border border-dashed border-festou-secondary/30 bg-festou-secondary/5 px-6 py-12 text-center">
           <p class="text-lg font-bold">Nenhum orçamento recebido ainda</p>
           <p class="mt-1 text-sm text-slate-600">Quando clientes adicionarem seus produtos ao carrinho e solicitarem orçamento, eles aparecerão aqui.</p>
         </div>
@@ -193,9 +193,9 @@ onMounted(loadOrders)
           <article
             v-for="order in orders"
             :key="order.id"
-            class="rounded-lg border border-orange-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+            class="festou-card p-6"
           >
-            <div class="flex flex-wrap items-start justify-between gap-4 border-b border-orange-100 pb-4">
+            <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <div class="flex items-center gap-3">
                   <h2 class="text-lg font-bold">Pedido #{{ order.id.slice(0, 8) }}</h2>
@@ -231,7 +231,7 @@ onMounted(loadOrders)
                 >
                   <div>
                     <span class="font-bold text-slate-900">{{ item.quantidade }}x</span> {{ item.nome }}
-                    <span class="ml-2 rounded bg-orange-50 px-2 py-0.5 text-xs text-orange-800">{{ item.categoria }}</span>
+                    <span class="ml-2 rounded bg-festou-magenta/10 px-2 py-0.5 text-xs text-festou-primary">{{ item.categoria }}</span>
                   </div>
                   <div class="text-slate-700">
                     {{ formatPrice(item.subtotal) }}
@@ -242,18 +242,18 @@ onMounted(loadOrders)
             </div>
 
             <!-- Observação do cliente -->
-            <div v-if="order.observacao" class="mt-4 rounded-md bg-orange-50/70 p-3 text-sm text-slate-700">
+            <div v-if="order.observacao" class="mt-4 rounded-md bg-festou-soft p-3 text-sm text-slate-700">
               <span class="font-bold">Observação do cliente:</span> {{ order.observacao }}
             </div>
 
             <!-- Ações do Fornecedor -->
-            <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-orange-100 pt-4">
+            <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
               <div class="flex flex-wrap items-center gap-3">
                 <template v-if="order.status === 'solicitado'">
                   <button
                     type="button"
                     :disabled="updatingOrderId === order.id"
-                    class="rounded-md bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                    class="rounded-full bg-festou-secondary px-3.5 py-2 text-xs font-bold text-white shadow-festive-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'em_negociacao')"
                   >
                     Iniciar negociação
@@ -261,7 +261,7 @@ onMounted(loadOrders)
                   <button
                     type="button"
                     :disabled="updatingOrderId === order.id"
-                    class="rounded-md bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    class="rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'confirmado')"
                   >
                     Confirmar pedido
@@ -269,7 +269,7 @@ onMounted(loadOrders)
                   <button
                     type="button"
                     :disabled="updatingOrderId === order.id"
-                    class="rounded-md border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                    class="rounded-full border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 transition-all duration-300 hover:bg-rose-50 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'recusado')"
                   >
                     Recusar
@@ -280,7 +280,7 @@ onMounted(loadOrders)
                   <button
                     type="button"
                     :disabled="updatingOrderId === order.id"
-                    class="rounded-md bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    class="rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'confirmado')"
                   >
                     Confirmar pedido
@@ -288,7 +288,7 @@ onMounted(loadOrders)
                   <button
                     type="button"
                     :disabled="updatingOrderId === order.id"
-                    class="rounded-md border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                    class="rounded-full border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 transition-all duration-300 hover:bg-rose-50 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'recusado')"
                   >
                     Recusar
@@ -298,7 +298,7 @@ onMounted(loadOrders)
                 <span v-else-if="order.status === 'confirmado'" class="text-xs font-semibold text-emerald-800">
                   ✓ Pedido confirmado! Entre em contato com o cliente para combinar entrega/detalhes.
                 </span>
-                <span v-else-if="order.status === 'concluido'" class="text-xs font-semibold text-teal-800">
+                <span v-else-if="order.status === 'concluido'" class="text-xs font-semibold text-festou-turquoise">
                   ✓ Pedido finalizado e concluído pelo cliente.
                 </span>
                 <span v-else-if="order.status === 'recusado'" class="text-xs text-rose-700">
@@ -332,12 +332,12 @@ onMounted(loadOrders)
             Tentar novamente
           </button>
         </div>
-        <div v-else-if="!products.length" class="rounded-lg border border-dashed border-orange-200 bg-white/60 px-6 py-12 text-center">
+        <div v-else-if="!products.length" class="rounded-2xl border border-dashed border-festou-secondary/30 bg-festou-secondary/5 px-6 py-12 text-center">
           <p class="text-lg font-bold">Nenhum produto anunciado</p>
           <p class="mt-1 text-sm text-slate-600">Comece anunciando seus bolos, doces, brinquedos ou convites na vitrine.</p>
           <RouterLink
             to="/fornecedor/produtos/novo"
-            class="mt-4 inline-flex items-center rounded-md bg-festou-primary px-4 py-2 text-sm font-bold text-white shadow-festive hover:bg-rose-600"
+            class="btn-festou-primary mt-5 text-sm"
           >
             Cadastrar primeiro produto
           </RouterLink>
@@ -346,17 +346,17 @@ onMounted(loadOrders)
           <article
             v-for="product in products"
             :key="product.id"
-            class="flex flex-col justify-between overflow-hidden rounded-lg border border-orange-200 bg-white shadow-sm transition hover:shadow-md"
+            class="festou-card-gradient flex flex-col justify-between overflow-hidden"
           >
             <div>
-              <div class="relative h-44 w-full bg-orange-100">
+              <div class="relative h-44 w-full bg-festou-soft">
                 <img
                   v-if="product.imagem_url"
                   :src="product.imagem_url"
                   :alt="product.nome"
                   class="h-full w-full object-cover"
                 />
-                <div v-else class="grid h-full w-full place-items-center text-3xl font-extrabold text-festou-primary">
+                <div v-else class="grid h-full w-full place-items-center bg-gradient-to-br from-festou-magenta/20 to-festou-secondary/10 text-3xl font-extrabold text-festou-primary">
                   {{ product.nome.slice(0, 2).toUpperCase() }}
                 </div>
                 <span
@@ -367,21 +367,21 @@ onMounted(loadOrders)
                 </span>
               </div>
               <div class="p-5">
-                <span class="rounded bg-orange-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-orange-800">
+                <span class="rounded bg-festou-magenta/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-festou-primary">
                   {{ product.categoria }}
                 </span>
-                <h3 class="mt-2 text-lg font-bold text-slate-900">{{ product.nome }}</h3>
+                <h3 class="mt-2 font-display text-lg font-bold text-slate-900">{{ product.nome }}</h3>
                 <p class="mt-1 line-clamp-2 text-sm text-slate-600">{{ product.descricao }}</p>
-                <p class="mt-3 text-lg font-extrabold text-festou-primary">{{ formatPrice(product.preco) }}</p>
+                <p class="mt-3 font-display text-lg font-extrabold text-festou-primary">{{ formatPrice(product.preco) }}</p>
                 <p v-if="product.cidade" class="mt-1 text-xs text-slate-500">📍 {{ product.cidade }}</p>
               </div>
             </div>
 
-            <div class="border-t border-orange-100 bg-orange-50/40 p-4">
+            <div class="border-t border-slate-100 bg-festou-soft/70 p-4">
               <button
                 type="button"
                 :disabled="togglingProductId === product.id"
-                class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                class="w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-festou-magenta/50 hover:text-festou-primary disabled:opacity-50"
                 @click="toggleProductActive(product)"
               >
                 {{ togglingProductId === product.id ? 'Atualizando...' : (product.ativo ? 'Pausar anúncio' : 'Reativar na vitrine') }}

@@ -27,16 +27,30 @@ O desenvolvimento inicia o frontend Vite e a API Express em conjunto. O Vite enc
 
 O pacote de identidade visual da marca — paleta, tipografia, uso de grafismos e tom de voz — está documentado em [docs/IDENTIDADE-VISUAL.md](./docs/IDENTIDADE-VISUAL.md). Os tokens estão em `tailwind.config.js`; o padrão de confetes, o favicon e a arte principal ficam em `public/`.
 
+## Identidade visual
+
+A direção vigente é a **noite festiva**: hero em gradiente `#4F46E5 → #8B5CF6 → #FF5E62`, cards claros com borda em gradiente, header fixo em glassmorphism e rodapé noturno com confetes.
+
+- Paleta oficial e regras de contraste: [docs/IDENTIDADE-VISUAL.md](./docs/IDENTIDADE-VISUAL.md).
+- Tokens de cor, gradientes, sombras e animações: `tailwind.config.js`.
+- Primitivas visuais (wordmark, botões, cards, vidro, campo de confetes): `src/style.css`.
+- Camada de estrelas, confetes e balões: `src/components/FestouDecor.vue`.
+- Rodapé global: `src/components/AppFooter.vue`.
+
+As cores puras da marca não passam em contraste AA sobre fundo claro, por isso o Tailwind expõe variantes profundas (`festou-primary`, `festou-accent`, `festou-turquoise`) para texto e botões. Animações são desligadas em `prefers-reduced-motion: reduce`.
+
 ## Testes
 
 ```bash
 npm test            # suíte completa (unitários + integração da API)
 npm run test:unit   # apenas as libs do frontend
 npm run test:api    # apenas os endpoints, com supertest
-npm run smoke       # fluxo real ponta a ponta, com o servidor em execução
+npm run smoke       # fluxo real ponta a ponta, com servidor próprio
 ```
 
 Os testes de integração usam o mesmo banco Neon do `.env`, criam contas com e-mail `teste.*@festou.test` e removem os dados ao final de cada arquivo. O `npm run smoke` cria contas `smoke.*@festou.test` e também limpa tudo ao terminar.
+
+O smoke sobe o próprio servidor na porta `3100`, com os limitadores de requisição elevados, e o encerra ao final. Para apontá-lo para outro alvo, defina `SMOKE_PORT` (porta do servidor próprio) ou `SMOKE_BASE_URL` (URL de um servidor já em execução, por exemplo `http://127.0.0.1:3000`); `SMOKE_ORIGIN` ajusta a origem enviada nas requisições.
 
 ## Autenticação e dados
 

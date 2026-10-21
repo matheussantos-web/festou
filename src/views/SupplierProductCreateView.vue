@@ -50,7 +50,7 @@ async function createProduct() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen bg-festou-soft text-slate-900">
 
     <main id="conteudo-principal" class="mx-auto max-w-3xl px-5 py-10 sm:px-8">
       <div class="flex items-center justify-between text-xs font-semibold">
@@ -62,9 +62,9 @@ async function createProduct() {
         </RouterLink>
       </div>
 
-      <div class="festou-surface mt-6 p-6 sm:p-10">
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-festou-purple">
-          <span>💼</span> Catálogo do Fornecedor
+      <div class="festou-card-gradient mt-6 p-6 sm:p-10">
+        <span class="festou-badge bg-festou-secondary/12 text-festou-secondary">
+          <span aria-hidden="true">💼</span> Catálogo do Fornecedor
         </span>
         <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight">
           Anunciar Produto ou Serviço
@@ -192,7 +192,7 @@ async function createProduct() {
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="btn-festou-primary w-full text-sm font-bold shadow-festive"
+            class="btn-festou-primary w-full text-sm font-bold"
           >
             {{ isSubmitting ? 'Publicando produto...' : 'Publicar na vitrine' }}
           </button>

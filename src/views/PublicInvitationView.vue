@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import FestouDecor from '../components/FestouDecor.vue'
 import { api } from '../lib/api'
 import { formatDate } from '../lib/format'
 
@@ -22,7 +23,7 @@ const form = reactive({
 
 const rsvpOptions = [
   { value: 'confirmado', label: '✓ Vou com certeza', color: 'peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600' },
-  { value: 'talvez', label: '? Talvez', color: 'peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500' },
+  { value: 'talvez', label: '? Talvez', color: 'peer-checked:bg-festou-yellow peer-checked:text-festou-midnight peer-checked:border-festou-yellow' },
   { value: 'recusado', label: '✕ Não poderei ir', color: 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600' },
 ]
 
@@ -30,20 +31,23 @@ const themeStyles = {
   jardim: {
     bg: 'bg-gradient-to-b from-emerald-50 via-teal-50/40 to-slate-100 text-slate-900',
     card: 'border-emerald-200/80 bg-white/90 shadow-xl',
-    accent: 'text-emerald-800',
-    tag: 'bg-emerald-100 text-emerald-800',
+    accent: 'text-festou-primary',
+    tag: 'bg-festou-magenta/12 text-festou-primary',
+    decorated: false,
   },
   colorido: {
-    bg: 'bg-gradient-to-br from-indigo-950 via-purple-900 to-rose-950 text-white',
-    card: 'border-white/20 bg-white/10 text-white shadow-2xl backdrop-blur-md',
-    accent: 'text-pink-300',
-    tag: 'bg-pink-500/20 text-pink-200 border border-pink-400/30',
+    bg: 'bg-festou-night text-white',
+    card: 'border-white/25 bg-white/10 text-white shadow-2xl backdrop-blur-md',
+    accent: 'text-festou-yellow',
+    tag: 'border border-white/30 bg-white/20 text-white',
+    decorated: true,
   },
   'ceu-estrelado': {
-    bg: 'bg-gradient-to-b from-slate-950 via-[#1A134D] to-indigo-950 text-white',
-    card: 'border-indigo-400/20 bg-indigo-950/40 text-white shadow-2xl backdrop-blur-md',
-    accent: 'text-cyan-300',
-    tag: 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30',
+    bg: 'bg-festou-dusk text-white',
+    card: 'border-festou-cyan/25 bg-white/10 text-white shadow-2xl backdrop-blur-md',
+    accent: 'text-festou-yellow',
+    tag: 'border border-festou-cyan/30 bg-festou-cyan/20 text-festou-cyan',
+    decorated: true,
   },
 }
 
@@ -102,15 +106,21 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
 </script>
 
 <template>
-  <main class="min-h-screen px-4 py-8 sm:px-8 sm:py-14 transition-colors duration-500" :class="currentTheme.bg">
+  <main class="relative min-h-screen overflow-hidden px-4 py-8 transition-colors duration-500 sm:px-8 sm:py-14" :class="currentTheme.bg">
+    <!-- Decoração festiva dos temas noturnos -->
+    <template v-if="currentTheme.decorated">
+      <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
+      <FestouDecor />
+    </template>
+
     <!-- Carregando -->
-    <div v-if="isLoading" role="status" class="mx-auto max-w-2xl py-24 text-center">
+    <div v-if="isLoading" role="status" class="relative z-10 mx-auto max-w-2xl py-24 text-center">
       <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-current border-t-transparent"></div>
       <p class="mt-4 text-sm font-semibold">Carregando convite...</p>
     </div>
 
     <!-- Convite Não Encontrado -->
-    <section v-else-if="errorMessage && !invitation" class="festou-surface mx-auto max-w-md p-8 text-center text-slate-800 shadow-xl">
+    <section v-else-if="errorMessage && !invitation" class="festou-card-gradient relative z-10 mx-auto max-w-md p-8 text-center text-slate-800 shadow-xl">
       <span class="text-4xl">🔍</span>
       <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Convite não encontrado</h1>
       <p class="mt-2 text-sm text-slate-600">{{ errorMessage }}</p>
@@ -120,7 +130,7 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
     </section>
 
     <!-- Convite Carregado -->
-    <div v-else-if="invitation" class="mx-auto max-w-2xl">
+    <div v-else-if="invitation" class="relative z-10 mx-auto max-w-2xl">
       <!-- Topo -->
       <header class="flex items-center justify-between pb-6">
         <RouterLink to="/" class="font-heading text-xl font-extrabold tracking-tight">
@@ -184,7 +194,7 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
       </article>
 
       <!-- Seção do Formulário RSVP -->
-      <section class="festou-surface mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
+      <section class="festou-card-gradient mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
         <div class="text-center">
           <h2 class="font-heading text-2xl font-bold text-festou-midnight">Confirmação de Presença</h2>
           <p class="mt-1 text-xs text-slate-500">

@@ -5,12 +5,18 @@
 @tailwind utilities;
 
 :root {
+  /* Rosa Magenta */
+  --festou-magenta: #ff5e62;
+  --festou-magenta-deep: #e11d48;
+  /* Roxo Profundo / Noite Festiva */
+  --festou-night: #4f46e5;
   --festou-midnight: #1a134d;
-  --festou-magenta: #ff2d98;
-  --festou-purple: #7b12a2;
-  --festou-turquoise: #00c2d1;
-  --festou-yellow: #ffd938;
-  --festou-orange: #ff6b00;
+  /* Amarelo Ouro */
+  --festou-gold: #f59e0b;
+  --festou-gold-deep: #b45309;
+  /* Azul Turquesa */
+  --festou-cyan: #06b6d4;
+  --festou-cyan-deep: #0e7490;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #1e293b;
   background-color: #f8fafc;
@@ -20,129 +26,231 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  min-width: 320px;
-  min-height: 100vh;
-  margin: 0;
-  background-color: #f8fafc;
-  color: #1e293b;
+@layer base {
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f8fafc;
+    color: #1e293b;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-heading {
+    font-family: 'Baloo 2', 'Poppins', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
+    font-family: 'Poppins', 'Baloo 2', 'Inter', sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  input:not([type='radio']):not([type='checkbox']),
+  select,
+  textarea {
+    border-radius: 0.75rem;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #0f172a;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input:not([type='radio']):not([type='checkbox']):focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--festou-magenta);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 94, 98, 0.18);
+  }
+
+  ::selection {
+    color: #ffffff;
+    background-color: var(--festou-magenta-deep);
+  }
 }
 
-h1,
-h2,
-h3,
-h4,
-.font-heading {
-  font-family: 'Baloo 2', 'Poppins', 'Inter', sans-serif;
-  letter-spacing: -0.02em;
+@layer components {
+  /* Wordmark principal da marca Festou! */
+  .festou-wordmark {
+    font-family: 'Baloo 2', 'Poppins', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(120deg, #ff5e62 0%, #8b5cf6 55%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .festou-wordmark span {
+    color: var(--festou-gold);
+  }
+
+  /* Superfície padrão elevada e limpa */
+  .festou-surface {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 30px -10px rgba(26, 19, 77, 0.1);
+  }
+
+  /* Card refinado com hover */
+  .festou-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    box-shadow: 0 6px 24px -6px rgba(26, 19, 77, 0.08);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .festou-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(26, 19, 77, 0.18);
+    border-color: #fecdd3;
+  }
+
+  /* Card com borda em gradiente da marca */
+  .festou-card-gradient {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #ff5e62 0%, #8b5cf6 50%, #06b6d4 100%) border-box;
+    border: 1.5px solid transparent;
+    border-radius: 1.25rem;
+    box-shadow: 0 12px 32px -12px rgba(26, 19, 77, 0.16);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .festou-card-gradient:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 46px -14px rgba(124, 58, 237, 0.3);
+  }
+
+  /* Superfície de vidro (glassmorphism) sobre fundos coloridos */
+  .festou-glass {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 1.5rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .festou-glass-light {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 1.25rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 18px 40px -16px rgba(26, 19, 77, 0.25);
+  }
+
+  /* Botão principal festivo */
+  .btn-festou-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--festou-magenta-deep);
+    color: #ffffff;
+    font-weight: 700;
+    padding: 0.75rem 1.75rem;
+    box-shadow: 0 12px 28px -8px rgba(225, 29, 72, 0.5);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-festou-primary:hover {
+    background-color: #be123c;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 18px 36px -8px rgba(225, 29, 72, 0.6);
+  }
+
+  .btn-festou-primary:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .btn-festou-primary:focus-visible {
+    outline: 3px solid rgba(6, 182, 212, 0.65);
+    outline-offset: 2px;
+  }
+
+  .btn-festou-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 10px 25px -8px rgba(225, 29, 72, 0.4);
+  }
+
+  /* Botão secundário */
+  .btn-festou-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 2px solid rgba(79, 70, 229, 0.25);
+    background-color: #ffffff;
+    color: var(--festou-night);
+    font-weight: 700;
+    padding: 0.65rem 1.5rem;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-festou-secondary:hover {
+    border-color: var(--festou-night);
+    background-color: #eef2ff;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 28px -12px rgba(79, 70, 229, 0.4);
+  }
+
+  .btn-festou-secondary:focus-visible {
+    outline: 3px solid rgba(6, 182, 212, 0.65);
+    outline-offset: 2px;
+  }
+
+  /* Etiqueta festiva com fundo colorido */
+  .festou-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
 }
 
-/* Wordmark principal da marca Festou! */
-.festou-wordmark {
-  font-family: 'Baloo 2', 'Poppins', sans-serif;
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--festou-magenta);
+@layer utilities {
+  /* Fundo de confetes e estrelas da marca */
+  .festou-confetti-field {
+    background-image: url('/festou-confetti.svg');
+    background-repeat: repeat;
+    background-size: 240px 240px;
+  }
+
+  .transition-festive {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
 
-.festou-wordmark span {
-  color: var(--festou-yellow);
-}
+@media (prefers-reduced-motion: reduce) {
+  .festou-card,
+  .festou-card-gradient,
+  .btn-festou-primary,
+  .btn-festou-secondary,
+  .transition-festive {
+    transition-duration: 0.01ms;
+  }
 
-/* Superfície padrão elevada e limpa */
-.festou-surface {
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
-  border-radius: 1.25rem;
-  box-shadow: 0 10px 30px -10px rgba(26, 19, 77, 0.08);
-}
-
-/* Card refinado com hover */
-.festou-card {
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
-  border-radius: 1rem;
-  box-shadow: 0 4px 20px -2px rgba(26, 19, 77, 0.06);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.festou-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 32px -4px rgba(26, 19, 77, 0.12);
-  border-color: #fed7aa;
-}
-
-/* Botão principal festivo */
-.btn-festou-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background-color: var(--festou-magenta);
-  color: #ffffff;
-  font-weight: 700;
-  padding: 0.75rem 1.75rem;
-  box-shadow: 0 10px 25px -8px rgba(255, 45, 152, 0.45);
-  transition: all 0.2s ease;
-}
-
-.btn-festou-primary:hover {
-  background-color: #e30c7e;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px -6px rgba(255, 45, 152, 0.55);
-}
-
-.btn-festou-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Botão secundário */
-.btn-festou-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 2px solid rgba(123, 18, 162, 0.2);
-  background-color: #ffffff;
-  color: var(--festou-purple);
-  font-weight: 700;
-  padding: 0.65rem 1.5rem;
-  transition: all 0.2s ease;
-}
-
-.btn-festou-secondary:hover {
-  border-color: var(--festou-purple);
-  background-color: #faf5ff;
-}
-
-/* Campos de formulário padronizados */
-input:not([type='radio']):not([type='checkbox']),
-select,
-textarea {
-  border-radius: 0.625rem;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  color: #0f172a;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-input:not([type='radio']):not([type='checkbox']):focus,
-select:focus,
-textarea:focus {
-  border-color: var(--festou-magenta);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 45, 152, 0.15);
-}
-
-::selection {
-  color: #ffffff;
-  background-color: var(--festou-magenta);
-}
-
-/* Animações e transições suaves */
-.transition-festive {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  .animate-festou-float,
+  .animate-festou-drift,
+  .animate-festou-twinkle {
+    animation: none;
+  }
 }

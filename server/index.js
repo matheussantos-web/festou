@@ -27,7 +27,24 @@ const port = Number(process.env.PORT) || 3000
 const appOrigin = process.env.APP_ORIGIN || 'http://127.0.0.1:5173'
 
 app.disable('x-powered-by')
-app.use(helmet())
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // Permite imagens de produtos hospedadas em domínios externos (imagem_url)
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }),
+)
 app.use(express.json({ limit: '16kb' }))
 app.use(cookieParser())
 

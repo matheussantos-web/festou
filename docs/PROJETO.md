@@ -65,7 +65,7 @@ src/
     orderStatus.js     Rótulos e cores de status de pedido
   router/              Rotas e proteção de páginas
   views/               Páginas Vue
-  components/          Componentes compartilhados (AppHeader)
+  components/          Componentes compartilhados (AppHeader, AppFooter, FestouDecor)
   style.css            Tailwind e regras globais da identidade
 server/
   db.js                Conexão Neon
@@ -100,7 +100,13 @@ O schema versionado está em [`../server/schema.sql`](../server/schema.sql). Par
 
 ## Identidade visual
 
-A marca combina fundo marinho, magenta vibrante, roxo, turquesa, amarelo e laranja, com Baloo 2 em títulos, Inter em textos e grafismos de festa. O guia com códigos de cor e orientações de aplicação está em [`IDENTIDADE-VISUAL.md`](./IDENTIDADE-VISUAL.md).
+A direção vigente é a **noite festiva**: hero em gradiente `#4F46E5 → #8B5CF6 → #FF5E62`, surfaces claras com borda em gradiente, header fixo em glassmorphism, rodapé noturno e camadas de confetes/estrelas.
+
+- Paleta oficial: rosa magenta `#FF5E62`, roxo profundo `#4F46E5`, amarelo ouro `#F59E0B` e azul turquesa `#06B6D4`.
+- Por contraste AA, o Tailwind expõe variantes profundas (`#E11D48`, `#B45309`, `#0E7490`) para texto e botões sobre fundo claro.
+- Tipografia: Baloo 2 (`font-heading`), Poppins (`font-display`) e Inter (`font-sans`).
+- Tokens, gradientes, sombras e animações ficam em `tailwind.config.js`; as primitivas visuais em `src/style.css`.
+- O guia completo com códigos de cor e orientações de aplicação está em [`IDENTIDADE-VISUAL.md`](./IDENTIDADE-VISUAL.md).
 
 ## Configuração e comandos
 
@@ -177,7 +183,9 @@ A suíte usa Vitest 5 e roda contra o mesmo banco Neon configurado em `.env`. Os
 
 Variáveis usadas nos testes: `AUTH_RATE_LIMIT` e `RSVP_RATE_LIMIT` são elevadas para 1000 em `tests/setup.js`, para que a suíte não seja bloqueada pelo limitador de requisições.
 
-Além da suíte automatizada, `scripts/smoke.mjs` (`npm run smoke`) percorre o fluxo real contra um servidor já em execução: cadastro de fornecedor e cliente, publicação de produto, consulta da vitrine, criação de pedido, negociação de status pelo fornecedor, criação de convite, RSVP com atualização pelo mesmo e-mail, checagem de autorização, rotas do SPA e limpeza dos dados criados.
+Além da suíte automatizada, `scripts/smoke.mjs` (`npm run smoke`) percorre o fluxo real ponta a ponta: cadastro de fornecedor e cliente, publicação de produto, consulta da vitrine, criação de pedido, negociação de status pelo fornecedor, criação de convite, RSVP com atualização pelo mesmo e-mail, checagem de autorização, rotas do SPA e limpeza dos dados criados.
+
+O smoke sobe o próprio servidor na porta `3100` (configurável em `SMOKE_PORT`), com `AUTH_RATE_LIMIT` e `RSVP_RATE_LIMIT` elevados, e encerra o processo ao final — inclusive em `Ctrl+C`. Para rodar contra um servidor já em execução, defina `SMOKE_BASE_URL` (por exemplo `http://127.0.0.1:3000`); `SMOKE_ORIGIN` ajusta a origem enviada nas requisições.
 
 ## Validação da auditoria de dependências
 
@@ -198,11 +206,20 @@ Em 21/10/2026 o `npm audit` apontava 10 vulnerabilidades (3 moderate, 5 high, 2 
 
 Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de item na criação de pedido (quebravam a tela do carrinho), `aceita_rsvp` na criação de convite, agregados de confirmação convertidos para número, limites de requisição configuráveis por ambiente, duplicação de requisição na vitrine, `APP_ORIGIN` deixado de ser fixo no código, aceitação de requisições de mesma origem (a validação anterior bloqueava toda a aplicação quando o Express servia o SPA), 404 de API em JSON e cabeçalho global com navegação acessível.
 
+## Validação executada na etapa de identidade visual
+
+- `npm run build` concluído com sucesso (40 módulos) e classes conferidas no CSS gerado.
+- `npm test` com 50 testes aprovados em 7 arquivos (inclui regressão do CSP para imagens externas).
+- `npm run smoke` com 27 verificações aprovadas no fluxo ponta a ponta.
+- Hero, vitrine, carrinho, convites, painel do fornecedor, telas de acesso e 404 migrados para a noite festiva.
+- Rodapé global criado (`AppFooter.vue`) e header convertido para fixo com glassmorphism.
+- `img-src` do CSP ampliado para `https:` — as fotos de produto hospedadas fora do domínio leave de ser bloqueadas pelo navegador.
+
 ## Próximos passos
 
 Não há um roadmap fechado neste documento. Ao priorizar a continuação, considerar:
 
-- concluir a revisão visual responsiva e de acessibilidade em todas as rotas;
+- revisar a interface responsiva em telas pequenas e a camada de decoração nos convites públicos;
 - avaliar migração do Tailwind 3 para 4 quando houver folga, para sair do `braces` flagrado no `npm audit`;
 - definir as regras de negócio pendentes para edição/encerramento de convites e acompanhamento dos pedidos;
 - planejar deploy, observabilidade, backups e configuração de produção.

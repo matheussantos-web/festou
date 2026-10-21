@@ -140,13 +140,13 @@ onMounted(loadInvitations)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen bg-festou-soft text-slate-900">
 
     <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
       <!-- Cabeçalho -->
       <div class="border-b border-slate-200/80 pb-6">
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1 text-xs font-bold text-festou-primary">
-          <span>💌</span> Convites Interativos
+        <span class="festou-badge bg-festou-magenta/12 text-festou-primary">
+          <span aria-hidden="true">💌</span> Convites Interativos
         </span>
         <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
           Meus Convites Digitais & RSVP
@@ -165,7 +165,7 @@ onMounted(loadInvitations)
 
       <div class="mt-8 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <!-- Formulário de Criação -->
-        <section class="festou-surface p-6 sm:p-8">
+        <section class="festou-card-gradient p-6 sm:p-8">
           <h2 class="font-heading text-2xl font-bold text-festou-midnight">Criar Novo Convite</h2>
           <p class="mt-1 text-xs text-slate-500">Preencha as informações da celebração para gerar a página pública.</p>
 
@@ -288,7 +288,7 @@ onMounted(loadInvitations)
             Carregando seus convites...
           </div>
 
-          <div v-else-if="!invitations.length" class="festou-surface mt-6 p-8 text-center text-slate-600">
+          <div v-else-if="!invitations.length" class="festou-card mt-6 p-8 text-center text-slate-600">
             <span class="text-3xl">💌</span>
             <p class="mt-2 text-sm font-semibold">Você ainda não criou convites.</p>
             <p class="text-xs text-slate-500">Preencha o formulário ao lado para gerar o seu primeiro convite digital.</p>
@@ -298,7 +298,7 @@ onMounted(loadInvitations)
             <article
               v-for="invitation in invitations"
               :key="invitation.id"
-              class="festou-surface p-5 transition-all hover:shadow-md"
+              class="festou-card p-5"
             >
               <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
@@ -345,7 +345,7 @@ onMounted(loadInvitations)
                   <RouterLink
                     :to="`/convite/${invitation.slug}`"
                     target="_blank"
-                    class="rounded-lg bg-pink-50 px-2.5 py-1 text-xs font-bold text-festou-primary transition hover:bg-pink-100"
+                    class="rounded-lg bg-festou-magenta/12 px-2.5 py-1 text-xs font-bold text-festou-primary transition hover:bg-festou-magenta/20"
                   >
                     Abrir ↗
                   </RouterLink>

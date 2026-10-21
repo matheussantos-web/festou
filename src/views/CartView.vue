@@ -85,7 +85,7 @@ onMounted(loadOrders)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen bg-festou-soft text-slate-900">
 
     <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
       <!-- Cabeçalho da página -->
@@ -113,7 +113,7 @@ onMounted(loadOrders)
             <article
               v-for="item in cartItems"
               :key="item.id"
-              class="festou-card flex flex-wrap items-center justify-between gap-4 p-5"
+              class="festou-card-gradient flex flex-wrap items-center justify-between gap-4 p-5"
             >
               <div class="flex items-center gap-4">
                 <img
@@ -122,7 +122,7 @@ onMounted(loadOrders)
                   :alt="item.nome"
                   class="h-20 w-20 rounded-xl object-cover"
                 />
-                <div v-else class="grid h-20 w-20 place-items-center rounded-xl bg-orange-100 text-2xl font-bold text-festou-primary">
+                <div v-else class="grid h-20 w-20 place-items-center rounded-xl bg-gradient-to-br from-festou-magenta/20 to-festou-secondary/10 text-2xl font-bold text-festou-primary">
                   {{ item.nome.slice(0, 2).toUpperCase() }}
                 </div>
                 <div>
@@ -176,7 +176,7 @@ onMounted(loadOrders)
           </div>
 
           <!-- Carrinho Vazio -->
-          <div v-else class="festou-surface p-12 text-center">
+          <div v-else class="festou-card-gradient p-12 text-center">
             <span class="text-4xl">🛒</span>
             <h2 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Seu carrinho está vazio</h2>
             <p class="mt-2 text-sm text-slate-600">
@@ -190,7 +190,7 @@ onMounted(loadOrders)
 
         <!-- Resumo Lateral -->
         <aside v-if="cartItems.length" class="h-fit">
-          <div class="festou-surface sticky top-24 p-6">
+          <div class="festou-card-gradient sticky top-28 p-6">
             <h2 class="font-heading text-xl font-bold text-festou-midnight">Resumo do Orçamento</h2>
             <div class="mt-4 space-y-2.5 border-b border-slate-100 pb-4 text-sm text-slate-600">
               <div class="flex justify-between">
@@ -300,7 +300,7 @@ onMounted(loadOrders)
                   v-else-if="order.status === 'confirmado'"
                   type="button"
                   :disabled="updatingOrderId === order.id"
-                  class="rounded-full bg-teal-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50"
+                  class="rounded-full bg-festou-turquoise px-4 py-1.5 text-xs font-bold text-white shadow-festive-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-800 disabled:opacity-50"
                   @click="updateOrderStatus(order, 'concluido')"
                 >
                   {{ updatingOrderId === order.id ? 'Atualizando...' : '✓ Marcar como concluído' }}

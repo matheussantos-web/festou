@@ -40,14 +40,17 @@ async function signUp() {
 </script>
 
 <template>
-  <div class="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-orange-50/70 via-white to-slate-100 px-5 py-12 text-slate-900">
-    <div class="pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-festou-primary/10 blur-3xl"></div>
-    <div class="pointer-events-none absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-festou-turquoise/15 blur-3xl"></div>
+  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-festou-night px-5 py-12 text-slate-900">
+    <!-- Noite festiva com confetes -->
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-midnight/70 via-festou-midnight/25 to-festou-midnight/35"></div>
+    <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
+    <div class="pointer-events-none absolute -left-20 top-10 h-72 w-72 animate-festou-float rounded-full bg-festou-magenta/30 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 animate-festou-float rounded-full bg-festou-cyan/25 blur-3xl [animation-delay:1.5s]"></div>
 
-    <section class="festou-surface relative w-full max-w-lg p-8 sm:p-10">
+    <section class="festou-glass-light relative w-full max-w-lg p-8 sm:p-10">
       <div class="text-center">
-        <RouterLink to="/" class="inline-flex items-center gap-1 font-heading text-3xl font-extrabold tracking-tight text-festou-midnight">
-          <span class="text-festou-primary">Festou</span><span class="text-festou-yellow">!</span>
+        <RouterLink to="/" class="festou-wordmark inline-flex items-center gap-0.5 text-3xl">
+          <span>Festou<span>!</span></span>
         </RouterLink>
         <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">
           Crie sua conta no Festou!
@@ -71,8 +74,8 @@ async function signUp() {
             <button
               type="button"
               :aria-pressed="profileType === 'cliente'"
-              class="flex flex-col items-center justify-center rounded-xl border p-4 text-center transition"
-              :class="profileType === 'cliente' ? 'border-festou-primary bg-pink-50/60 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'"
+              class="flex flex-col items-center justify-center rounded-2xl border p-4 text-center transition-all duration-300"
+              :class="profileType === 'cliente' ? 'border-festou-magenta bg-festou-magenta/10 shadow-festive-soft' : 'border-slate-200 bg-white hover:border-festou-magenta/40 hover:bg-festou-soft'"
               @click="profileType = 'cliente'"
             >
               <span class="text-2xl" aria-hidden="true">🎉</span>
@@ -85,12 +88,12 @@ async function signUp() {
             <button
               type="button"
               :aria-pressed="profileType === 'fornecedor'"
-              class="flex flex-col items-center justify-center rounded-xl border p-4 text-center transition"
-              :class="profileType === 'fornecedor' ? 'border-festou-purple bg-purple-50/60 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'"
+              class="flex flex-col items-center justify-center rounded-2xl border p-4 text-center transition-all duration-300"
+              :class="profileType === 'fornecedor' ? 'border-festou-secondary bg-festou-secondary/10 shadow-festive-soft' : 'border-slate-200 bg-white hover:border-festou-secondary/40 hover:bg-festou-soft'"
               @click="profileType = 'fornecedor'"
             >
               <span class="text-2xl" aria-hidden="true">🎂</span>
-              <span class="mt-2 text-sm font-bold" :class="profileType === 'fornecedor' ? 'text-festou-purple' : 'text-slate-800'">
+              <span class="mt-2 text-sm font-bold" :class="profileType === 'fornecedor' ? 'text-festou-secondary' : 'text-slate-800'">
                 Sou Fornecedor
               </span>
               <span class="mt-0.5 text-[11px] text-slate-500">Quero vender produtos</span>
@@ -111,7 +114,7 @@ async function signUp() {
             maxlength="100"
             required
             placeholder="Ex: Beatriz Lima ou Doçuras da Bia"
-            class="w-full text-sm"
+            class="w-full px-4 py-3 text-sm"
           />
         </div>
 
@@ -128,7 +131,7 @@ async function signUp() {
             title="Use um e-mail válido, como nome@dominio.com."
             required
             placeholder="seuemail@exemplo.com"
-            class="w-full text-sm"
+            class="w-full px-4 py-3 text-sm"
           />
         </div>
 
@@ -144,7 +147,7 @@ async function signUp() {
             minlength="8"
             required
             placeholder="No mínimo 8 caracteres"
-            class="w-full text-sm"
+            class="w-full px-4 py-3 text-sm"
           />
           <p class="mt-1 text-[11px] text-slate-400">Pelo menos 8 caracteres para sua segurança.</p>
         </div>
@@ -152,13 +155,13 @@ async function signUp() {
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="btn-festou-primary mt-2 w-full text-sm font-bold shadow-festive"
+          class="btn-festou-primary mt-2 w-full text-sm font-bold"
         >
           {{ isSubmitting ? 'Criando sua conta...' : 'Cadastrar no Festou!' }}
         </button>
       </form>
 
-      <div class="mt-8 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
+      <div class="mt-8 border-t border-slate-200/80 pt-6 text-center text-xs text-slate-500">
         Já possui uma conta?
         <RouterLink to="/login" class="ml-1 font-bold text-festou-primary hover:underline">
           Fazer login
