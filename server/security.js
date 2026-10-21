@@ -5,19 +5,77 @@ const scrypt = promisify(scryptCallback)
 export const sessionCookieName = 'festou_session'
 export const sessionDurationMs = 7 * 24 * 60 * 60 * 1000
 
+// Parametros do scrypt fixados no codigo: sem isso o custo depende do padrao do
+// Node e um upgrade silencioso mudaria o tempo de verificacao. O formato do
+// hash guarda os valores usados, entao hashes antigos continuam validos.
+const SCRYPT_PARAMS = Object.freeze({
+  N: 16384,
+  r: 8,
+  p: 1,
+  keylen: 64,
+  maxmem: 64 * 1024 * 1024,
+})
+
+const HASH_PREFIX = 'scrypt'
+
 export async function hashPassword(password) {
   const salt = randomBytes(16).toString('hex')
-  const hash = await scrypt(password, salt, 64)
-  return `${salt}:${hash.toString('hex')}`
+  const { N, r, p, keylen, maxmem } = SCRYPT_PARAMS
+  const hash = await scrypt(password, salt, keylen, { N, r, p, maxmem })
+  return `${HASH_PREFIX}$${N}$${r}$${p}$${salt}$${hash.toString('hex')}`
+}
+
+function parseStoredHash(storedHash) {
+  if (typeof storedHash !== 'string') return null
+
+  if (storedHash.startsWith(`${HASH_PREFIX}$`)) {
+    const [prefix, N, r, p, salt, hash] = storedHash.split('$')
+    if (prefix !== HASH_PREFIX || !N || !r || !p || !salt || !hash) return null
+    return {
+      scheme: HASH_PREFIX,
+      params: { N: Number(N), r: Number(r), p: Number(p) },
+      salt,
+      hash,
+    }
+  }
+
+  // Formato anterior, sem os parametros: salt:hash com o padrao do Node.
+  const [salt, hash] = storedHash.split(':')
+  if (!salt || !hash) return null
+  return { scheme: 'legacy', params: null, salt, hash }
 }
 
 export async function verifyPassword(password, storedHash) {
-  const [salt, expectedHex] = storedHash.split(':')
-  if (!salt || !expectedHex) return false
+  const parsed = parseStoredHash(storedHash)
+  if (!parsed) return false
 
-  const expected = Buffer.from(expectedHex, 'hex')
-  const actual = await scrypt(password, salt, expected.length)
+  const expected = Buffer.from(parsed.hash, 'hex')
+  if (expected.length === 0) return false
+
+  const actual = parsed.params
+    ? await scrypt(password, parsed.salt, expected.length, {
+      N: parsed.params.N,
+      r: parsed.params.r,
+      p: parsed.params.p,
+      maxmem: SCRYPT_PARAMS.maxmem,
+    })
+    : await scrypt(password, parsed.salt, expected.length)
+
   return expected.length === actual.length && timingSafeEqual(expected, actual)
+}
+
+// Hashes antigos ou com parametros diferentes do atual devem ser refeitos no
+// proximo login, sem exigir troca de senha pelo usuario.
+export function passwordNeedsRehash(storedHash) {
+  const parsed = parseStoredHash(storedHash)
+  if (!parsed || parsed.scheme !== HASH_PREFIX) return true
+
+  return (
+    parsed.params.N !== SCRYPT_PARAMS.N
+    || parsed.params.r !== SCRYPT_PARAMS.r
+    || parsed.params.p !== SCRYPT_PARAMS.p
+    || Buffer.from(parsed.hash, 'hex').length !== SCRYPT_PARAMS.keylen
+  )
 }
 
 // Hash ficticio usado quando o e-mail informado nao existe na base. Sem essa

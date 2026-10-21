@@ -10,6 +10,10 @@ export const supplierProductsRouter = Router()
 
 const productIdSchema = z.string().uuid('Identificador do produto inválido.')
 
+const toggleActiveSchema = z.object({
+  ativo: z.boolean().optional(),
+})
+
 function requireFornecedor(request, response, mensagem) {
   if (request.user.tipo_perfil !== 'fornecedor') {
     response.status(403).json({ message: mensagem })
@@ -91,14 +95,24 @@ supplierProductsRouter.patch('/:id/toggle-active', requireUser, async (request, 
     if (!requireFornecedor(request, response, 'Apenas fornecedores podem alterar produtos.')) return
 
     const productId = productIdSchema.parse(request.params.id)
+    // Aceita "ativo" explicito para a operacao ser idempotente; sem o campo,
+    // alterna o estado atual.
+    const input = toggleActiveSchema.parse(request.body ?? {})
     const sql = getDatabase()
 
-    const [product] = await sql`
-      update public.produtos
-      set ativo = not ativo
-      where id = ${productId} and fornecedor_id = ${request.user.id}
-      returning id, nome, ativo
-    `
+    const [product] = input.ativo === undefined
+      ? await sql`
+        update public.produtos
+        set ativo = not ativo
+        where id = ${productId} and fornecedor_id = ${request.user.id}
+        returning id, nome, ativo
+      `
+      : await sql`
+        update public.produtos
+        set ativo = ${input.ativo}
+        where id = ${productId} and fornecedor_id = ${request.user.id}
+        returning id, nome, ativo
+      `
 
     if (!product) {
       return response.status(404).json({ message: 'Produto não encontrado ou permissão negada.' })

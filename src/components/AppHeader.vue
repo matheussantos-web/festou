@@ -3,9 +3,10 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { cartCount } from '../lib/cart'
+import { clearSession, loadSession, useSession } from '../lib/session'
 
 const router = useRouter()
-const currentUser = ref(null)
+const { user: currentUser } = useSession()
 const isMobileMenuOpen = ref(false)
 
 const firstName = computed(() => String(currentUser.value?.nome ?? '').split(' ')[0])
@@ -14,20 +15,11 @@ const menuButtonLabel = computed(() => (
   isMobileMenuOpen.value ? 'Fechar menu' : 'Abrir menu'
 ))
 
-async function checkUser() {
-  try {
-    const { user } = await api('/auth/me')
-    currentUser.value = user
-  } catch {
-    currentUser.value = null
-  }
-}
-
 async function handleLogout() {
   try {
     await api('/auth/logout', { method: 'POST' })
   } finally {
-    currentUser.value = null
+    clearSession()
     isMobileMenuOpen.value = false
     await router.push('/')
   }
@@ -44,7 +36,7 @@ function handleKeydown(event) {
 watch(() => router.currentRoute.value.fullPath, closeMobileMenu)
 
 onMounted(() => {
-  checkUser()
+  loadSession()
   window.addEventListener('keydown', handleKeydown)
 })
 

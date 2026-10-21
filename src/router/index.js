@@ -10,15 +10,10 @@ import SupplierDashboardView from '../views/SupplierDashboardView.vue'
 import CartView from '../views/CartView.vue'
 import InvitationsView from '../views/InvitationsView.vue'
 import PublicInvitationView from '../views/PublicInvitationView.vue'
-import { api } from '../lib/api'
+import { loadSession } from '../lib/session'
 
 async function resolveSession() {
-  try {
-    const { user } = await api('/auth/me')
-    return { user: user ?? null }
-  } catch (error) {
-    return { user: null, error }
-  }
+  return loadSession()
 }
 
 function createProfileGuard(tipoPerfil, destino) {

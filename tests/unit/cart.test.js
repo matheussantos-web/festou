@@ -114,4 +114,39 @@ describe('carrinho', () => {
 
     expect(cartItems.value.map((item) => item.id)).toEqual(['b'])
   })
+
+  it('atualiza o preco salvo quando a vitrine muda', async () => {
+    const { addToCart, cartItems, syncWithCatalog } = await loadCart()
+
+    addToCart(produto)
+    const { changed, removed } = syncWithCatalog([{ ...produto, preco: 59.9 }])
+
+    expect(changed).toEqual([{ nome: produto.nome, de: 49.9, para: 59.9 }])
+    expect(removed).toEqual([])
+    expect(cartItems.value[0].preco).toBe(59.9)
+  })
+
+  it('remove do carrinho o que saiu da vitrine', async () => {
+    const { addToCart, cartItems, syncWithCatalog, cartCount } = await loadCart()
+
+    addToCart({ ...produto, id: 'a' })
+    addToCart({ ...produto, id: 'b' })
+    const { changed, removed } = syncWithCatalog([{ ...produto, id: 'a' }])
+
+    expect(changed).toEqual([])
+    expect(removed).toHaveLength(1)
+    expect(removed[0].id).toBe('b')
+    expect(cartItems.value.map((item) => item.id)).toEqual(['a'])
+    expect(cartCount.value).toBe(1)
+  })
+
+  it('nao avisa nada quando o preco continua igual', async () => {
+    const { addToCart, syncWithCatalog } = await loadCart()
+
+    addToCart(produto)
+    const result = syncWithCatalog([{ ...produto, preco: '49.90' }])
+
+    expect(result.changed).toEqual([])
+    expect(result.removed).toEqual([])
+  })
 })

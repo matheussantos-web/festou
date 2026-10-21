@@ -8,6 +8,7 @@ import {
   clearCart,
   removeFromCart,
   setCartQuantity,
+  syncWithCatalog,
 } from '../lib/cart'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
@@ -16,6 +17,7 @@ const orders = ref([])
 const note = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+const priceNotice = ref('')
 const isLoadingOrders = ref(true)
 const isSubmitting = ref(false)
 const updatingOrderId = ref(null)
@@ -81,7 +83,37 @@ async function requestQuote() {
   }
 }
 
-onMounted(loadOrders)
+async function syncCartWithCatalog() {
+  if (cartItems.value.length === 0) return
+
+  try {
+    const result = await api('/products')
+    const { changed, removed } = syncWithCatalog(asArray(result.products))
+    const notices = []
+
+    if (changed.length > 0) {
+      const details = changed
+        .map((item) => `${item.nome} (${formatPrice(item.de)} → ${formatPrice(item.para)})`)
+        .join(', ')
+      notices.push(`O preço de ${details} mudou e o carrinho foi atualizado.`)
+    }
+
+    if (removed.length > 0) {
+      const names = removed.map((item) => item.nome).join(', ')
+      notices.push(`${names} saiu da vitrine e foi removido do carrinho.`)
+    }
+
+    priceNotice.value = notices.join(' ')
+  } catch {
+    // O aviso é informativo: se a vitrine falhar, o envio continua validando
+    // os preços no servidor.
+  }
+}
+
+onMounted(() => {
+  loadOrders()
+  syncCartWithCatalog()
+})
 </script>
 
 <template>
@@ -103,6 +135,9 @@ onMounted(loadOrders)
       </div>
       <div v-if="errorMessage" role="alert" class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900 shadow-sm">
         {{ errorMessage }}
+      </div>
+      <div v-if="priceNotice" role="status" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 shadow-sm">
+        {{ priceNotice }}
       </div>
 
       <!-- Seção do Carrinho Atual -->

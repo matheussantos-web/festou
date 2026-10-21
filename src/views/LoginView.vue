@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../lib/api'
+import { setSession } from '../lib/session'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,10 +16,11 @@ async function signIn() {
   isSubmitting.value = true
 
   try {
-    await api('/auth/login', {
+    const { user } = await api('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email: email.value, senha: password.value }),
     })
+    setSession(user)
 
     const redirect = route.query.redirect
     const destination = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')

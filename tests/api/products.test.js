@@ -78,6 +78,28 @@ describe('vitrine de produtos', () => {
     expect(found).toBeDefined()
     expect(found.ativo).toBe(false)
   })
+
+  it('pausa e reativa o produto sem depender do estado anterior', async () => {
+    const supplier = await createAccount('fornecedor')
+    const product = await createProduct(supplier)
+
+    const paused = await supplier.client
+      .patch(`/api/supplier/products/${product.id}/toggle-active`)
+      .send({ ativo: false })
+    expect(paused.status).toBe(200)
+    expect(paused.body.product.ativo).toBe(false)
+
+    // Repetir o mesmo pedido nao deve reativar o produto por engano.
+    const pausedAgain = await supplier.client
+      .patch(`/api/supplier/products/${product.id}/toggle-active`)
+      .send({ ativo: false })
+    expect(pausedAgain.body.product.ativo).toBe(false)
+
+    const activeAgain = await supplier.client
+      .patch(`/api/supplier/products/${product.id}/toggle-active`)
+      .send({ ativo: true })
+    expect(activeAgain.body.product.ativo).toBe(true)
+  })
 })
 
 describe('gestão do catálogo do fornecedor', () => {

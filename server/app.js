@@ -55,12 +55,19 @@ export function createApp() {
   const distDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 
   if (existsSync(distDir)) {
-    app.use(express.static(distDir))
+    // Os arquivos de assets carregam hash no nome, entao podem ficar em cache
+    // por muito tempo; o index.html precisa ser revalidado a cada acesso.
+    app.use('/assets', express.static(join(distDir, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+    }))
+    app.use(express.static(distDir, { maxAge: '1h' }))
 
     app.use((request, response, next) => {
       if (request.method !== 'GET' && request.method !== 'HEAD') return next()
       if (request.path.startsWith('/api')) return next()
 
+      response.set('Cache-Control', 'no-cache')
       response.sendFile(join(distDir, 'index.html'))
     })
   }

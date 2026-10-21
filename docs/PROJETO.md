@@ -27,6 +27,7 @@ Festou! é uma plataforma web para ajudar clientes a organizar festas: descobrir
 | 8. Dependências | Vitest 5 e correção transitiva do PostCSS; Tailwind 3 mantido de propósito | Implementada |
 | 9. Endurecimento da API | `trust proxy`, erros 4xx reais, limite de login por e-mail, edição/exclusão de produtos e convites | Implementada |
 | 10. Arquitetura do backend | Rotas, esquemas, middlewares e queries separados; migrations versionadas; CI no GitHub Actions | Implementada |
+| 11. Sessão e integridade | Sessão compartilhada no frontend, hash de senha versionado com rehash, RSVP bloqueado após o evento e aviso de preço no carrinho | Implementada |
 
 Este quadro descreve o que existe no repositório hoje, não um compromisso com um cronograma. Novas etapas e prioridades devem ser definidas conforme o produto evoluir.
 
@@ -54,6 +55,8 @@ Categorias de produto: bolos, doces, brinquedos e convites digitais. Estados do 
 - **Banco:** PostgreSQL hospedado no Neon, acessado pelo pacote `@neondatabase/serverless`.
 - **Validação:** Zod no servidor para validar os dados recebidos; os esquemas ficam em `server/schemas/` e são compartilhados entre as rotas.
 - **Segurança:** sessões com cookies HttpOnly, senhas com scrypt, validação de origem em requisições mutáveis, Helmet e rate limiting para autenticação e RSVP. A validação de origem aceita `APP_ORIGIN`, a própria origem do servidor (quando o Express também serve o SPA) e requisições sem cabeçalho `Origin` (o cookie de sessão é `SameSite=Lax`, o que já impede o envio em requisições de terceiros).
+- **Senhas:** os parâmetros do scrypt (`N=16384`, `r=8`, `p=1`, 64 bytes) ficam fixos no código e o hash versionado guarda os valores usados (`scrypt$N$r$p$salt$hash`). Os hashes no formato antigo continuam aceitos e são refeitos automaticamente no próximo login.
+- **RSVP:** a resposta é atualizada pelo par convite/e-mail; o anfitrião pode encerrar as confirmações e o servidor também recusa respostas depois da data do evento.
 - **Rate limiting por IP:** o Express só considera `X-Forwarded-For` quando `TRUST_PROXY` informa quantos proxies reversos existem na frente da aplicação. Sem isso, o limitador contaria o IP do proxy e valeria para todo mundo.
 - **Erros:** o corpo inválido responde 400 e o corpo grande demais responde 413, em vez de virar 500 genérico. Erros de banco sem `DATABASE_URL` respondem 503.
 - **Integração local:** Vite encaminha `/api` ao Express; `npm run dev` inicia ambos.
@@ -65,7 +68,8 @@ Categorias de produto: bolos, doces, brinquedos e convites digitais. Estados do 
 src/
   lib/                 Cliente da API e utilitários do frontend
     api.js             Requisições, erros tipados e normalização de listas
-    cart.js            Carrinho persistido no navegador
+    cart.js            Carrinho persistido no navegador e sincronização de preços
+    session.js         Sessão compartilhada, com cache e requisição única
     format.js          Formatação de preço, data e texto
     orderStatus.js     Rótulos e cores de status de pedido
   router/              Rotas e proteção de páginas
@@ -199,7 +203,9 @@ A suíte usa Vitest 5 e roda contra o mesmo banco Neon configurado em `.env`. Os
 | --- | --- |
 | `tests/unit/format.test.js` | Formatação de preço, data e texto |
 | `tests/unit/orderStatus.test.js` | Rótulos e estilos de status de pedido |
-| `tests/unit/cart.test.js` | Persistência, limites e totais do carrinho |
+| `tests/unit/cart.test.js` | Persistência, limites, totais do carrinho e sincronização de preços |
+| `tests/unit/session.test.js` | Cache da sessão, requisições simultâneas, login e logout |
+| `tests/unit/security.test.js` | Hash de senha, formato antigo, rehash e comparação de tempo |
 | `tests/unit/config.test.js` | Leitura e validação das variáveis de ambiente do servidor |
 | `tests/api/auth.test.js` | Cadastro, login, sessão, origem e rotas protegidas |
 | `tests/api/products.test.js` | Vitrine pública, filtro por categoria, permissões de fornecedor e edição/exclusão de produto |
@@ -254,9 +260,18 @@ Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de
 ## Validação executada na etapa de arquitetura do backend
 
 - `server/index.js` caiu de 1079 linhas para 16: as regras de negócio foram para `server/routes/`, os esquemas Zod para `server/schemas/`, a sessão, a origem, os limitadores e o tratamento de erros para `server/middleware/`, e as consultas reutilizadas para `server/queries/`.
-- Cada rota foi movida sem mudança de contrato: os 70 testes e as 39 verificações do smoke continuam passando.
+- Cada rota foi movida sem mudança de contrato: os 70 testes e as 39 verificações do smoke continuaram passando.
 - `server/app.js` monta o app e `server/index.js` apenas sobe o servidor, o que mantém `npm start`, o smoke e os testes usando o mesmo ponto de entrada.
 - `.github/workflows/ci.yml` compila o frontend, roda os testes unitários e, quando o segredo `DATABASE_URL` existe no repositório, também os testes de API e o smoke.
+
+## Validação executada na etapa de sessão e integridade dos dados
+
+- `npm run build` concluído com sucesso (43 módulos).
+- `npm test` com 90 testes aprovados em 12 arquivos.
+- `npm run smoke` com 39 verificações aprovadas no fluxo ponta a ponta.
+- A sessão do frontend passou a ser carregada uma única vez e compartilhada pelo cabeçalho e pelos guards de rota; a navegação para `/carrinho` sem sessão continua caindo em `/login` (conferido no DOM renderizado).
+- O carrinho compara os preços salvos com a vitrine ao abrir a tela e avisa quando um preço mudou ou um item saiu do catálogo.
+- `POST /api/health` passa a responder 405 com `Allow: GET, HEAD`; assets com hash no nome ficam em cache de um ano e o `index.html` é sempre revalidado.
 
 ## Próximos passos
 
@@ -264,11 +279,11 @@ Não há um roadmap fechado neste documento. Ao priorizar a continuação, consi
 
 - revisar a interface responsiva em telas pequenas e a camada de decoração nos convites públicos;
 - avaliar migração do Tailwind 3 para 4 quando houver folga, para sair do `braces` flagrado no `npm audit`;
-- parametrizar os parâmetros do scrypt e refazer o hash no próximo login, conforme o costume de cada ambiente;
-- permitir que o convidado altere a própria resposta depois de enviada e bloquear respostas depois da data do evento;
 - avaliar verificação de e-mail e recuperação de senha;
 - paginar a vitrine pública e a lista de pedidos;
+- gerar metadados Open Graph no servidor para o link público do convite (hoje o SPA não entrega prévia no WhatsApp);
 - revisar a exposição do e-mail do cliente para o fornecedor, dentro da LGPD;
+- mover a sessão para um store externo se a aplicação passar a rodar em mais de uma instância;
 - planejar deploy, observabilidade, backups e configuração de produção.
 
 ## Como manter este documento

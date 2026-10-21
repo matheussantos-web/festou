@@ -1,9 +1,19 @@
 import { afterAll, describe, expect, it } from 'vitest'
+import { randomBytes, scrypt } from 'node:crypto'
+import { promisify } from 'node:util'
 import request from 'supertest'
 import { app } from '../../server/index.js'
+import { getDatabase } from '../../server/db.js'
 import { cleanupTestData, createAccount, createClient } from '../helpers/api.js'
 
 afterAll(cleanupTestData)
+
+// Reproduz o formato de hash anterior: salt:hash, 64 bytes, sem versao.
+async function createLegacyHash(senha) {
+  const salt = randomBytes(16).toString('hex')
+  const derived = await promisify(scrypt)(senha, salt, 64)
+  return `${salt}:${derived.toString('hex')}`
+}
 
 describe('autenticação', () => {
   it('cadastra uma conta, cria a sessão e devolve o perfil', async () => {
@@ -77,6 +87,28 @@ describe('autenticação', () => {
     })
 
     expect(response.status).toBe(401)
+  })
+
+  it('atualiza o hash antigo para o formato atual no proximo login', async () => {
+    const { email } = await createAccount('cliente')
+    const sql = getDatabase()
+
+    // Hash no formato anterior (salt:hash, sem parametros), como as contas
+    // criadas antes da versionagem do scrypt.
+    const legacyHash = await createLegacyHash('SenhaDeTeste123')
+    await sql`update public.perfis set senha_hash = ${legacyHash} where email = ${email}`
+
+    const client = createClient()
+    const response = await client.post('/api/auth/login').send({
+      email,
+      senha: 'SenhaDeTeste123',
+    })
+
+    expect(response.status).toBe(200)
+
+    const [updated] = await sql`select senha_hash from public.perfis where email = ${email}`
+    expect(updated.senha_hash).not.toBe(legacyHash)
+    expect(updated.senha_hash.startsWith('scrypt$16384$8$1$')).toBe(true)
   })
 
   it('consulta a sessão atual e encerra a sessão', async () => {

@@ -57,9 +57,9 @@ O smoke sobe o próprio servidor na porta `3100`, com os limitadores de requisi�
 
 ## Autenticação e dados
 
-O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt e usa sessões aleatórias em cookies HttpOnly. Produtos são lidos pela vitrine pública e só fornecedores autenticados podem anunciá-los. A autorização ocorre na API; o Neon não é acessado pelo navegador.
+O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt (parâmetros fixos no código, hash versionado e rehash automático no login) e usa sessões aleatórias em cookies HttpOnly. Produtos são lidos pela vitrine pública e só fornecedores autenticados podem anunciá-los. A autorização ocorre na API; o Neon não é acessado pelo navegador.
 
-Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orçamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transação. O histórico do cliente também aparece nessa tela.
+Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orçamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transação. Se um preço tiver mudado desde que o item entrou no carrinho, a tela avisa e atualiza o valor antes do envio. O histórico do cliente também aparece nessa tela.
 
 Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites, edita o convite, encerra ou reabre as confirmações e exclui o convite quando a festa passa.
 

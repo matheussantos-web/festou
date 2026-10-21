@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../lib/api'
+import { setSession } from '../lib/session'
 
 const router = useRouter()
 const name = ref('')
@@ -16,7 +17,7 @@ async function signUp() {
   isSubmitting.value = true
 
   try {
-    await api('/auth/register', {
+    const { user } = await api('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         nome: name.value,
@@ -25,6 +26,7 @@ async function signUp() {
         tipo_perfil: profileType.value,
       }),
     })
+    setSession(user)
 
     if (profileType.value === 'fornecedor') {
       await router.push('/fornecedor/painel')

@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupTestData, createAccount, createClient } from '../helpers/api.js'
+import { getDatabase } from '../../server/db.js'
 
 afterAll(cleanupTestData)
 
@@ -97,6 +98,32 @@ describe('convites e RSVP', () => {
     })
 
     expect(response.status).toBe(404)
+  })
+
+  it('encerra as confirmacoes depois da data do evento', async () => {
+    const customer = await createAccount('cliente')
+    const created = await createInvitation(customer)
+    const { id, slug } = created.body.invitation
+
+    // A API recusa criar convite no passado, entao o cenario so pode ser
+    // montado direto no banco.
+    const sql = getDatabase()
+    await sql`
+      update public.convites
+      set data_evento = ${new Date(Date.now() - 3_600_000).toISOString()}
+      where id = ${id}
+    `
+
+    const visitor = createClient()
+    const response = await visitor.post(`/api/invitations/${slug}/rsvp`).send({
+      nome: 'Convidado Atrasado',
+      email: 'atrasado@festou.test',
+      resposta: 'confirmado',
+      quantidade_pessoas: 2,
+    })
+
+    expect(response.status).toBe(409)
+    expect(response.body.message).toContain('evento ja aconteceu')
   })
 
   it('encerra e reabre as confirmacoes de presença', async () => {

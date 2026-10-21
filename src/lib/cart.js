@@ -65,6 +65,39 @@ export function removeFromCart(productId) {
   cartItems.value = cartItems.value.filter((item) => item.id !== productId)
 }
 
+// Compara o carrinho salvo no navegador com a vitrine atual. O servidor sempre
+// recalcula os precos no envio do orcamento; aqui o aviso chega antes, para o
+// cliente nao descobrir a diferenca so na resposta.
+export function syncWithCatalog(products) {
+  const byId = new Map(products.map((product) => [product.id, product]))
+  const changed = []
+  const removed = []
+
+  for (const item of cartItems.value) {
+    const product = byId.get(item.id)
+
+    if (!product) {
+      removed.push(item)
+      continue
+    }
+
+    const currentPrice = Number(product.preco)
+    if (Math.round(currentPrice * 100) !== Math.round(item.preco * 100)) {
+      changed.push({ nome: item.nome, de: item.preco, para: currentPrice })
+      item.preco = currentPrice
+    }
+
+    item.nome = product.nome
+  }
+
+  if (removed.length > 0) {
+    const removedIds = new Set(removed.map((item) => item.id))
+    cartItems.value = cartItems.value.filter((item) => !removedIds.has(item.id))
+  }
+
+  return { changed, removed }
+}
+
 export function clearCart() {
   cartItems.value = []
 }

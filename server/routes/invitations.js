@@ -202,7 +202,7 @@ invitationsRouter.post('/:slug/rsvp', rsvpLimiter, async (request, response, nex
     const input = rsvpSchema.parse(request.body)
     const sql = getDatabase()
     const [invitation] = await sql`
-      select id, aceita_rsvp
+      select id, aceita_rsvp, data_evento
       from public.convites
       where slug = ${request.params.slug}
       limit 1
@@ -211,6 +211,11 @@ invitationsRouter.post('/:slug/rsvp', rsvpLimiter, async (request, response, nex
     if (!invitation) return response.status(404).json({ message: 'Convite nao encontrado.' })
     if (!invitation.aceita_rsvp) {
       return response.status(409).json({ message: 'As confirmacoes para este convite foram encerradas.' })
+    }
+    // Respostas depois do evento nao fazem sentido e ainda distorcem o resumo
+    // que o anfitriao acompanha.
+    if (new Date(invitation.data_evento).getTime() < Date.now()) {
+      return response.status(409).json({ message: 'O evento ja aconteceu; as confirmacoes estao encerradas.' })
     }
 
     await sql`

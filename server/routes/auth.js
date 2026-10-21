@@ -1,6 +1,11 @@
 import { Router } from 'express'
 import { getDatabase } from '../db.js'
-import { hashPassword, verifyPassword, getDummyPasswordHash } from '../security.js'
+import {
+  hashPassword,
+  passwordNeedsRehash,
+  verifyPassword,
+  getDummyPasswordHash,
+} from '../security.js'
 import { clearSessionCookie, hashSessionToken, sessionCookieName } from '../security.js'
 import { findSession, sendProfile, startSession } from '../middleware/session.js'
 import { loginByEmailLimiter, loginLimiter, registerLimiter } from '../middleware/rateLimits.js'
@@ -49,6 +54,17 @@ authRouter.post('/login', loginLimiter, loginByEmailLimiter, async (request, res
 
     if (!(await verifyPassword(input.senha, profile.senha_hash))) {
       return response.status(401).json({ message: 'E-mail ou senha invalidos.' })
+    }
+
+    // Hash antigo ou com parametros fora do padrao atual e refeito agora, sem
+    // pedir nada ao usuario.
+    if (passwordNeedsRehash(profile.senha_hash)) {
+      const novoSenhaHash = await hashPassword(input.senha)
+      await sql`
+        update public.perfis
+        set senha_hash = ${novoSenhaHash}
+        where id = ${profile.id}
+      `
     }
 
     const user = await startSession(profile, response)

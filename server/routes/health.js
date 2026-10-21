@@ -11,3 +11,10 @@ healthRouter.get('/', async (_request, response, next) => {
     next(error)
   }
 })
+
+// Health check so aceita leitura: um POST aqui costuma ser erro de cliente e
+// nao deve parecer "endpoint inexistente".
+healthRouter.all('/', (_request, response) => {
+  response.set('Allow', 'GET, HEAD')
+  response.status(405).json({ message: 'Metodo nao permitido para este endpoint.' })
+})

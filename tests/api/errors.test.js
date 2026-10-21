@@ -38,4 +38,19 @@ describe('tratamento de erros da API', () => {
     expect(response.status).toBe(200)
     expect(response.body.message).toBeUndefined()
   })
+
+  it('responde 405 para metodos nao suportados no health', async () => {
+    const response = await request(app).post('/api/health')
+
+    expect(response.status).toBe(405)
+    expect(response.headers.allow).toBe('GET, HEAD')
+    expect(response.body.message).toBeTruthy()
+  })
+
+  it('responde 404 em JSON para endpoint inexistente', async () => {
+    const response = await request(app).get('/api/nao-existe')
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Endpoint nao encontrado.' })
+  })
 })
