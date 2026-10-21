@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-e-teste:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Copia o codigo
+        uses: actions/checkout@v4
+
+      - name: Prepara o Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instala as dependencias
+        run: npm ci
+
+      - name: Compila o frontend
+        run: npm run build
+
+      - name: Testes unitarios
+        run: npm run test:unit
+
+      # Os testes de API e o smoke usam o mesmo Neon configurado em .env. Sem a
+      # variavel DATABASE_URL no repositorio, esses passos sao ignorados.
+      - name: Testes de API
+        if: ${{ secrets.DATABASE_URL != '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: test
+        run: npm run test:api
+
+      - name: Verificacao de ponta a ponta
+        if: ${{ secrets.DATABASE_URL != '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: test
+        run: npm run smoke

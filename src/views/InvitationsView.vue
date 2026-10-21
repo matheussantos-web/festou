@@ -354,113 +354,113 @@ onMounted(loadInvitations)
           </template>
 
           <template v-else>
-          <h2 class="font-heading text-2xl font-bold text-festou-midnight">Criar Novo Convite</h2>
-          <p class="mt-1 text-xs text-slate-500">Preencha as informações da celebração para gerar a página pública.</p>
+            <h2 class="font-heading text-2xl font-bold text-festou-midnight">Criar Novo Convite</h2>
+            <p class="mt-1 text-xs text-slate-500">Preencha as informações da celebração para gerar a página pública.</p>
 
-          <form class="mt-6 space-y-4" @submit.prevent="createInvitation">
-            <div>
-              <label for="invite-title" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Nome da celebração</label>
-              <input
-                id="invite-title"
-                v-model.trim="form.titulo"
-                type="text"
-                minlength="3"
-                maxlength="100"
-                required
-                placeholder="Ex: Aniversário de 5 anos do Lucas"
-                class="w-full text-sm"
-              />
-            </div>
-
-            <div>
-              <label for="host-name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quem convida (anfitrião)</label>
-              <input
-                id="host-name"
-                v-model.trim="form.anfitriao"
-                type="text"
-                minlength="2"
-                maxlength="100"
-                required
-                placeholder="Ex: Família Silva ou Marina & Pedro"
-                class="w-full text-sm"
-              />
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
+            <form class="mt-6 space-y-4" @submit.prevent="createInvitation">
               <div>
-                <label for="event-date" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Data e horário</label>
+                <label for="invite-title" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Nome da celebração</label>
                 <input
-                  id="event-date"
-                  v-model="form.data_evento"
-                  type="datetime-local"
-                  :min="minimumDate"
+                  id="invite-title"
+                  v-model.trim="form.titulo"
+                  type="text"
+                  minlength="3"
+                  maxlength="100"
                   required
+                  placeholder="Ex: Aniversário de 5 anos do Lucas"
                   class="w-full text-sm"
                 />
               </div>
+
               <div>
-                <label for="invite-theme" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Tema visual</label>
-                <select
-                  id="invite-theme"
-                  v-model="form.tema"
+                <label for="host-name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quem convida (anfitrião)</label>
+                <input
+                  id="host-name"
+                  v-model.trim="form.anfitriao"
+                  type="text"
+                  minlength="2"
+                  maxlength="100"
+                  required
+                  placeholder="Ex: Família Silva ou Marina & Pedro"
                   class="w-full text-sm"
+                />
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="event-date" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Data e horário</label>
+                  <input
+                    id="event-date"
+                    v-model="form.data_evento"
+                    type="datetime-local"
+                    :min="minimumDate"
+                    required
+                    class="w-full text-sm"
+                  />
+                </div>
+                <div>
+                  <label for="invite-theme" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Tema visual</label>
+                  <select
+                    id="invite-theme"
+                    v-model="form.tema"
+                    class="w-full text-sm"
+                  >
+                    <option v-for="theme in themes" :key="theme.value" :value="theme.value">{{ theme.label }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label for="event-location" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Local ou endereço</label>
+                <input
+                  id="event-location"
+                  v-model.trim="form.local_evento"
+                  type="text"
+                  minlength="3"
+                  maxlength="180"
+                  required
+                  placeholder="Ex: Buffet Estrela Mágica, Rua das Flores, 123"
+                  class="w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label for="invite-message" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Mensagem aos convidados (opcional)</label>
+                <textarea
+                  id="invite-message"
+                  v-model.trim="form.mensagem"
+                  rows="3"
+                  maxlength="500"
+                  placeholder="Venha comemorar essa data tão especial com a gente! Traga seu sorriso."
+                  class="w-full text-sm"
+                ></textarea>
+              </div>
+
+              <button
+                type="submit"
+                :disabled="isSubmitting"
+                class="btn-festou-primary w-full text-sm"
+              >
+                {{ isSubmitting ? 'Gerando convite digital...' : 'Criar convite digital' }}
+              </button>
+            </form>
+
+            <!-- Banner de Sucesso com Link para Copiar -->
+            <div v-if="createdInvitation" class="mt-6 rounded-xl border border-green-200 bg-green-50 p-4">
+              <p class="text-xs font-bold uppercase tracking-wider text-green-900">Seu convite está pronto!</p>
+              <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <RouterLink :to="`/convite/${createdInvitation.slug}`" target="_blank" class="break-all text-xs font-semibold text-festou-primary underline">
+                  {{ `${appOrigin}/convite/${createdInvitation.slug}` }}
+                </RouterLink>
+                <button
+                  type="button"
+                  class="rounded-full bg-green-700 px-3 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-green-800"
+                  @click="copyInvitationLink(createdInvitation.slug)"
                 >
-                  <option v-for="theme in themes" :key="theme.value" :value="theme.value">{{ theme.label }}</option>
-                </select>
+                  {{ didCopy ? '✓ Copiado!' : 'Copiar link' }}
+                </button>
               </div>
             </div>
-
-            <div>
-              <label for="event-location" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Local ou endereço</label>
-              <input
-                id="event-location"
-                v-model.trim="form.local_evento"
-                type="text"
-                minlength="3"
-                maxlength="180"
-                required
-                placeholder="Ex: Buffet Estrela Mágica, Rua das Flores, 123"
-                class="w-full text-sm"
-              />
-            </div>
-
-            <div>
-              <label for="invite-message" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Mensagem aos convidados (opcional)</label>
-              <textarea
-                id="invite-message"
-                v-model.trim="form.mensagem"
-                rows="3"
-                maxlength="500"
-                placeholder="Venha comemorar essa data tão especial com a gente! Traga seu sorriso."
-                class="w-full text-sm"
-              ></textarea>
-            </div>
-
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="btn-festou-primary w-full text-sm"
-            >
-              {{ isSubmitting ? 'Gerando convite digital...' : 'Criar convite digital' }}
-            </button>
-          </form>
-
-          <!-- Banner de Sucesso com Link para Copiar -->
-          <div v-if="createdInvitation" class="mt-6 rounded-xl border border-green-200 bg-green-50 p-4">
-            <p class="text-xs font-bold uppercase tracking-wider text-green-900">Seu convite está pronto!</p>
-            <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-              <RouterLink :to="`/convite/${createdInvitation.slug}`" target="_blank" class="break-all text-xs font-semibold text-festou-primary underline">
-                {{ `${appOrigin}/convite/${createdInvitation.slug}` }}
-              </RouterLink>
-              <button
-                type="button"
-                class="rounded-full bg-green-700 px-3 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-green-800"
-                @click="copyInvitationLink(createdInvitation.slug)"
-              >
-                {{ didCopy ? '✓ Copiado!' : 'Copiar link' }}
-              </button>
-            </div>
-          </div>
           </template>
         </section>
 

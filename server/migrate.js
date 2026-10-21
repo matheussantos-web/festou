@@ -1,18 +1,68 @@
 import 'dotenv/config'
-import { readFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { readdir, readFile } from 'node:fs/promises'
 import { getDatabase } from './db.js'
 
-const schemaUrl = new URL('./schema.sql', import.meta.url)
-const schema = await readFile(schemaUrl, 'utf8')
-const statements = schema
-  .split(/;\s*(?:\r?\n|$)/)
-  .map((statement) => statement.trim())
-  .filter(Boolean)
+// Cada migration e um arquivo .sql numerado em server/migrations. O que ja foi
+// aplicado fica registrado em public.schema_migrations com o checksum do
+// arquivo, entao rodar de novo nao repete nada e arquivo editado e recusado.
+const migrationsDir = new URL('./migrations/', import.meta.url)
+
+function splitStatements(content) {
+  return content
+    .split(/;\s*(?:\r?\n|$)/)
+    .map((statement) => statement.trim())
+    .filter(Boolean)
+}
 
 const sql = getDatabase()
 
-for (const statement of statements) {
-  await sql.query(statement)
+await sql`
+  create table if not exists public.schema_migrations (
+    nome text primary key,
+    checksum text not null,
+    applied_at timestamptz not null default now()
+  )
+`
+
+const files = (await readdir(migrationsDir))
+  .filter((file) => file.endsWith('.sql'))
+  .sort()
+
+const applied = await sql`select nome, checksum from public.schema_migrations`
+const appliedByName = new Map(applied.map((row) => [row.nome, row.checksum]))
+
+let pending = 0
+
+for (const file of files) {
+  const content = await readFile(new URL(file, migrationsDir), 'utf8')
+  const checksum = createHash('sha256').update(content).digest('hex')
+  const previousChecksum = appliedByName.get(file)
+
+  if (previousChecksum) {
+    if (previousChecksum !== checksum) {
+      throw new Error(
+        `A migration ${file} mudou depois de aplicada. Crie uma nova migration com outro numero.`,
+      )
+    }
+    continue
+  }
+
+  const statements = splitStatements(content)
+
+  await sql.transaction(statements.map((statement) => sql.query(statement)))
+
+  await sql`
+    insert into public.schema_migrations (nome, checksum)
+    values (${file}, ${checksum})
+  `
+
+  pending += 1
+  console.log(`Migration aplicada: ${file} (${statements.length} statements)`)
 }
 
-console.log(`Neon schema ready (${statements.length} statements).`)
+console.log(
+  pending === 0
+    ? `Neon schema pronto (${files.length} migrations, nada pendente).`
+    : `Neon schema pronto (${pending} de ${files.length} migrations aplicadas agora).`,
+)
