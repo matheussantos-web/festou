@@ -10,6 +10,10 @@ export const supplierProductsRouter = Router()
 
 const productIdSchema = z.string().uuid('Identificador do produto inválido.')
 
+const defaultPageSize = 24
+const pageSchema = z.coerce.number().int('A pagina precisa ser um numero inteiro.').min(1).max(10_000)
+const limitSchema = z.coerce.number().int('O limite precisa ser um numero inteiro.').min(1).max(60)
+
 const toggleActiveSchema = z.object({
   ativo: z.boolean().optional(),
 })
@@ -27,22 +31,51 @@ productsRouter.get('/', async (request, response, next) => {
     const category = request.query.categoria
       ? categorySchema.parse(request.query.categoria)
       : null
+    const pagina = pageSchema.parse(request.query.pagina ?? 1)
+    const limite = limitSchema.parse(request.query.limite ?? defaultPageSize)
+    const offset = (pagina - 1) * limite
     const sql = getDatabase()
+
+    const [{ total }] = category
+      ? await sql`
+        select count(*)::int as total
+        from public.produtos
+        where ativo = true and categoria = ${category}
+      `
+      : await sql`
+        select count(*)::int as total
+        from public.produtos
+        where ativo = true
+      `
+
     const products = category
       ? await sql`
         select id, nome, descricao, categoria, preco, cidade, imagem_url, created_at
         from public.produtos
         where ativo = true and categoria = ${category}
-        order by created_at desc
+        order by created_at desc, id
+        limit ${limite} offset ${offset}
       `
       : await sql`
         select id, nome, descricao, categoria, preco, cidade, imagem_url, created_at
         from public.produtos
         where ativo = true
-        order by created_at desc
+        order by created_at desc, id
+        limit ${limite} offset ${offset}
       `
 
-    response.json({ products })
+    const totalPaginas = Math.max(1, Math.ceil(total / limite))
+
+    response.json({
+      products,
+      pagination: {
+        pagina,
+        limite,
+        total,
+        totalPaginas,
+        temMais: pagina < totalPaginas,
+      },
+    })
   } catch (error) {
     next(error)
   }

@@ -1,6 +1,9 @@
-import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupTestData, createAccount, createClient } from '../helpers/api.js'
+﻿import { afterAll, describe, expect, it } from 'vitest'
+import { existsSync } from 'node:fs'
+import request from 'supertest'
+import { app } from '../../server/index.js'
 import { getDatabase } from '../../server/db.js'
+import { cleanupTestData, createAccount, createClient } from '../helpers/api.js'
 
 afterAll(cleanupTestData)
 
@@ -31,7 +34,7 @@ describe('convites e RSVP', () => {
     expect(response.status).toBe(201)
     expect(response.body.invitation.slug).toBeTruthy()
 
-    // Regressão: sem aceita_rsvp na resposta, o anfitriao nunca consegue
+    // RegressÃ£o: sem aceita_rsvp na resposta, o anfitriao nunca consegue
     // encerrar as confirmacoes de um convite recem-criado.
     expect(response.body.invitation.aceita_rsvp).toBe(true)
   })
@@ -126,7 +129,7 @@ describe('convites e RSVP', () => {
     expect(response.body.message).toContain('evento ja aconteceu')
   })
 
-  it('encerra e reabre as confirmacoes de presença', async () => {
+  it('encerra e reabre as confirmacoes de presenÃ§a', async () => {
     const customer = await createAccount('cliente')
     const created = await createInvitation(customer)
     const { id, slug } = created.body.invitation
@@ -192,8 +195,8 @@ describe('convites e RSVP', () => {
   })
 })
 
-describe('edição e exclusão de convites', () => {
-  it('edita um convite do próprio cliente', async () => {
+describe('ediÃ§Ã£o e exclusÃ£o de convites', () => {
+  it('edita um convite do prÃ³prio cliente', async () => {
     const customer = await createAccount('cliente')
     const created = await createInvitation(customer)
     const { id } = created.body.invitation
@@ -220,7 +223,7 @@ describe('edição e exclusão de convites', () => {
     expect(response.status).toBe(404)
   })
 
-  it('exclui um convite do próprio cliente', async () => {
+  it('exclui um convite do prÃ³prio cliente', async () => {
     const customer = await createAccount('cliente')
     const created = await createInvitation(customer)
     const { id, slug } = created.body.invitation
@@ -242,5 +245,31 @@ describe('edição e exclusão de convites', () => {
     const response = await stranger.client.delete(`/api/invitations/${created.body.invitation.id}`)
 
     expect(response.status).toBe(404)
+  })
+})
+
+const distIndex = new URL('../../dist/index.html', import.meta.url)
+
+describe.skipIf(!existsSync(distIndex))('prÃ©via do link pÃºblico', () => {
+  it('injeta as tags Open Graph na pÃ¡gina do convite', async () => {
+    const customer = await createAccount('cliente')
+    const created = await createInvitation(customer, { titulo: 'Festa da Marina' })
+    const { slug } = created.body.invitation
+
+    const response = await request(app).get(`/convite/${slug}`)
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-type']).toContain('text/html')
+    expect(response.text).toContain('property="og:title"')
+    expect(response.text).toContain('Festa da Marina')
+    expect(response.text).toContain(`${slug}`)
+    expect(response.text).toContain('property="og:image"')
+  })
+
+  it('entrega o SPA normal para convite inexistente', async () => {
+    const response = await request(app).get('/convite/slug-que-nao-existe')
+
+    expect(response.status).toBe(200)
+    expect(response.text).not.toContain('property="og:title"')
   })
 })

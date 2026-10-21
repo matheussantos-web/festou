@@ -28,6 +28,7 @@ Festou! é uma plataforma web para ajudar clientes a organizar festas: descobrir
 | 9. Endurecimento da API | `trust proxy`, erros 4xx reais, limite de login por e-mail, edição/exclusão de produtos e convites | Implementada |
 | 10. Arquitetura do backend | Rotas, esquemas, middlewares e queries separados; migrations versionadas; CI no GitHub Actions | Implementada |
 | 11. Sessão e integridade | Sessão compartilhada no frontend, hash de senha versionado com rehash, RSVP bloqueado após o evento e aviso de preço no carrinho | Implementada |
+| 12. Vitrine paginada e prévia | Paginação da vitrine e metadados Open Graph no link público do convite | Implementada |
 
 Este quadro descreve o que existe no repositório hoje, não um compromisso com um cronograma. Novas etapas e prioridades devem ser definidas conforme o produto evoluir.
 
@@ -83,6 +84,7 @@ server/
   db.js                 Conexão Neon
   migrate.js            Aplicação das migrations versionadas
   security.js           Senhas, sessões e validação de origem
+  meta.js               Metadados Open Graph das páginas públicas
   migrations/           Migrations SQL numeradas
   routes/               Rotas por domínio (auth, products, orders, invitations, health)
   schemas/              Esquemas Zod por domínio
@@ -177,7 +179,7 @@ Comandos disponíveis:
 | `POST` | `/api/auth/login` | Iniciar sessão |
 | `GET` | `/api/auth/me` | Consultar sessão |
 | `POST` | `/api/auth/logout` | Encerrar sessão |
-| `GET` | `/api/products` | Consultar vitrine; aceita filtro de categoria |
+| `GET` | `/api/products` | Consultar vitrine; aceita `categoria`, `pagina` e `limite` e devolve `pagination` com total e total de páginas |
 | `POST` | `/api/products` | Publicar produto como fornecedor |
 | `GET` | `/api/supplier/products` | Consultar catálogo completo do fornecedor autenticado (ativos e pausados) |
 | `GET` | `/api/supplier/products/:id` | Consultar um produto do fornecedor autenticado |
@@ -206,6 +208,7 @@ A suíte usa Vitest 5 e roda contra o mesmo banco Neon configurado em `.env`. Os
 | `tests/unit/cart.test.js` | Persistência, limites, totais do carrinho e sincronização de preços |
 | `tests/unit/session.test.js` | Cache da sessão, requisições simultâneas, login e logout |
 | `tests/unit/security.test.js` | Hash de senha, formato antigo, rehash e comparação de tempo |
+| `tests/unit/meta.test.js` | Título, descrição e escape das tags Open Graph do convite |
 | `tests/unit/config.test.js` | Leitura e validação das variáveis de ambiente do servidor |
 | `tests/api/auth.test.js` | Cadastro, login, sessão, origem e rotas protegidas |
 | `tests/api/products.test.js` | Vitrine pública, filtro por categoria, permissões de fornecedor e edição/exclusão de produto |
@@ -273,6 +276,15 @@ Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de
 - O carrinho compara os preços salvos com a vitrine ao abrir a tela e avisa quando um preço mudou ou um item saiu do catálogo.
 - `POST /api/health` passa a responder 405 com `Allow: GET, HEAD`; assets com hash no nome ficam em cache de um ano e o `index.html` é sempre revalidado.
 
+## Validação executada na etapa de vitrine paginada e prévia
+
+- `npm run build` concluído com sucesso (43 módulos).
+- `npm test` com 100 testes aprovados em 13 arquivos.
+- `npm run smoke` com 43 verificações aprovadas no fluxo ponta a ponta.
+- `GET /api/products` devolve `pagination` com `pagina`, `limite`, `total`, `totalPaginas` e `temMais`; página 1 e 2 não repetem itens e `pagina`/`limite` inválidos respondem 400.
+- A vitrine renderizou em navegador real com os produtos ativos e sem erro; o botão "Carregar mais" só aparece quando há próxima página.
+- `/convite/:slug` passou a entregar `og:title`, `og:description`, `og:url`, `og:image` e as tags do Twitter, com escape de HTML; um slug inexistente continua servindo o SPA sem metadados.
+
 ## Próximos passos
 
 Não há um roadmap fechado neste documento. Ao priorizar a continuação, considerar:
@@ -280,8 +292,6 @@ Não há um roadmap fechado neste documento. Ao priorizar a continuação, consi
 - revisar a interface responsiva em telas pequenas e a camada de decoração nos convites públicos;
 - avaliar migração do Tailwind 3 para 4 quando houver folga, para sair do `braces` flagrado no `npm audit`;
 - avaliar verificação de e-mail e recuperação de senha;
-- paginar a vitrine pública e a lista de pedidos;
-- gerar metadados Open Graph no servidor para o link público do convite (hoje o SPA não entrega prévia no WhatsApp);
 - revisar a exposição do e-mail do cliente para o fornecedor, dentro da LGPD;
 - mover a sessão para um store externo se a aplicação passar a rodar em mais de uma instância;
 - planejar deploy, observabilidade, backups e configuração de produção.

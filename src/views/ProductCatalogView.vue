@@ -11,8 +11,13 @@ const products = ref([])
 const categoryFilter = ref('')
 const searchQuery = ref('')
 const isLoading = ref(true)
+const isLoadingMore = ref(false)
 const errorMessage = ref('')
 const addedProductId = ref(null)
+const page = ref(1)
+const pagination = ref(null)
+
+const pageSize = 12
 
 const categories = [
   { value: '', label: 'Todos os produtos', icon: '✨' },
@@ -22,21 +27,39 @@ const categories = [
   { value: 'convites', label: 'Convites digitais', icon: '💌' },
 ]
 
-async function loadProducts() {
-  isLoading.value = true
+async function loadProducts({ append = false } = {}) {
+  if (append) {
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+    page.value = 1
+  }
   errorMessage.value = ''
 
   try {
-    const query = categoryFilter.value
-      ? `?categoria=${encodeURIComponent(categoryFilter.value)}`
-      : ''
-    const { products: result } = await api(`/products${query}`)
-    products.value = asArray(result)
+    const params = new URLSearchParams()
+    if (categoryFilter.value) params.set('categoria', categoryFilter.value)
+    params.set('pagina', String(page.value))
+    params.set('limite', String(pageSize))
+
+    const result = await api(`/products?${params.toString()}`)
+    const items = asArray(result.products)
+
+    products.value = append ? [...products.value, ...items] : items
+    pagination.value = result.pagination ?? null
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível carregar os produtos.'
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
+}
+
+async function loadMore() {
+  if (isLoadingMore.value || !pagination.value?.temMais) return
+
+  page.value += 1
+  await loadProducts({ append: true })
 }
 
 const filteredProducts = computed(() => {
@@ -237,6 +260,27 @@ watch(categoryFilter, (value) => {
           Limpar busca e filtros
         </button>
       </div>
+
+      <!-- Paginação -->
+      <div v-if="pagination?.temMais && !isLoading && !errorMessage" class="mt-10 flex flex-col items-center gap-3">
+        <p class="text-xs font-semibold text-slate-500">
+          Mostrando {{ products.length }} de {{ pagination.total }} produtos
+        </p>
+        <button
+          type="button"
+          :disabled="isLoadingMore"
+          class="btn-festou-primary text-sm disabled:opacity-60"
+          @click="loadMore"
+        >
+          {{ isLoadingMore ? 'Carregando...' : 'Carregar mais produtos' }}
+        </button>
+      </div>
+      <p
+        v-else-if="pagination && !pagination.temMais && pagination.total > pageSize && !isLoading && !errorMessage"
+        class="mt-10 text-center text-xs font-semibold text-slate-500"
+      >
+        Você chegou ao fim da vitrine · {{ pagination.total }} produtos
+      </p>
     </main>
   </div>
 </template>

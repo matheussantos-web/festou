@@ -143,6 +143,15 @@ check('vitrine lista o produto', vitrine.status === 200 && vitrine.data.products
 const vitrineFiltrada = await call('GET', '/api/products?categoria=bolos')
 check('filtro por categoria', vitrineFiltrada.status === 200 && vitrineFiltrada.data.products.every((p) => p.categoria === 'bolos'))
 
+const paginaUm = await call('GET', '/api/products?pagina=1&limite=1')
+check('vitrine pagina e informa o total', paginaUm.status === 200
+  && paginaUm.data.products.length === 1
+  && paginaUm.data.pagination?.limite === 1
+  && Number.isInteger(paginaUm.data.pagination?.total), `pagination=${JSON.stringify(paginaUm.data?.pagination)}`)
+
+const paginaInvalida = await call('GET', '/api/products?pagina=0')
+check('pagina invalida e recusada', paginaInvalida.status === 400, `status ${paginaInvalida.status}`)
+
 console.log('\n== 5. Pedido de orçamento ==')
 cookies.clear()
 await call('POST', '/api/auth/login', { email: clienteEmail, senha })
@@ -176,6 +185,12 @@ check('RSVP atualizado pelo mesmo e-mail', rsvp2.status === 200 && rsvp2.data?.s
 
 const publico = await call('GET', `/api/invitations/${slug}`)
 check('convite público acessível', publico.status === 200 && publico.data?.invitation?.titulo === 'Aniversário da Marina')
+
+const paginaConvite = await fetch(`${base}/convite/${slug}`)
+const htmlConvite = await paginaConvite.text()
+check('link do convite tem prévia Open Graph', paginaConvite.status === 200
+  && htmlConvite.includes('property="og:title"')
+  && htmlConvite.includes('Aniversário da Marina'), `status ${paginaConvite.status}`)
 
 console.log('\n== 7. Gestão do fornecedor ==')
 cookies.clear()

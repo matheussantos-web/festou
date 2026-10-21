@@ -57,11 +57,11 @@ O smoke sobe o próprio servidor na porta `3100`, com os limitadores de requisi�
 
 ## Autenticação e dados
 
-O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt (parâmetros fixos no código, hash versionado e rehash automático no login) e usa sessões aleatórias em cookies HttpOnly. Produtos são lidos pela vitrine pública e só fornecedores autenticados podem anunciá-los. A autorização ocorre na API; o Neon não é acessado pelo navegador.
+O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt (parâmetros fixos no código, hash versionado e rehash automático no login) e usa sessões aleatórias em cookies HttpOnly. Produtos são lidos pela vitrine pública — em páginas de 12, com filtro por categoria e botão de carregar mais — e só fornecedores autenticados podem anunciá-los. A autorização ocorre na API; o Neon não é acessado pelo navegador.
 
 Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orçamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transação. Se um preço tiver mudado desde que o item entrou no carrinho, a tela avisa e atualiza o valor antes do envio. O histórico do cliente também aparece nessa tela.
 
-Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites, edita o convite, encerra ou reabre as confirmações e exclui o convite quando a festa passa.
+Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites, edita o convite, encerra ou reabre as confirmações e exclui o convite quando a festa passa. Ao compartilhar o link, o servidor injeta as tags Open Graph no HTML, então o WhatsApp e as redes sociais mostram o título do evento, a data, o local e a imagem da marca na prévia.
 
 Fornecedores anunciam produtos em `/fornecedor/produtos/novo` e os editam, pausam ou excluem em `/fornecedor/painel`. Os orçamentos recebidos ficam na aba "Orçamentos Recebidos", onde o fornecedor negocia, confirma ou recusa cada pedido. Toda rota de fornecedor confere a posse do recurso: um fornecedor não alcança o produto nem o pedido de outro.
 
