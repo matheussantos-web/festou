@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { api } from '../lib/api'
+import { api, asArray } from '../lib/api'
 import {
   cartCount,
   cartItems,
@@ -9,6 +9,8 @@ import {
   removeFromCart,
   setCartQuantity,
 } from '../lib/cart'
+import { formatDate, formatPrice } from '../lib/format'
+import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
 
 const orders = ref([])
 const note = ref('')
@@ -16,30 +18,37 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const isLoadingOrders = ref(true)
 const isSubmitting = ref(false)
+const updatingOrderId = ref(null)
 
-function formatPrice(value) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))
-}
+async function updateOrderStatus(order, nextStatus) {
+  if (nextStatus === 'cancelado') {
+    const confirmed = window.confirm('Deseja realmente cancelar esta solicitação de orçamento?')
+    if (!confirmed) return
+  }
 
-function formatDate(value) {
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-}
+  errorMessage.value = ''
+  successMessage.value = ''
+  updatingOrderId.value = order.id
 
-const orderStatuses = {
-  solicitado: 'Aguardando fornecedor',
-  em_negociacao: 'Em negociação',
-  confirmado: 'Confirmado',
-  recusado: 'Recusado',
-  cancelado: 'Cancelado',
-  concluido: 'Concluído',
+  try {
+    const result = await api(`/orders/${order.id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: nextStatus }),
+    })
+    order.status = nextStatus
+    successMessage.value = result.message || 'Status do pedido atualizado com sucesso.'
+  } catch (error) {
+    errorMessage.value = error.message || 'Não foi possível atualizar o status do pedido.'
+  } finally {
+    updatingOrderId.value = null
+  }
 }
 
 async function loadOrders() {
   isLoadingOrders.value = true
-
   try {
     const result = await api('/orders')
-    orders.value = result.orders
+    orders.value = asArray(result.orders)
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível carregar seus pedidos.'
   } finally {
@@ -64,7 +73,7 @@ async function requestQuote() {
     orders.value.unshift(order)
     clearCart()
     note.value = ''
-    successMessage.value = `Solicitação enviada. Total estimado: ${formatPrice(order.total_estimado)}.`
+    successMessage.value = `Solicitação enviada! Total estimado: ${formatPrice(order.total_estimado)}.`
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível enviar a solicitação.'
   } finally {
@@ -76,131 +85,232 @@ onMounted(loadOrders)
 </script>
 
 <template>
-  <main class="min-h-screen bg-orange-50 text-slate-900">
-    <header class="flex items-center justify-between border-b border-orange-100 bg-white px-6 py-5 md:px-12">
-      <RouterLink to="/" class="text-2xl font-bold text-rose-700">Festou!</RouterLink>
-      <RouterLink to="/vitrine" class="text-sm font-semibold text-rose-700 hover:underline">Continuar escolhendo</RouterLink>
-    </header>
+  <div class="min-h-screen bg-slate-50 text-slate-900">
 
-    <div class="festou-surface mx-auto max-w-6xl px-6 py-10 md:px-12">
-      <h1 class="text-3xl font-bold">Carrinho e orçamentos</h1>
-      <p class="mt-2 text-slate-600">Revise os itens e envie uma solicitação aos fornecedores.</p>
+    <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
+      <!-- Cabeçalho da página -->
+      <div class="border-b border-slate-200/80 pb-6">
+        <h1 class="font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
+          Carrinho & Orçamentos
+        </h1>
+        <p class="mt-2 text-slate-600">
+          Revise os itens selecionados e envie solicitações aos fornecedores da sua festa.
+        </p>
+      </div>
 
-      <p v-if="successMessage" role="status" class="mt-6 rounded-md bg-green-100 px-4 py-3 text-sm text-green-900">
+      <div v-if="successMessage" role="status" class="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-900 shadow-sm">
         {{ successMessage }}
-      </p>
-      <p v-if="errorMessage" role="alert" class="mt-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">
+      </div>
+      <div v-if="errorMessage" role="alert" class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900 shadow-sm">
         {{ errorMessage }}
-      </p>
+      </div>
 
-      <section class="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <!-- Seção do Carrinho Atual -->
+      <section class="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
+        <!-- Itens no Carrinho -->
         <div>
-          <div v-if="cartItems.length" class="divide-y divide-orange-100 border-y border-orange-200">
-            <article v-for="item in cartItems" :key="item.id" class="flex gap-4 py-5">
-              <img
-                v-if="item.imagem_url"
-                :src="item.imagem_url"
-                :alt="item.nome"
-                class="size-20 rounded-md object-cover"
-              />
-              <div v-else class="grid size-20 shrink-0 place-items-center rounded-md bg-orange-100 text-2xl font-bold text-rose-700">
-                {{ item.nome.slice(0, 1).toUpperCase() }}
+          <div v-if="cartItems.length" class="space-y-4">
+            <article
+              v-for="item in cartItems"
+              :key="item.id"
+              class="festou-card flex flex-wrap items-center justify-between gap-4 p-5"
+            >
+              <div class="flex items-center gap-4">
+                <img
+                  v-if="item.imagem_url"
+                  :src="item.imagem_url"
+                  :alt="item.nome"
+                  class="h-20 w-20 rounded-xl object-cover"
+                />
+                <div v-else class="grid h-20 w-20 place-items-center rounded-xl bg-orange-100 text-2xl font-bold text-festou-primary">
+                  {{ item.nome.slice(0, 2).toUpperCase() }}
+                </div>
+                <div>
+                  <h2 class="font-bold text-slate-900">{{ item.nome }}</h2>
+                  <p class="mt-0.5 text-xs text-slate-500">{{ formatPrice(item.preco) }} por unidade</p>
+                  <p class="mt-2 text-sm font-extrabold text-festou-primary">
+                    Subtotal: {{ formatPrice(item.preco * item.quantidade) }}
+                  </p>
+                </div>
               </div>
-              <div class="min-w-0 flex-1">
-                <h2 class="font-bold">{{ item.nome }}</h2>
-                <p class="mt-1 text-sm text-slate-600">{{ formatPrice(item.preco) }} por unidade</p>
-                <div class="mt-3 flex flex-wrap items-center gap-3">
-                  <label :for="`quantity-${item.id}`" class="text-sm font-medium">Quantidade</label>
+
+              <!-- Controles de Quantidade e Excluir -->
+              <div class="flex items-center gap-4">
+                <div class="flex items-center rounded-lg border border-slate-200 bg-white shadow-sm">
+                  <label :for="`quantity-${item.id}`" class="sr-only">Quantidade</label>
                   <input
                     :id="`quantity-${item.id}`"
                     :value="item.quantidade"
                     type="number"
                     min="1"
                     max="20"
-                    class="w-20 rounded-md border border-slate-300 px-2 py-1"
+                    class="w-16 border-none py-1.5 text-center text-sm font-bold text-slate-800 outline-none focus:ring-0"
                     @change="setCartQuantity(item.id, $event.target.value)"
                   />
-                  <button
-                    type="button"
-                    class="text-sm font-semibold text-rose-700 hover:underline"
-                    @click="removeFromCart(item.id)"
-                  >
-                    Remover
-                  </button>
                 </div>
+                <button
+                  type="button"
+                  class="rounded-lg p-2 text-xs font-semibold text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                  aria-label="Remover item"
+                  @click="removeFromCart(item.id)"
+                >
+                  ✕ Remover
+                </button>
               </div>
-              <p class="shrink-0 font-bold">{{ formatPrice(item.preco * item.quantidade) }}</p>
             </article>
+
+            <!-- Observação para os fornecedores -->
+            <div class="festou-surface mt-6 p-6">
+              <label for="order-note" class="mb-2 block text-sm font-bold text-festou-midnight">
+                Observações gerais para os fornecedores (opcional)
+              </label>
+              <textarea
+                id="order-note"
+                v-model="note"
+                maxlength="500"
+                rows="3"
+                placeholder="Exemplo: Data pretendida do evento, horário, tema da festa ou restrições alimentares..."
+                class="w-full text-sm"
+              ></textarea>
+            </div>
           </div>
-          <div v-else class="rounded-lg border border-dashed border-orange-300 bg-white/70 px-6 py-12 text-center">
-            <h2 class="text-xl font-bold">Seu carrinho está vazio</h2>
-            <p class="mt-2 text-slate-600">Adicione produtos da vitrine para montar um orçamento.</p>
-            <RouterLink to="/vitrine" class="mt-5 inline-flex font-semibold text-rose-700 hover:underline">
+
+          <!-- Carrinho Vazio -->
+          <div v-else class="festou-surface p-12 text-center">
+            <span class="text-4xl">🛒</span>
+            <h2 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Seu carrinho está vazio</h2>
+            <p class="mt-2 text-sm text-slate-600">
+              Navegue pelos produtos e serviços da vitrine e monte seu orçamento para a festa.
+            </p>
+            <RouterLink to="/vitrine" class="btn-festou-primary mt-6 text-sm">
               Explorar a vitrine
             </RouterLink>
           </div>
-
-          <section v-if="cartItems.length" class="mt-8">
-            <label for="order-note" class="mb-2 block text-sm font-semibold">Observação para os fornecedores (opcional)</label>
-            <textarea
-              id="order-note"
-              v-model="note"
-              maxlength="500"
-              rows="3"
-              placeholder="Data da festa, tema ou detalhes importantes..."
-              class="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
-            ></textarea>
-          </section>
         </div>
 
-        <aside v-if="cartItems.length" class="h-fit border-t border-orange-200 pt-5 lg:border-t-0 lg:pt-0">
-          <h2 class="text-xl font-bold">Resumo</h2>
-          <div class="mt-4 flex justify-between text-sm text-slate-600">
-            <span>{{ cartCount }} {{ cartCount === 1 ? 'item' : 'itens' }}</span>
-            <span>{{ formatPrice(cartTotalCents / 100) }}</span>
+        <!-- Resumo Lateral -->
+        <aside v-if="cartItems.length" class="h-fit">
+          <div class="festou-surface sticky top-24 p-6">
+            <h2 class="font-heading text-xl font-bold text-festou-midnight">Resumo do Orçamento</h2>
+            <div class="mt-4 space-y-2.5 border-b border-slate-100 pb-4 text-sm text-slate-600">
+              <div class="flex justify-between">
+                <span>Total de itens</span>
+                <span class="font-bold text-slate-900">{{ cartCount }} {{ cartCount === 1 ? 'item' : 'itens' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Subtotal estimado</span>
+                <span class="font-bold text-slate-900">{{ formatPrice(cartTotalCents / 100) }}</span>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-baseline justify-between">
+              <span class="text-base font-bold text-festou-midnight">Total estimado</span>
+              <span class="font-heading text-2xl font-extrabold text-festou-primary">
+                {{ formatPrice(cartTotalCents / 100) }}
+              </span>
+            </div>
+
+            <p class="mt-3 text-xs leading-relaxed text-slate-500">
+              O valor final será revisado e confirmado pelos fornecedores. Não há cobrança no envio da solicitação.
+            </p>
+
+            <button
+              type="button"
+              :disabled="isSubmitting || !cartItems.length"
+              class="btn-festou-primary mt-6 w-full text-sm"
+              @click="requestQuote"
+            >
+              {{ isSubmitting ? 'Enviando solicitação...' : 'Solicitar orçamento' }}
+            </button>
           </div>
-          <div class="mt-4 flex justify-between border-t border-orange-200 pt-4 text-lg font-bold">
-            <span>Total estimado</span>
-            <span>{{ formatPrice(cartTotalCents / 100) }}</span>
-          </div>
-          <p class="mt-3 text-xs leading-5 text-slate-500">O valor será confirmado pelo fornecedor. O preço final é calculado novamente ao enviar.</p>
-          <button
-            type="button"
-            :disabled="isSubmitting || !cartItems.length"
-            class="mt-6 w-full rounded-md bg-rose-700 px-4 py-3 font-semibold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60"
-            @click="requestQuote"
-          >
-            {{ isSubmitting ? 'Enviando...' : 'Solicitar orçamento' }}
-          </button>
         </aside>
       </section>
 
-      <section class="mt-14 border-t border-orange-200 pt-8">
-        <h2 class="text-2xl font-bold">Minhas solicitações</h2>
-        <p v-if="isLoadingOrders" role="status" class="mt-4 text-sm text-slate-600">Carregando solicitações...</p>
-        <p v-else-if="!orders.length" class="mt-4 text-sm text-slate-600">Você ainda não enviou solicitações de orçamento.</p>
-        <div v-else class="mt-5 divide-y divide-orange-100 border-y border-orange-200">
-          <article v-for="order in orders" :key="order.id" class="py-5">
-            <div class="flex flex-wrap items-start justify-between gap-3">
+      <!-- Histórico de Solicitações do Cliente -->
+      <section class="mt-16 border-t border-slate-200/80 pt-10">
+        <h2 class="font-heading text-2xl font-extrabold text-festou-midnight sm:text-3xl">
+          Minhas Solicitações Anteriores
+        </h2>
+        <p class="mt-1 text-sm text-slate-600">
+          Acompanhe o retorno dos fornecedores e o status de cada orçamento solicitado.
+        </p>
+
+        <div v-if="isLoadingOrders" role="status" class="py-12 text-center text-slate-500">
+          Carregando histórico de pedidos...
+        </div>
+
+        <div v-else-if="!orders.length" class="festou-surface mt-6 p-8 text-center text-slate-600">
+          Você ainda não realizou nenhuma solicitação de orçamento.
+        </div>
+
+        <div v-else class="mt-6 space-y-4">
+          <article
+            v-for="order in orders"
+            :key="order.id"
+            class="festou-surface p-6 transition-all hover:shadow-md"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
-                <p class="font-bold">Solicitação #{{ order.id.slice(0, 8) }}</p>
-                <p class="mt-1 text-sm text-slate-600">{{ formatDate(order.created_at) }}</p>
+                <div class="flex items-center gap-3">
+                  <h3 class="font-bold text-slate-900">Solicitação #{{ order.id.slice(0, 8) }}</h3>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    :class="orderStatusStyle(order.status)"
+                  >
+                    {{ orderStatusLabel(order.status, 'customer') }}
+                  </span>
+                </div>
+                <p class="mt-1 text-xs text-slate-500">Enviada em {{ formatDate(order.created_at) }}</p>
               </div>
-              <span class="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">
-                {{ orderStatuses[order.status] || order.status }}
-              </span>
+
+              <div class="text-right">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Estimado</span>
+                <p class="text-lg font-extrabold text-festou-primary">{{ formatPrice(order.total_estimado) }}</p>
+              </div>
             </div>
-            <ul class="mt-4 space-y-2 text-sm">
-              <li v-for="item in order.itens" :key="item.id" class="flex justify-between gap-4">
-                <span>{{ item.quantidade }}x {{ item.nome }}</span>
-                <span>{{ formatPrice(item.subtotal) }}</span>
+
+            <!-- Lista de itens do pedido -->
+            <ul class="mt-4 divide-y divide-slate-100 text-sm">
+              <li v-for="item in asArray(order.itens)" :key="item.id" class="flex justify-between py-2 text-slate-700">
+                <span>
+                  <strong class="text-slate-900">{{ item.quantidade }}x</strong> {{ item.nome }}
+                  <span class="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{{ item.categoria }}</span>
+                </span>
+                <span class="font-semibold text-slate-900">{{ formatPrice(item.subtotal) }}</span>
               </li>
             </ul>
-            <p class="mt-4 text-right font-bold">Estimativa: {{ formatPrice(order.total_estimado) }}</p>
-            <p v-if="order.observacao" class="mt-2 text-sm text-slate-600">{{ order.observacao }}</p>
+
+            <div v-if="order.observacao" class="mt-3 rounded-md bg-slate-50 p-3 text-xs text-slate-600">
+              <span class="font-bold">Sua observação:</span> {{ order.observacao }}
+            </div>
+
+            <!-- Ações -->
+            <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+              <div>
+                <button
+                  v-if="['solicitado', 'em_negociacao'].includes(order.status)"
+                  type="button"
+                  :disabled="updatingOrderId === order.id"
+                  class="text-xs font-bold text-rose-600 transition hover:underline disabled:opacity-50"
+                  @click="updateOrderStatus(order, 'cancelado')"
+                >
+                  {{ updatingOrderId === order.id ? 'Cancelando...' : '✕ Cancelar solicitação' }}
+                </button>
+                <button
+                  v-else-if="order.status === 'confirmado'"
+                  type="button"
+                  :disabled="updatingOrderId === order.id"
+                  class="rounded-full bg-teal-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50"
+                  @click="updateOrderStatus(order, 'concluido')"
+                >
+                  {{ updatingOrderId === order.id ? 'Atualizando...' : '✓ Marcar como concluído' }}
+                </button>
+              </div>
+              <span class="text-xs text-slate-400">Status atualizado pelo fornecedor</span>
+            </div>
           </article>
         </div>
       </section>
-    </div>
-  </main>
+    </main>
+  </div>
 </template>

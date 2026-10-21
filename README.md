@@ -2,16 +2,21 @@
 
 Plataforma de festas e eventos com Vue 3, Vite, Tailwind CSS, Express e Neon PostgreSQL.
 
-## Configuracao local
+Visão geral do produto, arquitetura, rotas, modelo de dados e instruções de manutenção da documentação: [docs/PROJETO.md](./docs/PROJETO.md).
+
+## Configuração local
 
 1. Revogue a senha Neon que foi compartilhada e crie uma nova credencial no painel do Neon.
-2. Crie `.env` na raiz do projeto com as variaveis abaixo. Nunca compartilhe o valor de `DATABASE_URL`.
+2. Crie `.env` na raiz do projeto com as variáveis abaixo. Nunca compartilhe o valor de `DATABASE_URL`.
 
 ```env
 DATABASE_URL=postgresql://USUARIO:SENHA@HOST/neondb?sslmode=require
 APP_ORIGIN=http://127.0.0.1:5173
 PORT=3000
+HOST=127.0.0.1
 NODE_ENV=development
+AUTH_RATE_LIMIT=10
+RSVP_RATE_LIMIT=30
 ```
 
 3. Execute `npm run db:setup` para criar as tabelas no Neon.
@@ -20,14 +25,24 @@ NODE_ENV=development
 
 O desenvolvimento inicia o frontend Vite e a API Express em conjunto. O Vite encaminha `/api` para o backend local. A string do banco e as senhas nunca devem ser expostas ao frontend.
 
-O pacote de identidade visual da marca — paleta, tipografia, uso de grafismos e tom de voz — esta documentado em [docs/IDENTIDADE-VISUAL.md](./docs/IDENTIDADE-VISUAL.md). Os tokens estao em `tailwind.config.js`; o padrao de confetes, o favicon e a arte principal ficam em `public/`.
+O pacote de identidade visual da marca — paleta, tipografia, uso de grafismos e tom de voz — está documentado em [docs/IDENTIDADE-VISUAL.md](./docs/IDENTIDADE-VISUAL.md). Os tokens estão em `tailwind.config.js`; o padrão de confetes, o favicon e a arte principal ficam em `public/`.
 
-## Autenticacao e dados
+## Testes
 
-O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt e usa sessoes aleatorias em cookies HttpOnly. Produtos sao lidos pela vitrine publica e so fornecedores autenticados podem anuncia-los. A autorizacao ocorre na API; o Neon nao e acessado pelo navegador.
+```bash
+npm test            # suíte completa (unitários + integração da API)
+npm run test:unit   # apenas as libs do frontend
+npm run test:api    # apenas os endpoints, com supertest
+```
 
-Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orcamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transacao. O historico do cliente tambem aparece nessa tela.
+Os testes de integração usam o mesmo banco Neon do `.env`, criam contas com e-mail `teste.*@festou.test` e removem os dados ao final de cada arquivo.
 
-Clientes tambem podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link publico `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitriao acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites.
+## Autenticação e dados
 
-Para producao, configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production` e um proxy HTTPS que encaminhe `/api` para o servidor Express.
+O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt e usa sessões aleatórias em cookies HttpOnly. Produtos são lidos pela vitrine pública e só fornecedores autenticados podem anunciá-los. A autorização ocorre na API; o Neon não é acessado pelo navegador.
+
+Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orçamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transação. O histórico do cliente também aparece nessa tela.
+
+Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites.
+
+Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express.

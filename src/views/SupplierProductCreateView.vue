@@ -32,7 +32,7 @@ async function createProduct() {
         imagem_url: form.imagem_url,
       }),
     })
-    successMessage.value = 'Produto anunciado na vitrine.'
+    successMessage.value = 'Produto publicado com sucesso na vitrine!'
     Object.assign(form, {
       nome: '',
       categoria: 'bolos',
@@ -50,17 +50,34 @@ async function createProduct() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-orange-50 px-6 py-10 text-slate-900">
-    <section class="mx-auto max-w-2xl">
-      <RouterLink to="/vitrine" class="text-sm font-semibold text-rose-700 hover:underline">Voltar à vitrine</RouterLink>
-      <div class="festou-surface mt-6 p-6 sm:p-9">
-        <p class="text-sm font-bold uppercase tracking-widest text-rose-700">Área do fornecedor</p>
-        <h1 class="mt-2 text-3xl font-bold">Anunciar produto ou serviço</h1>
-        <p class="mt-2 text-slate-600">As informações serão exibidas na vitrine pública.</p>
+  <div class="min-h-screen bg-slate-50 text-slate-900">
+
+    <main id="conteudo-principal" class="mx-auto max-w-3xl px-5 py-10 sm:px-8">
+      <div class="flex items-center justify-between text-xs font-semibold">
+        <RouterLink to="/fornecedor/painel" class="text-festou-primary hover:underline">
+          ← Voltar ao painel de pedidos
+        </RouterLink>
+        <RouterLink to="/vitrine" class="text-slate-500 hover:text-slate-800">
+          Ver vitrine pública
+        </RouterLink>
+      </div>
+
+      <div class="festou-surface mt-6 p-6 sm:p-10">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-festou-purple">
+          <span>💼</span> Catálogo do Fornecedor
+        </span>
+        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight">
+          Anunciar Produto ou Serviço
+        </h1>
+        <p class="mt-1 text-sm text-slate-600">
+          Cadastre bolos, doces, brinquedos ou convites para exibir na vitrine pública para clientes.
+        </p>
 
         <form class="mt-8 space-y-5" @submit.prevent="createProduct">
           <div>
-            <label for="product-name" class="mb-1 block text-sm font-semibold">Nome do produto</label>
+            <label for="product-name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+              Nome do produto ou serviço
+            </label>
             <input
               id="product-name"
               v-model="form.nome"
@@ -68,38 +85,33 @@ async function createProduct() {
               minlength="3"
               maxlength="120"
               required
-              class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+              placeholder="Ex: Bolo de Chocolate Belga com Morangos"
+              class="w-full text-sm"
             />
           </div>
-          <div>
-            <label for="category" class="mb-1 block text-sm font-semibold">Categoria</label>
-            <select
-              id="category"
-              v-model="form.categoria"
-              required
-              class="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
-            >
-              <option value="bolos">Bolos</option>
-              <option value="doces">Doces</option>
-              <option value="brinquedos">Brinquedos</option>
-              <option value="convites">Convites digitais</option>
-            </select>
-          </div>
-          <div>
-            <label for="description" class="mb-1 block text-sm font-semibold">Descrição</label>
-            <textarea
-              id="description"
-              v-model="form.descricao"
-              rows="4"
-              minlength="10"
-              maxlength="1000"
-              required
-              class="w-full resize-y rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
-            ></textarea>
-          </div>
+
           <div class="grid gap-5 sm:grid-cols-2">
             <div>
-              <label for="price" class="mb-1 block text-sm font-semibold">Preço (R$)</label>
+              <label for="category" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Categoria
+              </label>
+              <select
+                id="category"
+                v-model="form.categoria"
+                required
+                class="w-full text-sm"
+              >
+                <option value="bolos">🎂 Bolos</option>
+                <option value="doces">🍬 Doces</option>
+                <option value="brinquedos">🎈 Brinquedos</option>
+                <option value="convites">💌 Convites digitais</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="price" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Preço sugerido (R$)
+              </label>
               <input
                 id="price"
                 v-model.number="form.preco"
@@ -108,45 +120,84 @@ async function createProduct() {
                 max="99999999"
                 step="0.01"
                 required
-                class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+                placeholder="150.00"
+                class="w-full text-sm"
               />
             </div>
+          </div>
+
+          <div>
+            <label for="description" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+              Descrição detalhada
+            </label>
+            <textarea
+              id="description"
+              v-model="form.descricao"
+              rows="4"
+              minlength="10"
+              maxlength="1000"
+              required
+              placeholder="Descreva os ingredientes, dimensões, quantidade de fatias ou detalhes do serviço..."
+              class="w-full text-sm"
+            ></textarea>
+          </div>
+
+          <div class="grid gap-5 sm:grid-cols-2">
             <div>
-              <label for="city" class="mb-1 block text-sm font-semibold">Cidade (opcional)</label>
+              <label for="city" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Cidade de atendimento (opcional)
+              </label>
               <input
                 id="city"
                 v-model="form.cidade"
                 type="text"
                 maxlength="100"
-                class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+                placeholder="Ex: São Paulo - SP"
+                class="w-full text-sm"
+              />
+            </div>
+
+            <div>
+              <label for="image-url" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                URL da imagem (opcional)
+              </label>
+              <input
+                id="image-url"
+                v-model="form.imagem_url"
+                type="url"
+                maxlength="2048"
+                placeholder="https://exemplo.com/foto.jpg"
+                class="w-full text-sm"
               />
             </div>
           </div>
-          <div>
-            <label for="image-url" class="mb-1 block text-sm font-semibold">URL da imagem (opcional)</label>
-            <input
-              id="image-url"
-              v-model="form.imagem_url"
-              type="url"
-              maxlength="2048"
-              placeholder="https://..."
-              class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
-            />
+
+          <div v-if="errorMessage" role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800">
+            {{ errorMessage }}
           </div>
-          <p v-if="errorMessage" role="alert" class="text-sm text-red-700">{{ errorMessage }}</p>
-          <p v-if="successMessage" role="status" class="text-sm text-green-700">
-            {{ successMessage }}
-            <RouterLink to="/vitrine" class="ml-1 font-semibold underline">Ver vitrine</RouterLink>
-          </p>
+
+          <div v-if="successMessage" role="status" class="flex flex-wrap items-center justify-between rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-semibold text-green-900">
+            <span>{{ successMessage }}</span>
+            <div class="flex items-center gap-2">
+              <RouterLink to="/fornecedor/painel" class="font-bold underline">
+                Ver no meu painel
+              </RouterLink>
+              <span>·</span>
+              <RouterLink to="/vitrine" class="font-bold underline">
+                Ver na vitrine
+              </RouterLink>
+            </div>
+          </div>
+
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="w-full rounded-md bg-rose-700 px-4 py-3 font-semibold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60"
+            class="btn-festou-primary w-full text-sm font-bold shadow-festive"
           >
-            {{ isSubmitting ? 'Publicando...' : 'Publicar na vitrine' }}
+            {{ isSubmitting ? 'Publicando produto...' : 'Publicar na vitrine' }}
           </button>
         </form>
       </div>
-    </section>
-  </main>
+    </main>
+  </div>
 </template>

@@ -9,12 +9,10 @@ const email = ref('')
 const password = ref('')
 const profileType = ref('cliente')
 const errorMessage = ref('')
-const successMessage = ref('')
 const isSubmitting = ref(false)
 
 async function signUp() {
   errorMessage.value = ''
-  successMessage.value = ''
   isSubmitting.value = true
 
   try {
@@ -28,7 +26,11 @@ async function signUp() {
       }),
     })
 
-    await router.push('/vitrine')
+    if (profileType.value === 'fornecedor') {
+      await router.push('/fornecedor/painel')
+    } else {
+      await router.push('/vitrine')
+    }
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível criar sua conta. Tente novamente.'
   } finally {
@@ -38,15 +40,68 @@ async function signUp() {
 </script>
 
 <template>
-  <main class="grid min-h-screen place-items-center bg-orange-50 px-6 py-10 text-slate-900">
-    <section class="festou-surface w-full max-w-md p-8">
-      <RouterLink to="/" class="festou-wordmark">Festou!</RouterLink>
-      <h1 class="mt-6 text-3xl font-bold">Crie sua conta</h1>
-      <p class="mt-2 text-slate-600">Escolha como quer participar da Festou!.</p>
+  <div class="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-orange-50/70 via-white to-slate-100 px-5 py-12 text-slate-900">
+    <div class="pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-festou-primary/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-festou-turquoise/15 blur-3xl"></div>
 
-      <form class="mt-8 space-y-5" @submit.prevent="signUp">
+    <section class="festou-surface relative w-full max-w-lg p-8 sm:p-10">
+      <div class="text-center">
+        <RouterLink to="/" class="inline-flex items-center gap-1 font-heading text-3xl font-extrabold tracking-tight text-festou-midnight">
+          <span class="text-festou-primary">Festou</span><span class="text-festou-yellow">!</span>
+        </RouterLink>
+        <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">
+          Crie sua conta no Festou!
+        </h1>
+        <p class="mt-1 text-sm text-slate-600">
+          Junte-se à maior comunidade de celebrações e eventos.
+        </p>
+      </div>
+
+      <div v-if="errorMessage" role="alert" class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+        {{ errorMessage }}
+      </div>
+
+      <form class="mt-6 space-y-4" @submit.prevent="signUp">
+        <!-- Seletor de Perfil Elegante em Cards -->
+        <fieldset>
+          <legend class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Qual é o seu objetivo?
+          </legend>
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              :aria-pressed="profileType === 'cliente'"
+              class="flex flex-col items-center justify-center rounded-xl border p-4 text-center transition"
+              :class="profileType === 'cliente' ? 'border-festou-primary bg-pink-50/60 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'"
+              @click="profileType = 'cliente'"
+            >
+              <span class="text-2xl" aria-hidden="true">🎉</span>
+              <span class="mt-2 text-sm font-bold" :class="profileType === 'cliente' ? 'text-festou-primary' : 'text-slate-800'">
+                Sou Cliente
+              </span>
+              <span class="mt-0.5 text-[11px] text-slate-500">Quero organizar festas</span>
+            </button>
+
+            <button
+              type="button"
+              :aria-pressed="profileType === 'fornecedor'"
+              class="flex flex-col items-center justify-center rounded-xl border p-4 text-center transition"
+              :class="profileType === 'fornecedor' ? 'border-festou-purple bg-purple-50/60 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'"
+              @click="profileType = 'fornecedor'"
+            >
+              <span class="text-2xl" aria-hidden="true">🎂</span>
+              <span class="mt-2 text-sm font-bold" :class="profileType === 'fornecedor' ? 'text-festou-purple' : 'text-slate-800'">
+                Sou Fornecedor
+              </span>
+              <span class="mt-0.5 text-[11px] text-slate-500">Quero vender produtos</span>
+            </button>
+          </div>
+        </fieldset>
+
         <div>
-          <label for="name" class="mb-1 block text-sm font-semibold">Nome completo</label>
+          <label for="name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Nome completo ou da empresa
+          </label>
           <input
             id="name"
             v-model.trim="name"
@@ -55,35 +110,32 @@ async function signUp() {
             minlength="3"
             maxlength="100"
             required
-            class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+            placeholder="Ex: Beatriz Lima ou Doçuras da Bia"
+            class="w-full text-sm"
           />
         </div>
+
         <div>
-          <label for="email" class="mb-1 block text-sm font-semibold">E-mail</label>
+          <label for="email" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+            E-mail
+          </label>
           <input
             id="email"
             v-model.trim="email"
             type="email"
             autocomplete="email"
             pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
-            title="Use um e-mail como nome@dominio.com."
+            title="Use um e-mail válido, como nome@dominio.com."
             required
-            class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+            placeholder="seuemail@exemplo.com"
+            class="w-full text-sm"
           />
         </div>
+
         <div>
-          <label for="profile-type" class="mb-1 block text-sm font-semibold">Quero participar como</label>
-          <select
-            id="profile-type"
-            v-model="profileType"
-            class="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
-          >
-            <option value="cliente">Cliente</option>
-            <option value="fornecedor">Fornecedor</option>
-          </select>
-        </div>
-        <div>
-          <label for="password" class="mb-1 block text-sm font-semibold">Senha</label>
+          <label for="password" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Senha de acesso
+          </label>
           <input
             id="password"
             v-model="password"
@@ -91,25 +143,27 @@ async function signUp() {
             autocomplete="new-password"
             minlength="8"
             required
-            class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+            placeholder="No mínimo 8 caracteres"
+            class="w-full text-sm"
           />
-          <p class="mt-1 text-xs text-slate-500">Use pelo menos 8 caracteres.</p>
+          <p class="mt-1 text-[11px] text-slate-400">Pelo menos 8 caracteres para sua segurança.</p>
         </div>
-        <p v-if="errorMessage" role="alert" class="text-sm text-red-700">{{ errorMessage }}</p>
-        <p v-if="successMessage" role="status" class="text-sm text-green-700">{{ successMessage }}</p>
+
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="w-full rounded-md bg-rose-700 px-4 py-3 font-semibold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60"
+          class="btn-festou-primary mt-2 w-full text-sm font-bold shadow-festive"
         >
-          {{ isSubmitting ? 'Criando conta...' : 'Criar conta' }}
+          {{ isSubmitting ? 'Criando sua conta...' : 'Cadastrar no Festou!' }}
         </button>
       </form>
 
-      <p class="mt-6 text-sm text-slate-600">
-        Já tem uma conta?
-        <RouterLink to="/login" class="font-semibold text-rose-700 hover:underline">Entrar</RouterLink>
-      </p>
+      <div class="mt-8 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
+        Já possui uma conta?
+        <RouterLink to="/login" class="ml-1 font-bold text-festou-primary hover:underline">
+          Fazer login
+        </RouterLink>
+      </div>
     </section>
-  </main>
+  </div>
 </template>

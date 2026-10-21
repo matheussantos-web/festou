@@ -1,6 +1,9 @@
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { randomBytes } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import cookieParser from 'cookie-parser'
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
@@ -39,7 +42,7 @@ app.use('/api', (request, response, next) => {
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: Number(process.env.AUTH_RATE_LIMIT) || 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
@@ -47,7 +50,7 @@ const authLimiter = rateLimit({
 
 const rsvpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: Number(process.env.RSVP_RATE_LIMIT) || 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { message: 'Muitas tentativas de confirmacao. Aguarde alguns minutos.' },
@@ -110,7 +113,7 @@ app.post('/api/invitations', requireUser, async (request, response, next) => {
         ${request.user.id}, ${slug}, ${input.titulo}, ${input.anfitriao},
         ${input.data_evento}, ${input.local_evento}, ${input.mensagem}, ${input.tema}
       )
-      returning id, slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema, created_at
+      returning id, slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema, aceita_rsvp, created_at
     `
 
     response.status(201).json({ invitation })
@@ -136,6 +139,7 @@ app.get('/api/invitations/mine', requireUser, async (request, response, next) =>
         c.local_evento,
         c.mensagem,
         c.tema,
+        c.aceita_rsvp,
         c.created_at,
         coalesce(
           json_agg(json_build_object(
@@ -162,6 +166,40 @@ app.get('/api/invitations/mine', requireUser, async (request, response, next) =>
   }
 })
 
+app.patch('/api/invitations/:id/rsvp-status', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem gerenciar convites.' })
+    }
+
+    const invitationId = z.string().uuid('Identificador de convite inválido.').parse(request.params.id)
+    const rsvpStatusSchema = z.object({
+      aceita_rsvp: z.boolean({ required_error: 'Informe o estado de aceitação de confirmação.' }),
+    })
+    const input = rsvpStatusSchema.parse(request.body)
+    const sql = getDatabase()
+
+    const [updated] = await sql`
+      update public.convites
+      set aceita_rsvp = ${input.aceita_rsvp}
+      where id = ${invitationId} and dono_id = ${request.user.id}
+      returning id, slug, titulo, aceita_rsvp
+    `
+
+    if (!updated) {
+      return response.status(404).json({ message: 'Convite não encontrado ou você não tem permissão para editá-lo.' })
+    }
+
+    const message = input.aceita_rsvp
+      ? 'Confirmações de presença reabertas com sucesso.'
+      : 'Confirmações de presença encerradas com sucesso.'
+
+    response.json({ message, invitation: updated })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 app.get('/api/invitations/:slug', async (request, response, next) => {
   try {
     const sql = getDatabase()
@@ -176,10 +214,10 @@ app.get('/api/invitations/:slug', async (request, response, next) => {
 
     const [summary] = await sql`
       select
-        count(*) filter (where resposta = 'confirmado') as confirmados,
-        coalesce(sum(quantidade_pessoas) filter (where resposta = 'confirmado'), 0) as pessoas_confirmadas,
-        count(*) filter (where resposta = 'talvez') as talvez,
-        count(*) filter (where resposta = 'recusado') as recusados
+        (count(*) filter (where resposta = 'confirmado'))::int as confirmados,
+        (coalesce(sum(quantidade_pessoas) filter (where resposta = 'confirmado'), 0))::int as pessoas_confirmadas,
+        (count(*) filter (where resposta = 'talvez'))::int as talvez,
+        (count(*) filter (where resposta = 'recusado'))::int as recusados
       from public.confirmacoes_presenca
       where convite_id = ${invitation.id}
     `
@@ -224,10 +262,10 @@ app.post('/api/invitations/:slug/rsvp', rsvpLimiter, async (request, response, n
 
     const [summary] = await sql`
       select
-        count(*) filter (where resposta = 'confirmado') as confirmados,
-        coalesce(sum(quantidade_pessoas) filter (where resposta = 'confirmado'), 0) as pessoas_confirmadas,
-        count(*) filter (where resposta = 'talvez') as talvez,
-        count(*) filter (where resposta = 'recusado') as recusados
+        (count(*) filter (where resposta = 'confirmado'))::int as confirmados,
+        (coalesce(sum(quantidade_pessoas) filter (where resposta = 'confirmado'), 0))::int as pessoas_confirmadas,
+        (count(*) filter (where resposta = 'talvez'))::int as talvez,
+        (count(*) filter (where resposta = 'recusado'))::int as recusados
       from public.confirmacoes_presenca
       where convite_id = ${invitation.id}
     `
@@ -263,6 +301,39 @@ function sendProfile(profile) {
     email: profile.email,
     tipo_perfil: profile.tipo_perfil,
   }
+}
+
+const clientOrderSelect = `
+  select
+    o.id,
+    o.status,
+    o.total_estimado,
+    o.observacao,
+    o.created_at,
+    coalesce(
+      json_agg(json_build_object(
+        'id', i.id,
+        'produto_id', i.produto_id,
+        'nome', i.nome_produto,
+        'categoria', i.categoria,
+        'preco_unitario', i.preco_unitario,
+        'quantidade', i.quantidade,
+        'subtotal', i.subtotal
+      )) filter (where i.id is not null),
+      '[]'::json
+    ) as itens
+  from public.pedidos o
+  left join public.itens_pedido i on i.pedido_id = o.id
+`
+
+async function findClientOrderById(orderId) {
+  const sql = getDatabase()
+  const rows = await sql.query(
+    `${clientOrderSelect} where o.id = $1 group by o.id`,
+    [orderId],
+  )
+
+  return rows[0] ?? null
 }
 
 async function startSession(profile, response) {
@@ -441,37 +512,65 @@ app.post('/api/products', requireUser, async (request, response, next) => {
   }
 })
 
+app.get('/api/supplier/products', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'fornecedor') {
+      return response.status(403).json({ message: 'Apenas fornecedores podem consultar esta lista.' })
+    }
+
+    const sql = getDatabase()
+    const products = await sql`
+      select id, nome, categoria, descricao, preco, cidade, imagem_url, ativo, created_at
+      from public.produtos
+      where fornecedor_id = ${request.user.id}
+      order by created_at desc
+    `
+
+    response.json({ products })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.patch('/api/supplier/products/:id/toggle-active', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'fornecedor') {
+      return response.status(403).json({ message: 'Apenas fornecedores podem alterar produtos.' })
+    }
+
+    const productId = z.string().uuid('Identificador do produto inválido.').parse(request.params.id)
+    const sql = getDatabase()
+
+    const [product] = await sql`
+      update public.produtos
+      set ativo = not ativo
+      where id = ${productId} and fornecedor_id = ${request.user.id}
+      returning id, nome, ativo
+    `
+
+    if (!product) {
+      return response.status(404).json({ message: 'Produto não encontrado ou permissão negada.' })
+    }
+
+    const message = product.ativo
+      ? `O produto "${product.nome}" foi ativado na vitrine.`
+      : `O produto "${product.nome}" foi pausado.`
+
+    response.json({ message, product })
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.get('/api/orders', requireUser, async (request, response, next) => {
   try {
     const sql = getDatabase()
 
     if (request.user.tipo_perfil === 'cliente') {
-      const orders = await sql`
-        select
-          o.id,
-          o.status,
-          o.total_estimado,
-          o.observacao,
-          o.created_at,
-          coalesce(
-            json_agg(json_build_object(
-              'id', i.id,
-              'produto_id', i.produto_id,
-              'nome', i.nome_produto,
-              'categoria', i.categoria,
-              'preco_unitario', i.preco_unitario,
-              'quantidade', i.quantidade,
-              'subtotal', i.subtotal
-            )) filter (where i.id is not null),
-            '[]'::json
-          ) as itens
-        from public.pedidos o
-        left join public.itens_pedido i on i.pedido_id = o.id
-        where o.cliente_id = ${request.user.id}
-        group by o.id
-        order by o.created_at desc
-        limit 100
-      `
+      const orders = await sql.query(
+        `${clientOrderSelect} where o.cliente_id = $1 group by o.id order by o.created_at desc limit 100`,
+        [request.user.id],
+      )
 
       return response.json({ orders })
     }
@@ -484,6 +583,7 @@ app.get('/api/orders', requireUser, async (request, response, next) => {
           o.observacao,
           o.created_at,
           c.nome as cliente_nome,
+          c.email as cliente_email,
           sum(i.subtotal) as total_fornecedor,
           json_agg(json_build_object(
             'id', i.id,
@@ -497,7 +597,7 @@ app.get('/api/orders', requireUser, async (request, response, next) => {
         join public.perfis c on c.id = o.cliente_id
         join public.itens_pedido i on i.pedido_id = o.id
         where i.fornecedor_id = ${request.user.id}
-        group by o.id, c.nome
+        group by o.id, c.nome, c.email
         order by o.created_at desc
         limit 100
       `
@@ -578,25 +678,109 @@ app.post('/api/orders', requireUser, async (request, response, next) => {
 
     await sql.transaction(statements)
 
-    response.status(201).json({
-      order: {
-        id: orderId,
-        status: 'solicitado',
-        total_estimado: total,
-        observacao: input.observacao,
-        itens: orderItems.map(({ product, quantity, unitPrice, subtotal }) => ({
-          nome: product.nome,
-          categoria: product.categoria,
-          preco_unitario: unitPrice,
-          quantidade: quantity,
-          subtotal,
-        })),
-      },
-    })
+    const order = await findClientOrderById(orderId)
+
+    if (!order) {
+      return response.status(500).json({ message: 'O pedido foi criado, mas não pôde ser carregado. Atualize a página.' })
+    }
+
+    response.status(201).json({ order })
   } catch (error) {
     return next(error)
   }
 })
+
+const updateOrderStatusSchema = z.object({
+  status: z.enum(['solicitado', 'em_negociacao', 'confirmado', 'recusado', 'cancelado', 'concluido'], {
+    errorMap: () => ({ message: 'Status do pedido inválido.' }),
+  }),
+})
+
+app.patch('/api/orders/:id/status', requireUser, async (request, response, next) => {
+  try {
+    const orderId = z.string().uuid('Identificador do pedido inválido.').parse(request.params.id)
+    const input = updateOrderStatusSchema.parse(request.body)
+    const sql = getDatabase()
+
+    const [order] = await sql`
+      select id, cliente_id, status
+      from public.pedidos
+      where id = ${orderId}
+      limit 1
+    `
+
+    if (!order) {
+      return response.status(404).json({ message: 'Pedido não encontrado.' })
+    }
+
+    if (request.user.tipo_perfil === 'cliente') {
+      if (order.cliente_id !== request.user.id) {
+        return response.status(403).json({ message: 'Você não tem permissão para alterar este pedido.' })
+      }
+
+      if (input.status === 'cancelado') {
+        if (!['solicitado', 'em_negociacao'].includes(order.status)) {
+          return response.status(400).json({ message: 'Apenas pedidos pendentes ou em negociação podem ser cancelados.' })
+        }
+      } else if (input.status === 'concluido') {
+        if (order.status !== 'confirmado') {
+          return response.status(400).json({ message: 'Apenas pedidos confirmados podem ser marcados como concluídos.' })
+        }
+      } else {
+        return response.status(403).json({ message: 'Clientes só podem cancelar ou concluir seus pedidos.' })
+      }
+    } else if (request.user.tipo_perfil === 'fornecedor') {
+      const [supplierItem] = await sql`
+        select 1
+        from public.itens_pedido
+        where pedido_id = ${order.id} and fornecedor_id = ${request.user.id}
+        limit 1
+      `
+
+      if (!supplierItem) {
+        return response.status(403).json({ message: 'Você não possui produtos vinculados a este pedido.' })
+      }
+
+      const allowedForSupplier = ['em_negociacao', 'confirmado', 'recusado']
+      if (!allowedForSupplier.includes(input.status)) {
+        return response.status(400).json({ message: 'Status inválido para fornecedor.' })
+      }
+
+      if (!['solicitado', 'em_negociacao'].includes(order.status)) {
+        return response.status(400).json({ message: 'Este pedido não pode mais ter o status alterado pelo fornecedor.' })
+      }
+    } else {
+      return response.status(403).json({ message: 'Perfil não autorizado.' })
+    }
+
+    const [updatedOrder] = await sql`
+      update public.pedidos
+      set status = ${input.status}
+      where id = ${order.id}
+      returning id, status
+    `
+
+    response.json({
+      message: 'Status do pedido atualizado com sucesso.',
+      order: updatedOrder,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+const distDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
+
+if (existsSync(distDir)) {
+  app.use(express.static(distDir))
+
+  app.use((request, response, next) => {
+    if (request.method !== 'GET' && request.method !== 'HEAD') return next()
+    if (request.path.startsWith('/api')) return next()
+
+    response.sendFile(join(distDir, 'index.html'))
+  })
+}
 
 app.use((error, _request, response, _next) => {
   if (error instanceof ZodError) {
@@ -615,6 +799,15 @@ app.use((error, _request, response, _next) => {
   return response.status(500).json({ message: 'Erro interno. Tente novamente.' })
 })
 
-app.listen(port, '127.0.0.1', () => {
-  console.log(`Festou API listening on http://127.0.0.1:${port}`)
-})
+const isDirectRun = process.argv[1]
+  && import.meta.url === pathToFileURL(process.argv[1]).href
+
+if (isDirectRun) {
+  const host = process.env.HOST || '127.0.0.1'
+
+  app.listen(port, host, () => {
+    console.log(`Festou API listening on http://${host}:${port}`)
+  })
+}
+
+export { app }

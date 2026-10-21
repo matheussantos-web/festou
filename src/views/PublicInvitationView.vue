@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../lib/api'
+import { formatDate } from '../lib/format'
 
 const route = useRoute()
 const invitation = ref(null)
@@ -20,21 +21,47 @@ const form = reactive({
 })
 
 const rsvpOptions = [
-  { value: 'confirmado', label: 'Vou' },
-  { value: 'talvez', label: 'Talvez' },
-  { value: 'recusado', label: 'Não vou' },
+  { value: 'confirmado', label: '✓ Vou com certeza', color: 'peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600' },
+  { value: 'talvez', label: '? Talvez', color: 'peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500' },
+  { value: 'recusado', label: '✕ Não poderei ir', color: 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600' },
 ]
 
 const themeStyles = {
-  jardim: 'bg-gradient-to-br from-emerald-100 via-lime-50 to-white text-emerald-950',
-  colorido: 'bg-gradient-to-br from-festou-magenta via-festou-purple to-festou-midnight text-white',
-  'ceu-estrelado': 'bg-gradient-to-br from-festou-midnight via-indigo-950 to-festou-purple text-white',
+  jardim: {
+    bg: 'bg-gradient-to-b from-emerald-50 via-teal-50/40 to-slate-100 text-slate-900',
+    card: 'border-emerald-200/80 bg-white/90 shadow-xl',
+    accent: 'text-emerald-800',
+    tag: 'bg-emerald-100 text-emerald-800',
+  },
+  colorido: {
+    bg: 'bg-gradient-to-br from-indigo-950 via-purple-900 to-rose-950 text-white',
+    card: 'border-white/20 bg-white/10 text-white shadow-2xl backdrop-blur-md',
+    accent: 'text-pink-300',
+    tag: 'bg-pink-500/20 text-pink-200 border border-pink-400/30',
+  },
+  'ceu-estrelado': {
+    bg: 'bg-gradient-to-b from-slate-950 via-[#1A134D] to-indigo-950 text-white',
+    card: 'border-indigo-400/20 bg-indigo-950/40 text-white shadow-2xl backdrop-blur-md',
+    accent: 'text-cyan-300',
+    tag: 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30',
+  },
 }
 
-const themeClass = computed(() => themeStyles[invitation.value?.tema] || themeStyles.jardim)
+const currentTheme = computed(() => themeStyles[invitation.value?.tema] || themeStyles.jardim)
 
-function formatDate(value) {
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(value))
+function formatEventDate(value) {
+  return formatDate(value, { dateStyle: 'full', timeStyle: 'short' })
+}
+
+function getGoogleCalendarUrl(inv) {
+  if (!inv) return '#'
+  const startDate = new Date(inv.data_evento)
+  const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // +4h
+  const formatTime = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, '')
+  const title = encodeURIComponent(inv.titulo)
+  const details = encodeURIComponent(`${inv.mensagem || ''}\n\nConvite digital por Festou!`)
+  const location = encodeURIComponent(inv.local_evento)
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${formatTime(startDate)}/${formatTime(endDate)}&details=${details}&location=${location}`
 }
 
 async function loadInvitation() {
@@ -60,14 +87,10 @@ async function submitRsvp() {
   try {
     const result = await api(`/invitations/${encodeURIComponent(route.params.slug)}/rsvp`, {
       method: 'POST',
-      body: JSON.stringify({
-        ...form,
-        quantidade_pessoas: form.resposta === 'confirmado' ? Number(form.quantidade_pessoas) : 1,
-      }),
+      body: JSON.stringify(form),
     })
-
     summary.value = result.summary
-    successMessage.value = 'Resposta registrada! Você pode usar o mesmo e-mail para atualizar sua confirmação.'
+    successMessage.value = 'Resposta confirmada com sucesso! Você pode usar o mesmo e-mail caso precise alterar depois.'
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível registrar sua resposta.'
   } finally {
@@ -79,52 +102,106 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
 </script>
 
 <template>
-  <main class="min-h-screen px-5 py-10 sm:px-8 sm:py-16" :class="themeClass">
-    <div v-if="isLoading" role="status" class="mx-auto max-w-2xl py-20 text-center">Carregando convite...</div>
-    <section v-else-if="errorMessage && !invitation" class="mx-auto max-w-xl py-20 text-center">
-      <p class="text-sm font-bold uppercase tracking-widest">Festou!</p>
-      <h1 class="mt-4 text-3xl font-bold">Convite não encontrado</h1>
-      <p class="mt-3">{{ errorMessage }}</p>
-      <RouterLink to="/" class="mt-6 inline-block font-semibold underline">Ir para Festou!</RouterLink>
+  <main class="min-h-screen px-4 py-8 sm:px-8 sm:py-14 transition-colors duration-500" :class="currentTheme.bg">
+    <!-- Carregando -->
+    <div v-if="isLoading" role="status" class="mx-auto max-w-2xl py-24 text-center">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-current border-t-transparent"></div>
+      <p class="mt-4 text-sm font-semibold">Carregando convite...</p>
+    </div>
+
+    <!-- Convite Não Encontrado -->
+    <section v-else-if="errorMessage && !invitation" class="festou-surface mx-auto max-w-md p-8 text-center text-slate-800 shadow-xl">
+      <span class="text-4xl">🔍</span>
+      <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Convite não encontrado</h1>
+      <p class="mt-2 text-sm text-slate-600">{{ errorMessage }}</p>
+      <RouterLink to="/" class="btn-festou-primary mt-6 text-xs font-bold">
+        Ir para página inicial
+      </RouterLink>
     </section>
 
-    <div v-else-if="invitation" class="mx-auto max-w-3xl">
-      <header class="flex items-center justify-between">
-        <RouterLink to="/" class="festou-wordmark">Festou!</RouterLink>
-        <span class="text-sm font-semibold">Convite digital</span>
+    <!-- Convite Carregado -->
+    <div v-else-if="invitation" class="mx-auto max-w-2xl">
+      <!-- Topo -->
+      <header class="flex items-center justify-between pb-6">
+        <RouterLink to="/" class="font-heading text-xl font-extrabold tracking-tight">
+          Festou<span class="text-festou-yellow">!</span>
+        </RouterLink>
+        <span class="rounded-full px-3 py-1 text-xs font-bold" :class="currentTheme.tag">
+          Convite Digital
+        </span>
       </header>
 
-      <article class="mx-auto mt-10 max-w-2xl border-y border-current/20 px-5 py-10 text-center sm:mt-14 sm:px-12 sm:py-14">
-        <p class="text-sm font-bold uppercase tracking-widest opacity-70">Você está convidado</p>
-        <h1 class="mt-5 text-4xl font-bold leading-tight sm:text-6xl">{{ invitation.titulo }}</h1>
-        <p class="mt-5 text-xl">{{ invitation.anfitriao }} espera por você.</p>
-        <p v-if="invitation.mensagem" class="mx-auto mt-7 max-w-lg text-lg leading-8">{{ invitation.mensagem }}</p>
-        <dl class="mx-auto mt-9 grid max-w-lg gap-5 text-left sm:grid-cols-2">
-          <div>
-            <dt class="text-xs font-bold uppercase tracking-wider opacity-70">Quando</dt>
-            <dd class="mt-1 font-semibold">{{ formatDate(invitation.data_evento) }}</dd>
+      <!-- Cartão Principal do Convite -->
+      <article
+        class="relative mt-4 overflow-hidden rounded-3xl border p-8 text-center sm:p-12 transition-all"
+        :class="currentTheme.card"
+      >
+        <span class="text-xs font-bold uppercase tracking-widest opacity-80">
+          Você está convidado para celebrar
+        </span>
+
+        <h1 class="mt-4 font-heading text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+          {{ invitation.titulo }}
+        </h1>
+
+        <p class="mt-3 text-lg font-medium opacity-90">
+          Com carinho, <strong class="underline decoration-festou-primary underline-offset-4">{{ invitation.anfitriao }}</strong>
+        </p>
+
+        <p v-if="invitation.mensagem" class="mx-auto mt-6 max-w-lg text-sm leading-relaxed opacity-85">
+          "{{ invitation.mensagem }}"
+        </p>
+
+        <!-- Detalhes de Data e Local -->
+        <div class="mt-8 grid gap-4 rounded-2xl bg-black/10 p-5 text-left backdrop-blur-sm sm:grid-cols-2">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">📅</span>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider opacity-70">Quando</p>
+              <p class="mt-0.5 text-sm font-bold">{{ formatEventDate(invitation.data_evento) }}</p>
+            </div>
           </div>
-          <div>
-            <dt class="text-xs font-bold uppercase tracking-wider opacity-70">Onde</dt>
-            <dd class="mt-1 font-semibold">{{ invitation.local_evento }}</dd>
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">📍</span>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider opacity-70">Onde</p>
+              <p class="mt-0.5 text-sm font-bold">{{ invitation.local_evento }}</p>
+            </div>
           </div>
-        </dl>
+        </div>
+
+        <!-- Botão Adicionar à Agenda -->
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a
+            :href="getGoogleCalendarUrl(invitation)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 rounded-full border border-current/20 bg-white/20 px-4 py-1.5 text-xs font-bold shadow-sm backdrop-blur transition hover:bg-white/30"
+          >
+            <span>+ Adicionar ao Google Agenda</span>
+          </a>
+        </div>
       </article>
 
-      <section class="mx-auto mt-10 max-w-xl rounded-lg border border-current/15 bg-white/80 p-6 text-slate-900 shadow-sm sm:p-8">
-        <h2 class="text-2xl font-bold">Você vem?</h2>
-        <p class="mt-2 text-sm text-slate-600">Confirme sua presença para ajudar na organização.</p>
+      <!-- Seção do Formulário RSVP -->
+      <section class="festou-surface mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
+        <div class="text-center">
+          <h2 class="font-heading text-2xl font-bold text-festou-midnight">Confirmação de Presença</h2>
+          <p class="mt-1 text-xs text-slate-500">
+            Responda para ajudar os anfitriões no planejamento da festa.
+          </p>
+        </div>
 
-        <p v-if="successMessage" role="status" class="mt-5 rounded-md bg-green-100 px-4 py-3 text-sm text-green-900">
+        <div v-if="successMessage" role="status" class="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-semibold text-green-900">
           {{ successMessage }}
-        </p>
-        <p v-if="errorMessage" role="alert" class="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">
+        </div>
+        <div v-if="errorMessage" role="alert" class="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-900">
           {{ errorMessage }}
-        </p>
+        </div>
 
-        <form v-if="invitation.aceita_rsvp" class="mt-6 space-y-5" @submit.prevent="submitRsvp">
+        <form v-if="invitation.aceita_rsvp" class="mt-6 space-y-4" @submit.prevent="submitRsvp">
           <div>
-            <label for="guest-name" class="mb-1 block text-sm font-semibold">Seu nome</label>
+            <label for="guest-name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Seu nome completo</label>
             <input
               id="guest-name"
               v-model.trim="form.nome"
@@ -133,34 +210,49 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
               maxlength="100"
               autocomplete="name"
               required
-              class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+              placeholder="Ex: Carlos Eduardo"
+              class="w-full text-sm"
             />
           </div>
+
           <div>
-            <label for="guest-email" class="mb-1 block text-sm font-semibold">E-mail</label>
+            <label for="guest-email" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Seu e-mail</label>
             <input
               id="guest-email"
               v-model.trim="form.email"
               type="email"
               autocomplete="email"
               required
-              class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+              placeholder="seuemail@exemplo.com"
+              class="w-full text-sm"
             />
-            <p class="mt-1 text-xs text-slate-500">Usaremos o e-mail para localizar e atualizar sua resposta.</p>
+            <p class="mt-1 text-[11px] text-slate-400">Usado caso você precise atualizar sua resposta depois.</p>
           </div>
+
+          <!-- Opções de Confirmação -->
           <fieldset>
-            <legend class="mb-2 text-sm font-semibold">Confirmação</legend>
-            <div class="grid grid-cols-3 gap-2">
+            <legend class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">Você vai?</legend>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <label v-for="option in rsvpOptions" :key="option.value" class="cursor-pointer">
-                <input v-model="form.resposta" class="peer sr-only" type="radio" name="rsvp" :value="option.value" />
-                <span class="block rounded-md border border-slate-300 px-2 py-2 text-center text-sm font-semibold peer-checked:border-rose-700 peer-checked:bg-rose-700 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-rose-300">
+                <input
+                  v-model="form.resposta"
+                  class="peer sr-only"
+                  type="radio"
+                  name="rsvp"
+                  :value="option.value"
+                />
+                <span
+                  class="block rounded-xl border border-slate-200 px-3 py-2.5 text-center text-xs font-bold text-slate-700 transition"
+                  :class="option.color"
+                >
                   {{ option.label }}
                 </span>
               </label>
             </div>
           </fieldset>
+
           <div v-if="form.resposta === 'confirmado'">
-            <label for="guest-count" class="mb-1 block text-sm font-semibold">Quantidade de pessoas</label>
+            <label for="guest-count" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quantas pessoas com você?</label>
             <input
               id="guest-count"
               v-model.number="form.quantidade_pessoas"
@@ -168,38 +260,47 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
               min="1"
               max="10"
               required
-              class="w-28 rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+              class="w-28 text-sm"
             />
           </div>
+
           <div>
-            <label for="guest-note" class="mb-1 block text-sm font-semibold">Mensagem (opcional)</label>
+            <label for="guest-note" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Deixe um recado para o anfitrião (opcional)</label>
             <textarea
               id="guest-note"
               v-model.trim="form.mensagem"
               rows="2"
               maxlength="300"
-              class="w-full resize-y rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
+              placeholder="Mal posso esperar pela festa! Parabéns!"
+              class="w-full text-sm"
             ></textarea>
           </div>
+
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="w-full rounded-md bg-rose-700 px-4 py-3 font-semibold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60"
+            class="btn-festou-primary w-full text-sm font-bold shadow-festive"
           >
-            {{ isSubmitting ? 'Enviando...' : 'Enviar resposta' }}
+            {{ isSubmitting ? 'Registrando presença...' : 'Enviar minha resposta' }}
           </button>
         </form>
-        <p v-else class="mt-5 text-sm text-slate-600">As confirmações para este convite foram encerradas.</p>
 
-        <div v-if="summary" class="mt-7 border-t border-slate-200 pt-5">
-          <h3 class="text-sm font-bold">Presenças até agora</h3>
-          <p class="mt-2 text-sm text-slate-600">
-            {{ summary.pessoas_confirmadas }} {{ Number(summary.pessoas_confirmadas) === 1 ? 'pessoa confirmada' : 'pessoas confirmadas' }}
-            · {{ summary.talvez }} talvez
+        <div v-else class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
+          <p class="font-bold">As confirmações de presença para este convite foram encerradas pelo anfitrião.</p>
+        </div>
+
+        <!-- Resumo de Convidados -->
+        <div v-if="summary" class="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-slate-500">
+          <p>
+            Já confirmados: <strong class="text-slate-800">{{ summary.pessoas_confirmadas }}</strong> {{ Number(summary.pessoas_confirmadas) === 1 ? 'pessoa' : 'pessoas' }}
+            <span v-if="summary.talvez > 0"> · {{ summary.talvez }} talvez</span>
           </p>
         </div>
       </section>
-      <footer class="py-8 text-center text-xs opacity-70">Feito com Festou!</footer>
+
+      <footer class="py-8 text-center text-xs opacity-60">
+        Plataforma Festou! · Planeje celebrações inesquecíveis
+      </footer>
     </div>
   </main>
 </template>

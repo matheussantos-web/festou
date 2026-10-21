@@ -9,7 +9,11 @@
     "start": "node server/index.js",
     "db:setup": "node server/migrate.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:api": "vitest run tests/api"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
@@ -27,7 +31,9 @@
     "autoprefixer": "^10.6.1",
     "concurrently": "^10.0.6",
     "postcss": "^8.5.31",
+    "supertest": "^7.3.1",
     "tailwindcss": "^3.4.19",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^3.2.7"
   }
 }

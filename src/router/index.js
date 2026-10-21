@@ -5,57 +5,65 @@ import RegisterView from '../views/RegisterView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import ProductCatalogView from '../views/ProductCatalogView.vue'
 import SupplierProductCreateView from '../views/SupplierProductCreateView.vue'
+import SupplierDashboardView from '../views/SupplierDashboardView.vue'
 import CartView from '../views/CartView.vue'
 import InvitationsView from '../views/InvitationsView.vue'
 import PublicInvitationView from '../views/PublicInvitationView.vue'
 import { api } from '../lib/api'
 
-async function requireSupplier(to) {
+async function resolveSession() {
   try {
     const { user } = await api('/auth/me')
+    return { user: user ?? null }
+  } catch (error) {
+    return { user: null, error }
+  }
+}
+
+function createProfileGuard(tipoPerfil, destino) {
+  return async (to) => {
+    const { user, error } = await resolveSession()
+
+    if (error) {
+      return { name: 'login', query: { erroConexao: '1', redirect: to.fullPath } }
+    }
 
     if (!user) {
       return { name: 'login', query: { redirect: to.fullPath } }
     }
 
-    if (user.tipo_perfil !== 'fornecedor') {
-      return { name: 'vitrine', query: { aviso: 'fornecedor' } }
+    if (user.tipo_perfil !== tipoPerfil) {
+      return { name: 'vitrine', query: { aviso: destino } }
     }
 
     return true
-  } catch {
-    return { name: 'login', query: { configurarNeon: '1' } }
   }
 }
 
-async function requireCustomer(to) {
-  try {
-    const { user } = await api('/auth/me')
-
-    if (!user) {
-      return { name: 'login', query: { redirect: to.fullPath } }
-    }
-
-    if (user.tipo_perfil !== 'cliente') {
-      return { name: 'vitrine', query: { aviso: 'carrinho' } }
-    }
-
-    return true
-  } catch {
-    return { name: 'login', query: { configurarNeon: '1' } }
-  }
-}
+const requireSupplier = createProfileGuard('fornecedor', 'fornecedor')
+const requireCustomer = createProfileGuard('cliente', 'carrinho')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomeView },
-    { path: '/login', name: 'login', component: LoginView },
-    { path: '/cadastro', name: 'cadastro', component: RegisterView },
+    { path: '/login', name: 'login', component: LoginView, meta: { chrome: false } },
+    { path: '/cadastro', name: 'cadastro', component: RegisterView, meta: { chrome: false } },
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
     { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCustomer },
     { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
-    { path: '/convite/:slug', name: 'convite-publico', component: PublicInvitationView },
+    {
+      path: '/convite/:slug',
+      name: 'convite-publico',
+      component: PublicInvitationView,
+      meta: { chrome: false },
+    },
+    {
+      path: '/fornecedor/painel',
+      name: 'fornecedor-painel',
+      component: SupplierDashboardView,
+      beforeEnter: requireSupplier,
+    },
     {
       path: '/fornecedor/produtos/novo',
       name: 'produto-novo',
@@ -64,6 +72,12 @@ const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, behavior: 'smooth' }
+
+    return { top: 0 }
+  },
 })
 
 export default router

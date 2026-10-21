@@ -1,0 +1,208 @@
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { api } from '../lib/api'
+import { cartCount } from '../lib/cart'
+
+const router = useRouter()
+const currentUser = ref(null)
+const isMobileMenuOpen = ref(false)
+
+const firstName = computed(() => String(currentUser.value?.nome ?? '').split(' ')[0])
+
+const menuButtonLabel = computed(() => (
+  isMobileMenuOpen.value ? 'Fechar menu' : 'Abrir menu'
+))
+
+async function checkUser() {
+  try {
+    const { user } = await api('/auth/me')
+    currentUser.value = user
+  } catch {
+    currentUser.value = null
+  }
+}
+
+async function handleLogout() {
+  try {
+    await api('/auth/logout', { method: 'POST' })
+  } finally {
+    currentUser.value = null
+    isMobileMenuOpen.value = false
+    await router.push('/')
+  }
+}
+
+function closeMobileMenu() {
+  isMobileMenuOpen.value = false
+}
+
+function handleKeydown(event) {
+  if (event.key === 'Escape') closeMobileMenu()
+}
+
+watch(() => router.currentRoute.value.fullPath, closeMobileMenu)
+
+onMounted(() => {
+  checkUser()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+</script>
+
+<template>
+  <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8 lg:px-12">
+      <!-- Logo -->
+      <RouterLink to="/" class="group flex items-center gap-1.5 font-heading text-2xl font-extrabold tracking-tight text-festou-midnight">
+        <span class="text-festou-primary transition-transform group-hover:scale-105">Festou</span>
+        <span class="text-festou-yellow">!</span>
+      </RouterLink>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden items-center gap-6 text-sm font-semibold md:flex">
+        <RouterLink
+          to="/vitrine"
+          class="text-slate-600 transition hover:text-festou-primary"
+          active-class="text-festou-primary font-bold"
+        >
+          Vitrine
+        </RouterLink>
+
+        <!-- Links para Cliente ou Visitante -->
+        <template v-if="!currentUser || currentUser.tipo_perfil === 'cliente'">
+          <RouterLink
+            to="/convites"
+            class="text-slate-600 transition hover:text-festou-primary"
+            active-class="text-festou-primary font-bold"
+          >
+            Meus convites
+          </RouterLink>
+          <RouterLink
+            to="/carrinho"
+            class="inline-flex items-center gap-1.5 text-slate-600 transition hover:text-festou-primary"
+            active-class="text-festou-primary font-bold"
+          >
+            <span>Carrinho</span>
+            <span
+              v-if="cartCount > 0"
+              class="rounded-full bg-festou-primary px-2 py-0.5 text-xs font-bold text-white shadow-sm"
+            >
+              {{ cartCount }}
+            </span>
+          </RouterLink>
+        </template>
+
+        <!-- Links para Fornecedor -->
+        <template v-if="currentUser && currentUser.tipo_perfil === 'fornecedor'">
+          <RouterLink
+            to="/fornecedor/painel"
+            class="text-slate-600 transition hover:text-festou-primary"
+            active-class="text-festou-primary font-bold"
+          >
+            Painel de pedidos
+          </RouterLink>
+          <RouterLink
+            to="/fornecedor/produtos/novo"
+            class="text-slate-600 transition hover:text-festou-primary"
+            active-class="text-festou-primary font-bold"
+          >
+            + Anunciar produto
+          </RouterLink>
+        </template>
+
+        <!-- Ações de Sessão -->
+        <div class="flex items-center gap-3 border-l border-slate-200 pl-4">
+          <template v-if="currentUser">
+            <span class="text-xs text-slate-500">
+              Olá, <strong class="text-slate-800">{{ firstName }}</strong>
+            </span>
+            <button
+              type="button"
+              class="text-xs font-bold text-slate-500 transition hover:text-rose-600"
+              @click="handleLogout"
+            >
+              Sair
+            </button>
+          </template>
+          <template v-else>
+            <RouterLink
+              to="/login"
+              class="px-2 py-1 text-slate-700 transition hover:text-festou-primary"
+            >
+              Entrar
+            </RouterLink>
+            <RouterLink
+              to="/cadastro"
+              class="rounded-full bg-festou-primary px-4 py-2 font-bold text-white shadow-festive transition hover:-translate-y-0.5 hover:bg-rose-600"
+            >
+              Criar conta
+            </RouterLink>
+          </template>
+        </div>
+      </nav>
+
+      <!-- Botão Hambúrguer Mobile -->
+      <button
+        type="button"
+        class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+        :aria-label="menuButtonLabel"
+        :aria-expanded="isMobileMenuOpen"
+        aria-controls="menu-mobile"
+        @click="isMobileMenuOpen = !isMobileMenuOpen"
+      >
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path v-if="!isMobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Menu Dropdown Mobile -->
+    <div v-if="isMobileMenuOpen" id="menu-mobile" class="border-t border-slate-100 bg-white px-5 py-4 md:hidden">
+      <div class="flex flex-col gap-3 font-semibold text-slate-700">
+        <RouterLink to="/vitrine" class="py-1 hover:text-festou-primary" @click="closeMobileMenu">
+          Vitrine
+        </RouterLink>
+        <template v-if="!currentUser || currentUser.tipo_perfil === 'cliente'">
+          <RouterLink to="/convites" class="py-1 hover:text-festou-primary" @click="closeMobileMenu">
+            Meus convites
+          </RouterLink>
+          <RouterLink to="/carrinho" class="py-1 hover:text-festou-primary" @click="closeMobileMenu">
+            Carrinho ({{ cartCount }})
+          </RouterLink>
+        </template>
+        <template v-if="currentUser && currentUser.tipo_perfil === 'fornecedor'">
+          <RouterLink to="/fornecedor/painel" class="py-1 hover:text-festou-primary" @click="closeMobileMenu">
+            Painel de pedidos
+          </RouterLink>
+          <RouterLink to="/fornecedor/produtos/novo" class="py-1 hover:text-festou-primary" @click="closeMobileMenu">
+            + Anunciar produto
+          </RouterLink>
+        </template>
+
+        <div class="mt-2 border-t border-slate-100 pt-3">
+          <template v-if="currentUser">
+            <p class="text-xs text-slate-500 mb-2">Conectado como {{ currentUser.nome }}</p>
+            <button type="button" class="text-sm font-bold text-rose-600" @click="handleLogout">
+              Sair da conta
+            </button>
+          </template>
+          <template v-else>
+            <div class="flex flex-col gap-2">
+              <RouterLink to="/login" class="text-center font-bold text-slate-700 py-2" @click="closeMobileMenu">
+                Entrar
+              </RouterLink>
+              <RouterLink to="/cadastro" class="rounded-full bg-festou-primary py-2 text-center font-bold text-white shadow-festive" @click="closeMobileMenu">
+                Criar conta
+              </RouterLink>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </header>
+</template>
