@@ -20,6 +20,16 @@ export async function verifyPassword(password, storedHash) {
   return expected.length === actual.length && timingSafeEqual(expected, actual)
 }
 
+// Hash ficticio usado quando o e-mail informado nao existe na base. Sem essa
+// comparacao o login responderia bem mais rapido para e-mails inexistentes e
+// permitiria enumerar contas pela diferenca de tempo.
+let dummyHashPromise = null
+
+export function getDummyPasswordHash() {
+  dummyHashPromise ??= hashPassword(randomBytes(16).toString('hex'))
+  return dummyHashPromise
+}
+
 export function createSessionToken() {
   return randomBytes(32).toString('base64url')
 }

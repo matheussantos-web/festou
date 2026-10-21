@@ -6,13 +6,23 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import cookieParser from 'cookie-parser'
 import express from 'express'
-import { rateLimit } from 'express-rate-limit'
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit'
 import helmet from 'helmet'
 import { z, ZodError } from 'zod'
+import {
+  appOrigin,
+  authRateLimit,
+  host,
+  jsonBodyLimit,
+  port,
+  rsvpRateLimit,
+  trustProxy,
+} from './config.js'
 import { getDatabase } from './db.js'
 import {
   clearSessionCookie,
   createSessionToken,
+  getDummyPasswordHash,
   hashPassword,
   hashSessionToken,
   sessionCookieName,
@@ -23,10 +33,11 @@ import {
 } from './security.js'
 
 const app = express()
-const port = Number(process.env.PORT) || 3000
-const appOrigin = process.env.APP_ORIGIN || 'http://127.0.0.1:5173'
 
 app.disable('x-powered-by')
+// Sem trust proxy, o rate limit enxerga o IP do proxy reverso e o limite vira
+// global. O numero de proxies vem de TRUST_PROXY (0 = nenhum, 1 = nginx).
+app.set('trust proxy', trustProxy)
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -45,7 +56,7 @@ app.use(
     crossOriginEmbedderPolicy: false,
   }),
 )
-app.use(express.json({ limit: '16kb' }))
+app.use(express.json({ limit: jsonBodyLimit }))
 app.use(cookieParser())
 
 app.use('/api', (request, response, next) => {
@@ -58,9 +69,33 @@ app.use('/api', (request, response, next) => {
   return next()
 })
 
-const authLimiter = rateLimit({
+// Login e cadastro tem contadores separados: um Shared, o mesmo limite valia
+// para as duas rotas e um atacante travava os cadastros so de tentar login.
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: Number(process.env.AUTH_RATE_LIMIT) || 10,
+  limit: authRateLimit,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+})
+
+// Limita por e-mail para impedir que varias senhas sejam testadas contra a
+// mesma conta, mesmo vindo de origens diferentes.
+const loginByEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: Number(process.env.LOGIN_EMAIL_RATE_LIMIT) || authRateLimit * 2,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (request) => {
+    const email = String(request.body?.email ?? '').toLowerCase()
+    return email ? `${ipKeyGenerator(request.ip)}:${email}` : ipKeyGenerator(request.ip)
+  },
+  message: { message: 'Muitas tentativas para este e-mail. Aguarde alguns minutos.' },
+})
+
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: authRateLimit,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
@@ -68,7 +103,7 @@ const authLimiter = rateLimit({
 
 const rsvpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: Number(process.env.RSVP_RATE_LIMIT) || 30,
+  limit: rsvpRateLimit,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { message: 'Muitas tentativas de confirmacao. Aguarde alguns minutos.' },
@@ -218,6 +253,63 @@ app.patch('/api/invitations/:id/rsvp-status', requireUser, async (request, respo
   }
 })
 
+app.patch('/api/invitations/:id', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem gerenciar convites.' })
+    }
+
+    const invitationId = z.string().uuid('Identificador de convite inválido.').parse(request.params.id)
+    const input = invitationUpdateSchema.parse(request.body)
+    const { assignments, values } = buildUpdate(
+      ['titulo', 'anfitriao', 'data_evento', 'local_evento', 'mensagem', 'tema'],
+      input,
+    )
+    const sql = getDatabase()
+
+    const [updated] = await sql.query(
+      `update public.convites
+       set ${assignments.join(', ')}
+       where id = $${values.length + 1} and dono_id = $${values.length + 2}
+       returning id, slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema, aceita_rsvp`,
+      [...values, invitationId, request.user.id],
+    )
+
+    if (!updated) {
+      return response.status(404).json({ message: 'Convite não encontrado ou você não tem permissão para editá-lo.' })
+    }
+
+    response.json({ message: 'Convite atualizado com sucesso.', invitation: updated })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+app.delete('/api/invitations/:id', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem gerenciar convites.' })
+    }
+
+    const invitationId = z.string().uuid('Identificador de convite inválido.').parse(request.params.id)
+    const sql = getDatabase()
+
+    const [deleted] = await sql`
+      delete from public.convites
+      where id = ${invitationId} and dono_id = ${request.user.id}
+      returning id, titulo
+    `
+
+    if (!deleted) {
+      return response.status(404).json({ message: 'Convite não encontrado ou você não tem permissão para excluí-lo.' })
+    }
+
+    response.json({ message: `O convite "${deleted.titulo}" foi excluído.` })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 app.get('/api/invitations/:slug', async (request, response, next) => {
   try {
     const sql = getDatabase()
@@ -293,16 +385,45 @@ app.post('/api/invitations/:slug/rsvp', rsvpLimiter, async (request, response, n
     return next(error)
   }
 })
+// Imagens de produto ficam em servidores externos: só https é aceito, para
+// não misturar http com https na página e não vazar tráfego em claro.
+const httpsUrl = z.string().trim()
+  .url('Informe um link valido.')
+  .max(2048)
+  .refine((value) => new URL(value).protocol === 'https:', {
+    message: 'O link da imagem precisa usar https.',
+  })
+
 const productSchema = z.object({
   nome: z.string().trim().min(3).max(120),
   categoria: z.enum(['bolos', 'doces', 'brinquedos', 'convites']),
   descricao: z.string().trim().min(10).max(1000),
   preco: z.coerce.number().finite().positive().max(99999999),
   cidade: z.string().trim().max(100).optional().transform((value) => value || null),
-  imagem_url: z.union([z.literal(''), z.string().trim().url().max(2048)])
+  imagem_url: z.union([z.literal(''), httpsUrl])
     .optional()
     .transform((value) => value || null),
 })
+
+const productUpdateSchema = productSchema.partial().refine(
+  (value) => Object.values(value).some((field) => field !== undefined),
+  { message: 'Informe ao menos um campo para atualizar o produto.' },
+)
+
+const invitationUpdateSchema = z.object({
+  titulo: z.string().trim().min(3).max(100).optional(),
+  anfitriao: z.string().trim().min(2).max(100).optional(),
+  data_evento: z.string().datetime({ offset: true }).refine(
+    (value) => new Date(value).getTime() > Date.now(),
+    'A data do evento precisa estar no futuro.',
+  ).optional(),
+  local_evento: z.string().trim().min(3).max(180).optional(),
+  mensagem: z.string().trim().max(500).optional().transform((value) => value || null),
+  tema: z.enum(['jardim', 'colorido', 'ceu-estrelado']).optional(),
+}).refine(
+  (value) => Object.values(value).some((field) => field !== undefined),
+  { message: 'Informe ao menos um campo para atualizar o convite.' },
+)
 
 const orderSchema = z.object({
   items: z.array(z.object({
@@ -319,6 +440,21 @@ function sendProfile(profile) {
     email: profile.email,
     tipo_perfil: profile.tipo_perfil,
   }
+}
+
+// Monta o trecho SET de uma atualizacao parcial. Os nomes das colunas vem de
+// uma lista fixa e os valores sao sempre parametrizados.
+function buildUpdate(fields, input) {
+  const assignments = []
+  const values = []
+
+  for (const field of fields) {
+    if (input[field] === undefined) continue
+    assignments.push(`${field} = $${values.length + 1}`)
+    values.push(input[field])
+  }
+
+  return { assignments, values }
 }
 
 const clientOrderSelect = `
@@ -412,7 +548,7 @@ app.get('/api/health', async (_request, response, next) => {
   }
 })
 
-app.post('/api/auth/register', authLimiter, async (request, response, next) => {
+app.post('/api/auth/register', registerLimiter, async (request, response, next) => {
   try {
     const input = registerSchema.parse(request.body)
     const passwordHash = await hashPassword(input.senha)
@@ -433,7 +569,7 @@ app.post('/api/auth/register', authLimiter, async (request, response, next) => {
   }
 })
 
-app.post('/api/auth/login', authLimiter, async (request, response, next) => {
+app.post('/api/auth/login', loginLimiter, loginByEmailLimiter, async (request, response, next) => {
   try {
     const input = loginSchema.parse(request.body)
     const sql = getDatabase()
@@ -444,7 +580,14 @@ app.post('/api/auth/login', authLimiter, async (request, response, next) => {
       limit 1
     `
 
-    if (!profile || !(await verifyPassword(input.senha, profile.senha_hash))) {
+    if (!profile) {
+      // Compara com um hash ficticio para manter o tempo de resposta igual ao
+      // de um e-mail existente e nao permitir enumeracao de contas.
+      await verifyPassword(input.senha, await getDummyPasswordHash())
+      return response.status(401).json({ message: 'E-mail ou senha invalidos.' })
+    }
+
+    if (!(await verifyPassword(input.senha, profile.senha_hash))) {
       return response.status(401).json({ message: 'E-mail ou senha invalidos.' })
     }
 
@@ -714,6 +857,87 @@ const updateOrderStatusSchema = z.object({
   }),
 })
 
+app.get('/api/supplier/products/:id', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'fornecedor') {
+      return response.status(403).json({ message: 'Apenas fornecedores podem consultar esta lista.' })
+    }
+
+    const productId = z.string().uuid('Identificador do produto inválido.').parse(request.params.id)
+    const sql = getDatabase()
+    const [product] = await sql`
+      select id, nome, categoria, descricao, preco, cidade, imagem_url, ativo, created_at
+      from public.produtos
+      where id = ${productId} and fornecedor_id = ${request.user.id}
+      limit 1
+    `
+
+    if (!product) {
+      return response.status(404).json({ message: 'Produto não encontrado ou permissão negada.' })
+    }
+
+    response.json({ product })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.patch('/api/supplier/products/:id', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'fornecedor') {
+      return response.status(403).json({ message: 'Apenas fornecedores podem alterar produtos.' })
+    }
+
+    const productId = z.string().uuid('Identificador do produto inválido.').parse(request.params.id)
+    const input = productUpdateSchema.parse(request.body)
+    const { assignments, values } = buildUpdate(
+      ['nome', 'categoria', 'descricao', 'preco', 'cidade', 'imagem_url'],
+      input,
+    )
+
+    const sql = getDatabase()
+    const [product] = await sql.query(
+      `update public.produtos
+       set ${assignments.join(', ')}
+       where id = $${values.length + 1} and fornecedor_id = $${values.length + 2}
+       returning id, nome, categoria, descricao, preco, cidade, imagem_url, ativo, created_at`,
+      [...values, productId, request.user.id],
+    )
+
+    if (!product) {
+      return response.status(404).json({ message: 'Produto não encontrado ou permissão negada.' })
+    }
+
+    response.json({ message: 'Produto atualizado com sucesso.', product })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.delete('/api/supplier/products/:id', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'fornecedor') {
+      return response.status(403).json({ message: 'Apenas fornecedores podem excluir produtos.' })
+    }
+
+    const productId = z.string().uuid('Identificador do produto inválido.').parse(request.params.id)
+    const sql = getDatabase()
+    const [product] = await sql`
+      delete from public.produtos
+      where id = ${productId} and fornecedor_id = ${request.user.id}
+      returning id, nome
+    `
+
+    if (!product) {
+      return response.status(404).json({ message: 'Produto não encontrado ou permissão negada.' })
+    }
+
+    response.json({ message: `O produto "${product.nome}" foi excluído do catálogo.` })
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.patch('/api/orders/:id/status', requireUser, async (request, response, next) => {
   try {
     const orderId = z.string().uuid('Identificador do pedido inválido.').parse(request.params.id)
@@ -804,6 +1028,17 @@ if (existsSync(distDir)) {
   })
 }
 
+// Erros conhecidos do parser de corpo: são falhas do cliente e não devem
+// virar 500 genérico.
+const bodyParserErrors = {
+  'entity.parse.failed': { status: 400, message: 'Corpo da requisicao invalido: o JSON nao pode ser lido.' },
+  'entity.verify.failed': { status: 400, message: 'Corpo da requisicao invalido.' },
+  'entity.too.large': { status: 413, message: `Corpo da requisicao muito grande: o limite e de ${jsonBodyLimit}.` },
+  'parameters.too.many': { status: 413, message: 'Parametros demais na requisicao.' },
+  'charset.unsupported': { status: 415, message: 'Codificacao de caracteres nao suportada.' },
+  'encoding.unsupported': { status: 415, message: 'Codificacao de caracteres nao suportada.' },
+}
+
 app.use((error, _request, response, _next) => {
   if (error instanceof ZodError) {
     const issue = error.issues[0]
@@ -813,8 +1048,19 @@ app.use((error, _request, response, _next) => {
     })
   }
 
+  const knownBodyError = bodyParserErrors[error?.type]
+  if (knownBodyError) {
+    return response.status(knownBodyError.status).json({ message: knownBodyError.message })
+  }
+
   if (error?.message?.startsWith('DATABASE_URL')) {
     return response.status(503).json({ message: error.message })
+  }
+
+  // Demais erros 4xx carregam o proprio status e nao revelam detalhes internos.
+  const status = Number(error?.status ?? error?.statusCode)
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    return response.status(status).json({ message: 'Requisicao invalida.' })
   }
 
   console.error(error)
@@ -825,8 +1071,6 @@ const isDirectRun = process.argv[1]
   && import.meta.url === pathToFileURL(process.argv[1]).href
 
 if (isDirectRun) {
-  const host = process.env.HOST || '127.0.0.1'
-
   app.listen(port, host, () => {
     console.log(`Festou API listening on http://${host}:${port}`)
   })

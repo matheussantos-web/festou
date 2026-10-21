@@ -198,10 +198,34 @@ check('pausar produto', pausar.status === 200 && pausar.data?.product?.ativo ===
 const vitrinePausado = await call('GET', '/api/products')
 check('produto pausado sai da vitrine', !vitrinePausado.data.products.some((p) => p.id === produtoId))
 
+const editarProduto = await call('PATCH', `/api/supplier/products/${produtoId}`, {
+  nome: 'Bolo de chocolate edition',
+  preco: 109.9,
+})
+check('fornecedor edita o proprio produto', editarProduto.status === 200 && editarProduto.data?.product?.nome === 'Bolo de chocolate edition', `status ${editarProduto.status}`)
+
+const produtoDeOutro = await call('GET', `/api/supplier/products/${produtoId}`)
+check('fornecedor consulta o proprio produto', produtoDeOutro.status === 200, `status ${produtoDeOutro.status}`)
+
+const imagemInsegura = await call('POST', '/api/products', {
+  nome: 'Produto com imagem http',
+  categoria: 'bolos',
+  descricao: 'Produto com link de imagem que nao usa https.',
+  preco: 30,
+  imagem_url: 'http://exemplo.com/foto.jpg',
+})
+check('imagem fora de https é recusada', imagemInsegura.status === 400, `status ${imagemInsegura.status}`)
+
+const excluirProduto = await call('DELETE', `/api/supplier/products/${produtoId}`)
+check('fornecedor exclui o proprio produto', excluirProduto.status === 200, `status ${excluirProduto.status}`)
+
+const produtoExcluido = await call('GET', `/api/supplier/products/${produtoId}`)
+check('produto excluido nao aparece mais', produtoExcluido.status === 404, `status ${produtoExcluido.status}`)
+
 console.log('\n== 8. Autorizacao ==')
 cookies.clear()
 const visitanteSemSessao = await call('GET', '/api/orders')
-check('rota privada exige sessão', visitanteSemSessao.status === 401, `status ${visitanteSemSessao.status}`)
+check('rota privada exige sessao', visitanteSemSessao.status === 401, `status ${visitanteSemSessao.status}`)
 
 const origemInvalida = await fetch(`${base}/api/auth/login`, {
   method: 'POST',
@@ -210,7 +234,37 @@ const origemInvalida = await fetch(`${base}/api/auth/login`, {
 })
 check('origem invalida bloqueada', origemInvalida.status === 403, `status ${origemInvalida.status}`)
 
-console.log('\n== 9. SPA compilado ==')
+console.log('\n== 9. Gestao do convite pelo dono ==')
+cookies.clear()
+await call('POST', '/api/auth/login', { email: clienteEmail, senha })
+const editarConvite = await call('PATCH', `/api/invitations/${conviteId}`, {
+  titulo: 'Aniversário da Marina (editado)',
+  tema: 'colorido',
+})
+check('dono edita o convite', editarConvite.status === 200 && editarConvite.data?.invitation?.titulo === 'Aniversário da Marina (editado)', `status ${editarConvite.status}`)
+
+const outroCliente = await call('POST', '/api/auth/register', {
+  nome: 'Cliente Curioso',
+  email: `smoke.curioso.${stamp}@festou.test`,
+  senha,
+  tipo_perfil: 'cliente',
+})
+check('cadastro do segundo cliente', outroCliente.status === 201, `status ${outroCliente.status}`)
+
+const editarConviteDeOutro = await call('PATCH', `/api/invitations/${conviteId}`, { titulo: 'Convite sequestrado' })
+check('outro cliente nao edita o convite', editarConviteDeOutro.status === 404, `status ${editarConviteDeOutro.status}`)
+
+// O cadastro do segundo cliente trocou a sessao do cookie: volta para a dona.
+cookies.clear()
+await call('POST', '/api/auth/login', { email: clienteEmail, senha })
+
+const excluirConvite = await call('DELETE', `/api/invitations/${conviteId}`)
+check('dono exclui o convite', excluirConvite.status === 200, `status ${excluirConvite.status}`)
+
+const conviteExcluido = await call('GET', `/api/invitations/${slug}`)
+check('convite excluido some do link publico', conviteExcluido.status === 404, `status ${conviteExcluido.status}`)
+
+console.log('\n== 10. SPA compilado ==')
 const spa = await fetch(`${base}/`)
 const spaHtml = await spa.text()
 check('GET / serve o index', spa.status === 200 && spaHtml.includes('<div id="app">'))
@@ -222,7 +276,7 @@ check('GET /fornecedor/painel devolve o index', rotaSPA.status === 200 && rotaHt
 const api404 = await call('GET', '/api/rota-inexistente')
 check('/api inexistente responde 404 em JSON', api404.status === 404 && api404.data?.message, JSON.stringify(api404.data))
 
-console.log('\n== 10. Limpeza ==')
+console.log('\n== 11. Limpeza ==')
 const { sql } = await import('../server/db.js').then(async (m) => ({ sql: m.getDatabase() }))
 await sql.query('delete from public.pedidos p using public.perfis c where c.id = p.cliente_id and c.email like $1', [`smoke.%@festou.test`])
 await sql.query('delete from public.perfis where email like $1', [`smoke.%@festou.test`])

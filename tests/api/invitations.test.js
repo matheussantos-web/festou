@@ -164,3 +164,56 @@ describe('convites e RSVP', () => {
     expect(invitation.confirmacoes[0].quantidade_pessoas).toBe(3)
   })
 })
+
+describe('edição e exclusão de convites', () => {
+  it('edita um convite do próprio cliente', async () => {
+    const customer = await createAccount('cliente')
+    const created = await createInvitation(customer)
+    const { id } = created.body.invitation
+
+    const response = await customer.client.patch(`/api/invitations/${id}`).send({
+      titulo: 'Aniversario de Teste Editado',
+      tema: 'colorido',
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.body.invitation.titulo).toBe('Aniversario de Teste Editado')
+    expect(response.body.invitation.tema).toBe('colorido')
+    expect(response.body.invitation.local_evento).toBe('Buffet de Teste')
+  })
+
+  it('impede que outro cliente edite o convite', async () => {
+    const owner = await createAccount('cliente')
+    const stranger = await createAccount('cliente')
+    const created = await createInvitation(owner)
+
+    const response = await stranger.client.patch(`/api/invitations/${created.body.invitation.id}`)
+      .send({ titulo: 'Convite sequestrado' })
+
+    expect(response.status).toBe(404)
+  })
+
+  it('exclui um convite do próprio cliente', async () => {
+    const customer = await createAccount('cliente')
+    const created = await createInvitation(customer)
+    const { id, slug } = created.body.invitation
+
+    const response = await customer.client.delete(`/api/invitations/${id}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toContain('Aniversario de Teste')
+
+    const publicView = await createClient().get(`/api/invitations/${slug}`)
+    expect(publicView.status).toBe(404)
+  })
+
+  it('impede que outro cliente exclua o convite', async () => {
+    const owner = await createAccount('cliente')
+    const stranger = await createAccount('cliente')
+    const created = await createInvitation(owner)
+
+    const response = await stranger.client.delete(`/api/invitations/${created.body.invitation.id}`)
+
+    expect(response.status).toBe(404)
+  })
+})

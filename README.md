@@ -7,7 +7,7 @@ Visão geral do produto, arquitetura, rotas, modelo de dados e instruções de m
 ## Configuração local
 
 1. Revogue a senha Neon que foi compartilhada e crie uma nova credencial no painel do Neon.
-2. Crie `.env` na raiz do projeto com as variáveis abaixo. Nunca compartilhe o valor de `DATABASE_URL`.
+2. Copie `.env.example` para `.env` e preencha as variáveis. Nunca compartilhe o valor de `DATABASE_URL`.
 
 ```env
 DATABASE_URL=postgresql://USUARIO:SENHA@HOST/neondb?sslmode=require
@@ -15,9 +15,12 @@ APP_ORIGIN=http://127.0.0.1:5173
 PORT=3000
 HOST=127.0.0.1
 NODE_ENV=development
+TRUST_PROXY=0
 AUTH_RATE_LIMIT=10
 RSVP_RATE_LIMIT=30
 ```
+
+`TRUST_PROXY` é o número de proxies reversos na frente da aplicação (0 = nenhum, 1 = nginx padrão). Sem essa variável o Express ignora o `X-Forwarded-For` e o limitador de requisições passa a contar o IP do proxy, o que transforma o limite em um teto global. `LOGIN_EMAIL_RATE_LIMIT` limita as tentativas de login por e-mail, e `JSON_BODY_LIMIT` define o tamanho máximo do corpo aceito.
 
 3. Execute `npm run db:setup` para criar as tabelas no Neon.
 4. Execute `npm install` e `npm run dev`.
@@ -58,6 +61,8 @@ O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt e usa
 
 Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orçamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transação. O histórico do cliente também aparece nessa tela.
 
-Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites.
+Clientes também podem criar convites digitais em `/convites`, escolher um tema e compartilhar o link público `/convite/:slug`. Os convidados podem confirmar, recusar ou responder talvez sem criar conta; enviar outra resposta com o mesmo e-mail atualiza o RSVP existente. O anfitrião acompanha as respostas e a quantidade de pessoas confirmadas na lista de convites, edita o convite, encerra ou reabre as confirmações e exclui o convite quando a festa passa.
 
-Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express.
+Fornecedores anunciam produtos em `/fornecedor/produtos/novo` e os editam, pausam ou excluem em `/fornecedor/painel`. Os orçamentos recebidos ficam na aba "Orçamentos Recebidos", onde o fornecedor negocia, confirma ou recusa cada pedido. Toda rota de fornecedor confere a posse do recurso: um fornecedor não alcança o produto nem o pedido de outro.
+
+Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express — nesse cenário, ajuste `TRUST_PROXY` para o número de proxies na frente da aplicação.

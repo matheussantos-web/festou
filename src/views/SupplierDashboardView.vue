@@ -15,6 +15,7 @@ const actionError = ref('')
 const successMessage = ref('')
 const updatingOrderId = ref(null)
 const togglingProductId = ref(null)
+const deletingProductId = ref(null)
 const loadedTabs = new Set()
 
 const pendingOrdersCount = computed(() => {
@@ -97,6 +98,27 @@ async function toggleProductActive(product) {
     actionError.value = error.message || 'Não foi possível alterar a visibilidade do produto.'
   } finally {
     togglingProductId.value = null
+  }
+}
+
+async function deleteProduct(product) {
+  const confirmed = window.confirm(
+    `Excluir o produto "${product.nome}"? Ele sai do catálogo e da vitrine. Os pedidos já feitos continuam registrados.`,
+  )
+  if (!confirmed) return
+
+  actionError.value = ''
+  successMessage.value = ''
+  deletingProductId.value = product.id
+
+  try {
+    const result = await api(`/supplier/products/${product.id}`, { method: 'DELETE' })
+    products.value = products.value.filter((item) => item.id !== product.id)
+    successMessage.value = result.message
+  } catch (error) {
+    actionError.value = error.message || 'Não foi possível excluir o produto.'
+  } finally {
+    deletingProductId.value = null
   }
 }
 
@@ -378,14 +400,30 @@ onMounted(loadOrders)
             </div>
 
             <div class="border-t border-slate-100 bg-festou-soft/70 p-4">
-              <button
-                type="button"
-                :disabled="togglingProductId === product.id"
-                class="w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-festou-magenta/50 hover:text-festou-primary disabled:opacity-50"
-                @click="toggleProductActive(product)"
-              >
-                {{ togglingProductId === product.id ? 'Atualizando...' : (product.ativo ? 'Pausar anúncio' : 'Reativar na vitrine') }}
-              </button>
+              <div class="flex flex-wrap items-center gap-2">
+                <RouterLink
+                  :to="`/fornecedor/produtos/${product.id}/editar`"
+                  class="flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-center text-xs font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-festou-magenta/50 hover:text-festou-primary"
+                >
+                  Editar
+                </RouterLink>
+                <button
+                  type="button"
+                  :disabled="togglingProductId === product.id"
+                  class="flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-festou-magenta/50 hover:text-festou-primary disabled:opacity-50"
+                  @click="toggleProductActive(product)"
+                >
+                  {{ togglingProductId === product.id ? 'Atualizando...' : (product.ativo ? 'Pausar anúncio' : 'Reativar na vitrine') }}
+                </button>
+                <button
+                  type="button"
+                  :disabled="deletingProductId === product.id"
+                  class="rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 transition-all duration-300 hover:-translate-y-0.5 hover:bg-rose-50 disabled:opacity-50"
+                  @click="deleteProduct(product)"
+                >
+                  {{ deletingProductId === product.id ? 'Excluindo...' : 'Excluir' }}
+                </button>
+              </div>
             </div>
           </article>
         </div>

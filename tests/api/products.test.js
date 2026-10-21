@@ -79,3 +79,85 @@ describe('vitrine de produtos', () => {
     expect(found.ativo).toBe(false)
   })
 })
+
+describe('gestão do catálogo do fornecedor', () => {
+  it('edita um produto do próprio fornecedor', async () => {
+    const supplier = await createAccount('fornecedor')
+    const product = await createProduct(supplier)
+
+    const response = await supplier.client.patch(`/api/supplier/products/${product.id}`).send({
+      nome: 'Bolo de chocolate actualizado',
+      preco: 129.9,
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.body.product.nome).toBe('Bolo de chocolate actualizado')
+    expect(Number(response.body.product.preco)).toBe(129.9)
+    expect(response.body.product.categoria).toBe(product.categoria)
+  })
+
+  it('impede que um fornecedor edite produto de outro', async () => {
+    const owner = await createAccount('fornecedor')
+    const stranger = await createAccount('fornecedor')
+    const product = await createProduct(owner)
+
+    const response = await stranger.client.patch(`/api/supplier/products/${product.id}`).send({
+      nome: 'Produto roubado',
+    })
+
+    expect(response.status).toBe(404)
+  })
+
+  it('exclui um produto do próprio fornecedor', async () => {
+    const supplier = await createAccount('fornecedor')
+    const product = await createProduct(supplier)
+
+    const response = await supplier.client.delete(`/api/supplier/products/${product.id}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toContain(product.nome)
+
+    const list = await supplier.client.get('/api/supplier/products')
+    expect(list.body.products.some((item) => item.id === product.id)).toBe(false)
+  })
+
+  it('impede que um fornecedor exclua produto de outro', async () => {
+    const owner = await createAccount('fornecedor')
+    const stranger = await createAccount('fornecedor')
+    const product = await createProduct(owner)
+
+    const response = await stranger.client.delete(`/api/supplier/products/${product.id}`)
+
+    expect(response.status).toBe(404)
+  })
+
+  it('recusa imagem fora de https', async () => {
+    const supplier = await createAccount('fornecedor')
+
+    const response = await supplier.client.post('/api/products').send({
+      nome: 'Produto com imagem insegura',
+      categoria: 'bolos',
+      descricao: 'Produto com link de imagem que nao usa https.',
+      preco: 50,
+      imagem_url: 'http://exemplo.com/foto.jpg',
+    })
+
+    expect(response.status).toBe(400)
+    expect(response.body.message).toContain('https')
+  })
+
+  it('aceita imagem em https', async () => {
+    const supplier = await createAccount('fornecedor')
+
+    const response = await supplier.client.post('/api/products').send({
+      nome: 'Produto com imagem segura',
+      categoria: 'bolos',
+      descricao: 'Produto com link de imagem que usa https.',
+      preco: 50,
+      imagem_url: 'https://exemplo.com/foto.jpg',
+    })
+
+    expect(response.status).toBe(201)
+    expect(response.body.product.imagem_url).toBe('https://exemplo.com/foto.jpg')
+  })
+})

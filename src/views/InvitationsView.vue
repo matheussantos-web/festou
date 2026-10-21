@@ -13,8 +13,20 @@ const isSubmitting = ref(false)
 const didCopy = ref(false)
 const copiedSlug = ref(null)
 const updatingRsvpId = ref(null)
+const editingInvitation = ref(null)
+const isUpdating = ref(false)
+const deletingInvitationId = ref(null)
 
 const form = reactive({
+  titulo: '',
+  anfitriao: '',
+  data_evento: '',
+  local_evento: '',
+  mensagem: '',
+  tema: 'jardim',
+})
+
+const editForm = reactive({
   titulo: '',
   anfitriao: '',
   data_evento: '',
@@ -36,6 +48,15 @@ const themes = [
 
 function formatInvitationDate(value) {
   return formatDate(value, { dateStyle: 'full', timeStyle: 'short' })
+}
+
+// O input datetime-local espera a data no fuso do navegador.
+function toLocalDateTimeInput(value) {
+  if (!value) return ''
+
+  const date = new Date(value)
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
 }
 
 function getConfirmationSummary(confirmations = []) {
@@ -95,6 +116,76 @@ async function createInvitation() {
     errorMessage.value = error.message || 'Não foi possível criar o convite.'
   } finally {
     isSubmitting.value = false
+  }
+}
+
+function startEditing(invitation) {
+  errorMessage.value = ''
+  successMessage.value = ''
+  editingInvitation.value = invitation
+  Object.assign(editForm, {
+    titulo: invitation.titulo,
+    anfitriao: invitation.anfitriao,
+    data_evento: toLocalDateTimeInput(invitation.data_evento),
+    local_evento: invitation.local_evento,
+    mensagem: invitation.mensagem ?? '',
+    tema: invitation.tema,
+  })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function cancelEditing() {
+  editingInvitation.value = null
+}
+
+async function updateInvitation() {
+  errorMessage.value = ''
+  successMessage.value = ''
+  isUpdating.value = true
+
+  try {
+    const { invitation } = await api(`/invitations/${editingInvitation.value.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        titulo: editForm.titulo,
+        anfitriao: editForm.anfitriao,
+        data_evento: new Date(editForm.data_evento).toISOString(),
+        local_evento: editForm.local_evento,
+        mensagem: editForm.mensagem,
+        tema: editForm.tema,
+      }),
+    })
+
+    const target = invitations.value.find((item) => item.id === invitation.id)
+    if (target) Object.assign(target, invitation)
+    editingInvitation.value = null
+    successMessage.value = 'Convite atualizado com sucesso.'
+  } catch (error) {
+    errorMessage.value = error.message || 'Não foi possível atualizar o convite.'
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+async function deleteInvitation(invitation) {
+  const confirmed = window.confirm(
+    `Excluir o convite "${invitation.titulo}"? As confirmações de presença recebidas também serão apagadas.`,
+  )
+  if (!confirmed) return
+
+  errorMessage.value = ''
+  successMessage.value = ''
+  deletingInvitationId.value = invitation.id
+
+  try {
+    const result = await api(`/invitations/${invitation.id}`, { method: 'DELETE' })
+    invitations.value = invitations.value.filter((item) => item.id !== invitation.id)
+    if (editingInvitation.value?.id === invitation.id) editingInvitation.value = null
+    successMessage.value = result.message
+  } catch (error) {
+    errorMessage.value = error.message || 'Não foi possível excluir o convite.'
+  } finally {
+    deletingInvitationId.value = null
   }
 }
 
@@ -166,6 +257,103 @@ onMounted(loadInvitations)
       <div class="mt-8 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <!-- Formulário de Criação -->
         <section class="festou-card-gradient p-6 sm:p-8">
+          <template v-if="editingInvitation">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="font-heading text-2xl font-bold text-festou-midnight">Editar Convite</h2>
+                <p class="mt-1 text-xs text-slate-500">Ajuste as informações e salve para atualizar o link compartilhado.</p>
+              </div>
+              <button
+                type="button"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-600 transition hover:border-festou-magenta/50 hover:text-festou-primary"
+                @click="cancelEditing"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            <form class="mt-6 space-y-4" @submit.prevent="updateInvitation">
+              <div>
+                <label for="edit-title" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Nome da celebração</label>
+                <input
+                  id="edit-title"
+                  v-model.trim="editForm.titulo"
+                  type="text"
+                  minlength="3"
+                  maxlength="100"
+                  required
+                  class="w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label for="edit-host" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quem convida (anfitrião)</label>
+                <input
+                  id="edit-host"
+                  v-model.trim="editForm.anfitriao"
+                  type="text"
+                  minlength="2"
+                  maxlength="100"
+                  required
+                  class="w-full text-sm"
+                />
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="edit-date" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Data e horário</label>
+                  <input
+                    id="edit-date"
+                    v-model="editForm.data_evento"
+                    type="datetime-local"
+                    :min="minimumDate"
+                    required
+                    class="w-full text-sm"
+                  />
+                </div>
+                <div>
+                  <label for="edit-theme" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Tema visual</label>
+                  <select id="edit-theme" v-model="editForm.tema" class="w-full text-sm">
+                    <option v-for="theme in themes" :key="theme.value" :value="theme.value">{{ theme.label }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label for="edit-location" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Local ou endereço</label>
+                <input
+                  id="edit-location"
+                  v-model.trim="editForm.local_evento"
+                  type="text"
+                  minlength="3"
+                  maxlength="180"
+                  required
+                  class="w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label for="edit-message" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Mensagem aos convidados (opcional)</label>
+                <textarea
+                  id="edit-message"
+                  v-model.trim="editForm.mensagem"
+                  rows="3"
+                  maxlength="500"
+                  class="w-full text-sm"
+                ></textarea>
+              </div>
+
+              <button
+                type="submit"
+                :disabled="isUpdating"
+                class="btn-festou-primary w-full text-sm"
+              >
+                {{ isUpdating ? 'Salvando...' : 'Salvar alterações' }}
+              </button>
+            </form>
+          </template>
+
+          <template v-else>
           <h2 class="font-heading text-2xl font-bold text-festou-midnight">Criar Novo Convite</h2>
           <p class="mt-1 text-xs text-slate-500">Preencha as informações da celebração para gerar a página pública.</p>
 
@@ -273,6 +461,7 @@ onMounted(loadInvitations)
               </button>
             </div>
           </div>
+          </template>
         </section>
 
         <!-- Lista de Convites e Respostas -->
@@ -326,7 +515,7 @@ onMounted(loadInvitations)
                 </div>
 
                 <!-- Ações do Convite -->
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
@@ -336,11 +525,26 @@ onMounted(loadInvitations)
                   </button>
                   <button
                     type="button"
+                    class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    @click="startEditing(invitation)"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
                     :disabled="updatingRsvpId === invitation.id"
                     class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
                     @click="toggleRsvp(invitation)"
                   >
                     {{ updatingRsvpId === invitation.id ? '...' : (invitation.aceita_rsvp !== false ? 'Encerrar' : 'Reabrir') }}
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="deletingInvitationId === invitation.id"
+                    class="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50"
+                    @click="deleteInvitation(invitation)"
+                  >
+                    {{ deletingInvitationId === invitation.id ? '...' : 'Excluir' }}
                   </button>
                   <RouterLink
                     :to="`/convite/${invitation.slug}`"

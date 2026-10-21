@@ -5,6 +5,7 @@ import RegisterView from '../views/RegisterView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import ProductCatalogView from '../views/ProductCatalogView.vue'
 import SupplierProductCreateView from '../views/SupplierProductCreateView.vue'
+import SupplierProductEditView from '../views/SupplierProductEditView.vue'
 import SupplierDashboardView from '../views/SupplierDashboardView.vue'
 import CartView from '../views/CartView.vue'
 import InvitationsView from '../views/InvitationsView.vue'
@@ -68,6 +69,12 @@ const router = createRouter({
       path: '/fornecedor/produtos/novo',
       name: 'produto-novo',
       component: SupplierProductCreateView,
+      beforeEnter: requireSupplier,
+    },
+    {
+      path: '/fornecedor/produtos/:id/editar',
+      name: 'produto-editar',
+      component: SupplierProductEditView,
       beforeEnter: requireSupplier,
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
