@@ -24,4 +24,6 @@ O desenvolvimento inicia o frontend Vite e a API Express em conjunto. O Vite enc
 
 O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt e usa sessoes aleatorias em cookies HttpOnly. Produtos sao lidos pela vitrine publica e so fornecedores autenticados podem anuncia-los. A autorizacao ocorre na API; o Neon nao e acessado pelo navegador.
 
+Clientes podem adicionar produtos ao carrinho, ajustar quantidades e solicitar um orcamento em `/carrinho`. O backend consulta novamente os produtos ativos, calcula os valores e grava o pedido e seus itens em uma transacao. O historico do cliente tambem aparece nessa tela.
+
 Para producao, configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production` e um proxy HTTPS que encaminhe `/api` para o servidor Express.

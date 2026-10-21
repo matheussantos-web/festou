@@ -49,9 +49,10 @@ async function signUp() {
           <label for="name" class="mb-1 block text-sm font-semibold">Nome completo</label>
           <input
             id="name"
-            v-model="name"
+            v-model.trim="name"
             type="text"
             autocomplete="name"
+            minlength="3"
             maxlength="100"
             required
             class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
@@ -61,9 +62,11 @@ async function signUp() {
           <label for="email" class="mb-1 block text-sm font-semibold">E-mail</label>
           <input
             id="email"
-            v-model="email"
+            v-model.trim="email"
             type="email"
             autocomplete="email"
+            pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+            title="Use um e-mail como nome@dominio.com."
             required
             class="w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-rose-700 focus:ring-2 focus:ring-rose-100"
           />

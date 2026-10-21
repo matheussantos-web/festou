@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { randomUUID } from 'node:crypto'
 import cookieParser from 'cookie-parser'
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
@@ -44,10 +45,19 @@ const authLimiter = rateLimit({
 })
 
 const registerSchema = z.object({
-  nome: z.string().trim().min(3).max(100),
-  email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
-  senha: z.string().min(8).max(128),
-  tipo_perfil: z.enum(['cliente', 'fornecedor']),
+  nome: z.string().trim()
+    .min(3, 'Informe um nome com pelo menos 3 caracteres.')
+    .max(100, 'O nome pode ter no maximo 100 caracteres.'),
+  email: z.string().trim()
+    .email('Informe um e-mail valido, como nome@dominio.com.')
+    .max(254, 'O e-mail pode ter no maximo 254 caracteres.')
+    .transform((email) => email.toLowerCase()),
+  senha: z.string()
+    .min(8, 'A senha precisa ter pelo menos 8 caracteres.')
+    .max(128, 'A senha pode ter no maximo 128 caracteres.'),
+  tipo_perfil: z.enum(['cliente', 'fornecedor'], {
+    error: 'Selecione cliente ou fornecedor.',
+  }),
 })
 
 const loginSchema = z.object({
@@ -64,6 +74,14 @@ const productSchema = z.object({
   imagem_url: z.union([z.literal(''), z.string().trim().url().max(2048)])
     .optional()
     .transform((value) => value || null),
+})
+
+const orderSchema = z.object({
+  items: z.array(z.object({
+    produto_id: z.string().uuid(),
+    quantidade: z.number().int().min(1).max(20),
+  })).min(1).max(50),
+  observacao: z.string().trim().max(500).optional().transform((value) => value || null),
 })
 
 function sendProfile(profile) {
@@ -251,9 +269,170 @@ app.post('/api/products', requireUser, async (request, response, next) => {
   }
 })
 
+app.get('/api/orders', requireUser, async (request, response, next) => {
+  try {
+    const sql = getDatabase()
+
+    if (request.user.tipo_perfil === 'cliente') {
+      const orders = await sql`
+        select
+          o.id,
+          o.status,
+          o.total_estimado,
+          o.observacao,
+          o.created_at,
+          coalesce(
+            json_agg(json_build_object(
+              'id', i.id,
+              'produto_id', i.produto_id,
+              'nome', i.nome_produto,
+              'categoria', i.categoria,
+              'preco_unitario', i.preco_unitario,
+              'quantidade', i.quantidade,
+              'subtotal', i.subtotal
+            )) filter (where i.id is not null),
+            '[]'::json
+          ) as itens
+        from public.pedidos o
+        left join public.itens_pedido i on i.pedido_id = o.id
+        where o.cliente_id = ${request.user.id}
+        group by o.id
+        order by o.created_at desc
+        limit 100
+      `
+
+      return response.json({ orders })
+    }
+
+    if (request.user.tipo_perfil === 'fornecedor') {
+      const orders = await sql`
+        select
+          o.id,
+          o.status,
+          o.observacao,
+          o.created_at,
+          c.nome as cliente_nome,
+          sum(i.subtotal) as total_fornecedor,
+          json_agg(json_build_object(
+            'id', i.id,
+            'nome', i.nome_produto,
+            'categoria', i.categoria,
+            'preco_unitario', i.preco_unitario,
+            'quantidade', i.quantidade,
+            'subtotal', i.subtotal
+          )) as itens
+        from public.pedidos o
+        join public.perfis c on c.id = o.cliente_id
+        join public.itens_pedido i on i.pedido_id = o.id
+        where i.fornecedor_id = ${request.user.id}
+        group by o.id, c.nome
+        order by o.created_at desc
+        limit 100
+      `
+
+      return response.json({ orders })
+    }
+
+    return response.status(403).json({ message: 'Este perfil nao pode consultar pedidos.' })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+app.post('/api/orders', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem solicitar orcamentos.' })
+    }
+
+    const input = orderSchema.parse(request.body)
+    const quantities = new Map()
+    for (const item of input.items) {
+      const quantity = (quantities.get(item.produto_id) ?? 0) + item.quantidade
+      if (quantity > 20) {
+        return response.status(400).json({ message: 'O limite e de 20 unidades por produto.' })
+      }
+      quantities.set(item.produto_id, quantity)
+    }
+
+    const productIds = [...quantities.keys()]
+    const placeholders = productIds.map((_, index) => `$${index + 1}::uuid`).join(', ')
+    const sql = getDatabase()
+    const products = await sql.query(
+      `select id, fornecedor_id, nome, categoria, preco from public.produtos where ativo = true and id in (${placeholders})`,
+      productIds,
+    )
+
+    if (products.length !== productIds.length) {
+      return response.status(400).json({ message: 'Um ou mais produtos nao estao mais disponiveis.' })
+    }
+
+    const productsById = new Map(products.map((product) => [product.id, product]))
+    const orderItems = productIds.map((productId) => {
+      const product = productsById.get(productId)
+      const quantity = quantities.get(productId)
+      const unitPriceCents = Math.round(Number(product.preco) * 100)
+      const subtotalCents = unitPriceCents * quantity
+
+      return {
+        product,
+        quantity,
+        unitPrice: (unitPriceCents / 100).toFixed(2),
+        subtotal: (subtotalCents / 100).toFixed(2),
+        subtotalCents,
+      }
+    })
+    const totalCents = orderItems.reduce((total, item) => total + item.subtotalCents, 0)
+    const total = (totalCents / 100).toFixed(2)
+    const orderId = randomUUID()
+    const statements = [
+      sql`
+        insert into public.pedidos (id, cliente_id, total_estimado, observacao)
+        values (${orderId}, ${request.user.id}, ${total}, ${input.observacao})
+        returning id
+      `,
+    ]
+
+    statements.push(...orderItems.map(({ product, quantity, unitPrice, subtotal }) => sql`
+      insert into public.itens_pedido (
+        pedido_id, produto_id, fornecedor_id, nome_produto, categoria,
+        preco_unitario, quantidade, subtotal
+      ) values (
+        ${orderId},
+        ${product.id}, ${product.fornecedor_id}, ${product.nome}, ${product.categoria},
+        ${unitPrice}, ${quantity}, ${subtotal}
+      )
+    `))
+
+    await sql.transaction(statements)
+
+    response.status(201).json({
+      order: {
+        id: orderId,
+        status: 'solicitado',
+        total_estimado: total,
+        observacao: input.observacao,
+        itens: orderItems.map(({ product, quantity, unitPrice, subtotal }) => ({
+          nome: product.nome,
+          categoria: product.categoria,
+          preco_unitario: unitPrice,
+          quantidade: quantity,
+          subtotal,
+        })),
+      },
+    })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 app.use((error, _request, response, _next) => {
   if (error instanceof ZodError) {
-    return response.status(400).json({ message: 'Confira os dados enviados.' })
+    const issue = error.issues[0]
+    return response.status(400).json({
+      message: issue?.message || 'Confira os dados enviados.',
+      field: issue?.path[0] ?? null,
+    })
   }
 
   if (error?.message?.startsWith('DATABASE_URL')) {

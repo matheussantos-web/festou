@@ -35,3 +35,32 @@ create table if not exists public.produtos (
 create index if not exists produtos_vitrine_idx
   on public.produtos (categoria, created_at desc)
   where ativo = true;
+
+create table if not exists public.pedidos (
+  id uuid primary key default gen_random_uuid(),
+  cliente_id uuid not null references public.perfis (id) on delete restrict,
+  status text not null default 'solicitado'
+    check (status in ('solicitado', 'em_negociacao', 'confirmado', 'recusado', 'cancelado', 'concluido')),
+  total_estimado numeric(10, 2) not null check (total_estimado > 0),
+  observacao text check (observacao is null or char_length(observacao) <= 500),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.itens_pedido (
+  id uuid primary key default gen_random_uuid(),
+  pedido_id uuid not null references public.pedidos (id) on delete cascade,
+  produto_id uuid references public.produtos (id) on delete set null,
+  fornecedor_id uuid not null references public.perfis (id) on delete restrict,
+  nome_produto text not null,
+  categoria text not null check (categoria in ('bolos', 'doces', 'brinquedos', 'convites')),
+  preco_unitario numeric(10, 2) not null check (preco_unitario > 0),
+  quantidade integer not null check (quantidade between 1 and 20),
+  subtotal numeric(10, 2) not null check (subtotal > 0),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists pedidos_cliente_idx
+  on public.pedidos (cliente_id, created_at desc);
+
+create index if not exists itens_pedido_fornecedor_idx
+  on public.itens_pedido (fornecedor_id, pedido_id);

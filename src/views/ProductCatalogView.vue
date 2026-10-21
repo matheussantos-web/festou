@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../lib/api'
+import { addToCart, cartCount } from '../lib/cart'
 
 const route = useRoute()
 const products = ref([])
@@ -46,6 +47,9 @@ watch(categoryFilter, loadProducts)
     <header class="flex items-center justify-between border-b border-orange-100 bg-white px-6 py-5 md:px-12">
       <RouterLink to="/" class="text-2xl font-bold text-rose-700">Festou!</RouterLink>
       <nav class="flex items-center gap-4 text-sm font-semibold">
+        <RouterLink to="/carrinho" class="hover:text-rose-700">
+          Carrinho <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-800">{{ cartCount }}</span>
+        </RouterLink>
         <RouterLink to="/fornecedor/produtos/novo" class="hidden hover:text-rose-700 sm:inline">
           Anunciar produto
         </RouterLink>
@@ -109,7 +113,16 @@ watch(categoryFilter, loadProducts)
             <h3 class="mt-2 text-lg font-bold">{{ product.nome }}</h3>
             <p class="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{{ product.descricao }}</p>
             <p v-if="product.cidade" class="mt-3 text-sm text-slate-500">{{ product.cidade }}</p>
-            <p class="mt-4 text-lg font-bold text-slate-900">{{ formatPrice(product.preco) }}</p>
+            <div class="mt-4 flex items-center justify-between gap-3">
+              <p class="text-lg font-bold text-slate-900">{{ formatPrice(product.preco) }}</p>
+              <button
+                type="button"
+                class="rounded-md bg-rose-700 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-800"
+                @click="addToCart(product)"
+              >
+                Adicionar
+              </button>
+            </div>
           </div>
         </article>
       </div>
