@@ -82,7 +82,7 @@ onMounted(loadOrders)
       <RouterLink to="/vitrine" class="text-sm font-semibold text-rose-700 hover:underline">Continuar escolhendo</RouterLink>
     </header>
 
-    <div class="mx-auto max-w-6xl px-6 py-10 md:px-12">
+    <div class="festou-surface mx-auto max-w-6xl px-6 py-10 md:px-12">
       <h1 class="text-3xl font-bold">Carrinho e orçamentos</h1>
       <p class="mt-2 text-slate-600">Revise os itens e envie uma solicitação aos fornecedores.</p>
 

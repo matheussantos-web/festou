@@ -6,6 +6,8 @@ import NotFoundView from '../views/NotFoundView.vue'
 import ProductCatalogView from '../views/ProductCatalogView.vue'
 import SupplierProductCreateView from '../views/SupplierProductCreateView.vue'
 import CartView from '../views/CartView.vue'
+import InvitationsView from '../views/InvitationsView.vue'
+import PublicInvitationView from '../views/PublicInvitationView.vue'
 import { api } from '../lib/api'
 
 async function requireSupplier(to) {
@@ -52,6 +54,8 @@ const router = createRouter({
     { path: '/cadastro', name: 'cadastro', component: RegisterView },
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
     { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCustomer },
+    { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
+    { path: '/convite/:slug', name: 'convite-publico', component: PublicInvitationView },
     {
       path: '/fornecedor/produtos/novo',
       name: 'produto-novo',

@@ -1,9 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  --festou-midnight: #1a134d;
+  --festou-magenta: #ff2d98;
+  --festou-purple: #7b12a2;
+  --festou-turquoise: #00c2d1;
+  --festou-yellow: #ffd938;
+  --festou-orange: #ff6b00;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #1e293b;
+  background: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -14,4 +24,139 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  background: #f8fafc;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Baloo 2', 'Poppins', 'Inter', sans-serif;
+}
+
+main.min-h-screen:not(.bg-gradient-to-br) {
+  background-color: var(--festou-midnight);
+  color: #fff;
+  background-image:
+    url('/festou-confetti.svg'),
+    radial-gradient(ellipse at 5% 0%, rgb(255 45 152 / 30%), transparent 36%),
+    radial-gradient(ellipse at 100% 28%, rgb(0 194 209 / 17%), transparent 30%),
+    linear-gradient(145deg, var(--festou-midnight) 5%, #26105d 58%, #32104c 100%);
+  background-size: 240px 240px, auto, auto, auto;
+  background-attachment: fixed;
+}
+
+main.bg-festou-background .text-festou-text {
+  color: #fff;
+}
+
+main.bg-festou-background .text-slate-600 {
+  color: #e1d8fa;
+}
+
+.festou-surface {
+  border: 1px solid rgb(255 255 255 / 84%);
+  border-radius: 1.75rem;
+  background: #fff;
+  color: var(--festou-midnight);
+  box-shadow: 0 24px 60px -34px rgb(0 0 0 / 70%);
+}
+
+.festou-surface .text-slate-600 {
+  color: #655d7c;
+}
+
+.festou-wordmark {
+  color: var(--festou-magenta);
+  font-family: 'Baloo 2', 'Poppins', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-shadow: 1px 2px 0 var(--festou-midnight), 2px 3px 0 var(--festou-turquoise);
+}
+
+main.min-h-screen > header {
+  border-color: rgb(255 255 255 / 15%);
+  background-color: rgb(26 19 77 / 94%);
+  color: white;
+  box-shadow: 0 10px 32px -24px rgb(0 0 0 / 65%);
+}
+
+main.min-h-screen > header a:not(.text-rose-700) {
+  color: white;
+}
+
+main.min-h-screen > header a:hover {
+  color: #00c2d1;
+}
+
+main.min-h-screen > header > a:first-child,
+main.min-h-screen > header > div > a:first-child {
+  color: #fff;
+  font-family: 'Baloo 2', 'Poppins', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-shadow: 2px 3px 0 #ff2d98, 4px 5px 0 rgb(123 18 162 / 85%);
+}
+
+main.min-h-screen section.bg-gradient-to-br {
+  background-image:
+    url('/festou-confetti.svg'),
+    linear-gradient(125deg, #1a134d 0%, #7b12a2 54%, #ff2d98 100%);
+  background-size: 220px 220px, auto;
+  color: white;
+}
+
+main.min-h-screen section.bg-gradient-to-br h1,
+main.min-h-screen section.bg-gradient-to-br p {
+  color: white;
+}
+
+.text-rose-700 {
+  color: var(--festou-magenta);
+}
+
+.bg-rose-700,
+button.bg-rose-700,
+a.bg-rose-700 {
+  border-radius: 9999px;
+  background-color: var(--festou-magenta);
+  box-shadow: 0 10px 25px -12px rgb(255 45 152 / 85%);
+}
+
+.bg-rose-700:hover,
+button.bg-rose-700:hover,
+a.bg-rose-700:hover {
+  background-color: #e30c7e;
+}
+
+main.min-h-screen input:not([type='radio']),
+main.min-h-screen select,
+main.min-h-screen textarea {
+  border-radius: 0.9rem;
+  border-color: #ded7ef;
+}
+
+main.min-h-screen input:not([type='radio']):focus,
+main.min-h-screen select:focus,
+main.min-h-screen textarea:focus {
+  border-color: var(--festou-magenta);
+  --tw-ring-color: rgb(255 45 152 / 18%);
+}
+
+main.min-h-screen section.bg-white,
+main.min-h-screen article.bg-white {
+  border-color: #f2e9fc;
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 45px -24px rgb(0 0 0 / 25%);
+}
+
+a,
+button {
+  transition-duration: 180ms;
+}
+
+::selection {
+  color: white;
+  background: var(--festou-magenta);
 }

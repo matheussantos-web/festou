@@ -39,8 +39,8 @@ async function signUp() {
 
 <template>
   <main class="grid min-h-screen place-items-center bg-orange-50 px-6 py-10 text-slate-900">
-    <section class="w-full max-w-md rounded-lg border border-orange-100 bg-white p-8 shadow-sm">
-      <RouterLink to="/" class="text-sm font-semibold text-rose-700">Festou!</RouterLink>
+    <section class="festou-surface w-full max-w-md p-8">
+      <RouterLink to="/" class="festou-wordmark">Festou!</RouterLink>
       <h1 class="mt-6 text-3xl font-bold">Crie sua conta</h1>
       <p class="mt-2 text-slate-600">Escolha como quer participar da Festou!.</p>
 

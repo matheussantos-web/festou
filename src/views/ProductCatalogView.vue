@@ -67,7 +67,7 @@ watch(categoryFilter, loadProducts)
       </div>
     </section>
 
-    <section class="mx-auto max-w-6xl px-6 py-10 md:px-12">
+    <section class="festou-surface mx-auto max-w-6xl px-6 py-10 md:px-12">
       <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 class="text-2xl font-bold">Vitrine de produtos e serviços</h2>
@@ -89,6 +89,9 @@ watch(categoryFilter, loadProducts)
 
       <p v-if="route.query.aviso === 'fornecedor'" role="status" class="mb-5 rounded-md bg-amber-100 px-4 py-3 text-sm text-amber-900">
         O cadastro de produtos está disponível para contas de fornecedor.
+      </p>
+      <p v-else-if="route.query.aviso === 'carrinho'" role="status" class="mb-5 rounded-md bg-amber-100 px-4 py-3 text-sm text-amber-900">
+        Carrinho e convites estão disponíveis para contas de cliente.
       </p>
       <p v-if="isLoading" role="status" class="py-12 text-center text-slate-600">Carregando produtos...</p>
       <p v-else-if="errorMessage" role="alert" class="rounded-md border border-amber-200 bg-amber-50 px-5 py-4 text-slate-700">

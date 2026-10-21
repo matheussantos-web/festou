@@ -53,7 +53,7 @@ async function createProduct() {
   <main class="min-h-screen bg-orange-50 px-6 py-10 text-slate-900">
     <section class="mx-auto max-w-2xl">
       <RouterLink to="/vitrine" class="text-sm font-semibold text-rose-700 hover:underline">Voltar à vitrine</RouterLink>
-      <div class="mt-6 rounded-lg border border-orange-100 bg-white p-6 shadow-sm sm:p-9">
+      <div class="festou-surface mt-6 p-6 sm:p-9">
         <p class="text-sm font-bold uppercase tracking-widest text-rose-700">Área do fornecedor</p>
         <h1 class="mt-2 text-3xl font-bold">Anunciar produto ou serviço</h1>
         <p class="mt-2 text-slate-600">As informações serão exibidas na vitrine pública.</p>

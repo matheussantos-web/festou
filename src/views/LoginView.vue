@@ -35,8 +35,8 @@ async function signIn() {
 
 <template>
   <main class="grid min-h-screen place-items-center bg-orange-50 px-6 py-10 text-slate-900">
-    <section class="w-full max-w-md rounded-lg border border-orange-100 bg-white p-8 shadow-sm">
-      <RouterLink to="/" class="text-sm font-semibold text-rose-700">Festou!</RouterLink>
+    <section class="festou-surface w-full max-w-md p-8">
+      <RouterLink to="/" class="festou-wordmark">Festou!</RouterLink>
       <h1 class="mt-6 text-3xl font-bold">Que bom ter você de volta</h1>
       <p class="mt-2 text-slate-600">Entre para continuar organizando sua festa.</p>
       <p v-if="route.query.configurarNeon" role="alert" class="mt-4 text-sm text-amber-800">

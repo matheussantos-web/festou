@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import cookieParser from 'cookie-parser'
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
@@ -44,6 +45,14 @@ const authLimiter = rateLimit({
   message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
 })
 
+const rsvpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas de confirmacao. Aguarde alguns minutos.' },
+})
+
 const registerSchema = z.object({
   nome: z.string().trim()
     .min(3, 'Informe um nome com pelo menos 3 caracteres.')
@@ -60,11 +69,174 @@ const registerSchema = z.object({
   }),
 })
 
+const invitationSchema = z.object({
+  titulo: z.string().trim().min(3).max(100),
+  anfitriao: z.string().trim().min(2).max(100),
+  data_evento: z.string().datetime({ offset: true }).refine(
+    (value) => new Date(value).getTime() > Date.now(),
+    'A data do evento precisa estar no futuro.',
+  ),
+  local_evento: z.string().trim().min(3).max(180),
+  mensagem: z.string().trim().max(500).optional().transform((value) => value || null),
+  tema: z.enum(['jardim', 'colorido', 'ceu-estrelado']),
+})
+
+const rsvpSchema = z.object({
+  nome: z.string().trim().min(2).max(100),
+  email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
+  resposta: z.enum(['confirmado', 'recusado', 'talvez']),
+  quantidade_pessoas: z.number().int().min(1).max(10),
+  mensagem: z.string().trim().max(300).optional().transform((value) => value || null),
+})
+
 const loginSchema = z.object({
   email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
   senha: z.string().min(1).max(128),
 })
 
+app.post('/api/invitations', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem criar convites.' })
+    }
+
+    const input = invitationSchema.parse(request.body)
+    const slug = randomBytes(24).toString('base64url')
+    const sql = getDatabase()
+    const [invitation] = await sql`
+      insert into public.convites (
+        dono_id, slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema
+      ) values (
+        ${request.user.id}, ${slug}, ${input.titulo}, ${input.anfitriao},
+        ${input.data_evento}, ${input.local_evento}, ${input.mensagem}, ${input.tema}
+      )
+      returning id, slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema, created_at
+    `
+
+    response.status(201).json({ invitation })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+app.get('/api/invitations/mine', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Este perfil nao pode consultar convites.' })
+    }
+
+    const sql = getDatabase()
+    const invitations = await sql`
+      select
+        c.id,
+        c.slug,
+        c.titulo,
+        c.anfitriao,
+        c.data_evento,
+        c.local_evento,
+        c.mensagem,
+        c.tema,
+        c.created_at,
+        coalesce(
+          json_agg(json_build_object(
+            'nome', r.nome,
+            'email', r.email,
+            'resposta', r.resposta,
+            'quantidade_pessoas', r.quantidade_pessoas,
+            'mensagem', r.mensagem,
+            'updated_at', r.updated_at
+          )) filter (where r.id is not null),
+          '[]'::json
+        ) as confirmacoes
+      from public.convites c
+      left join public.confirmacoes_presenca r on r.convite_id = c.id
+      where c.dono_id = ${request.user.id}
+      group by c.id
+      order by c.data_evento desc
+      limit 100
+    `
+
+    response.json({ invitations })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+app.get('/api/invitations/:slug', async (request, response, next) => {
+  try {
+    const sql = getDatabase()
+    const [invitation] = await sql`
+      select id, slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema, aceita_rsvp
+      from public.convites
+      where slug = ${request.params.slug}
+      limit 1
+    `
+
+    if (!invitation) return response.status(404).json({ message: 'Convite nao encontrado.' })
+
+    const [summary] = await sql`
+      select
+        count(*) filter (where resposta = 'confirmado') as confirmados,
+        coalesce(sum(quantidade_pessoas) filter (where resposta = 'confirmado'), 0) as pessoas_confirmadas,
+        count(*) filter (where resposta = 'talvez') as talvez,
+        count(*) filter (where resposta = 'recusado') as recusados
+      from public.confirmacoes_presenca
+      where convite_id = ${invitation.id}
+    `
+
+    response.set('Cache-Control', 'no-store')
+    response.json({ invitation, summary })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+app.post('/api/invitations/:slug/rsvp', rsvpLimiter, async (request, response, next) => {
+  try {
+    const input = rsvpSchema.parse(request.body)
+    const sql = getDatabase()
+    const [invitation] = await sql`
+      select id, aceita_rsvp
+      from public.convites
+      where slug = ${request.params.slug}
+      limit 1
+    `
+
+    if (!invitation) return response.status(404).json({ message: 'Convite nao encontrado.' })
+    if (!invitation.aceita_rsvp) {
+      return response.status(409).json({ message: 'As confirmacoes para este convite foram encerradas.' })
+    }
+
+    await sql`
+      insert into public.confirmacoes_presenca (
+        convite_id, nome, email, resposta, quantidade_pessoas, mensagem
+      ) values (
+        ${invitation.id}, ${input.nome}, ${input.email}, ${input.resposta},
+        ${input.quantidade_pessoas}, ${input.mensagem}
+      )
+      on conflict (convite_id, email) do update set
+        nome = excluded.nome,
+        resposta = excluded.resposta,
+        quantidade_pessoas = excluded.quantidade_pessoas,
+        mensagem = excluded.mensagem,
+        updated_at = now()
+    `
+
+    const [summary] = await sql`
+      select
+        count(*) filter (where resposta = 'confirmado') as confirmados,
+        coalesce(sum(quantidade_pessoas) filter (where resposta = 'confirmado'), 0) as pessoas_confirmadas,
+        count(*) filter (where resposta = 'talvez') as talvez,
+        count(*) filter (where resposta = 'recusado') as recusados
+      from public.confirmacoes_presenca
+      where convite_id = ${invitation.id}
+    `
+
+    response.status(200).json({ message: 'Resposta registrada.', summary })
+  } catch (error) {
+    return next(error)
+  }
+})
 const productSchema = z.object({
   nome: z.string().trim().min(3).max(120),
   categoria: z.enum(['bolos', 'doces', 'brinquedos', 'convites']),

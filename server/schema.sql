@@ -64,3 +64,36 @@ create index if not exists pedidos_cliente_idx
 
 create index if not exists itens_pedido_fornecedor_idx
   on public.itens_pedido (fornecedor_id, pedido_id);
+
+create table if not exists public.convites (
+  id uuid primary key default gen_random_uuid(),
+  dono_id uuid not null references public.perfis (id) on delete cascade,
+  slug text not null unique,
+  titulo text not null check (char_length(btrim(titulo)) between 3 and 100),
+  anfitriao text not null check (char_length(btrim(anfitriao)) between 2 and 100),
+  data_evento timestamptz not null,
+  local_evento text not null check (char_length(btrim(local_evento)) between 3 and 180),
+  mensagem text check (mensagem is null or char_length(mensagem) <= 500),
+  tema text not null default 'jardim'
+    check (tema in ('jardim', 'colorido', 'ceu-estrelado')),
+  aceita_rsvp boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.confirmacoes_presenca (
+  id uuid primary key default gen_random_uuid(),
+  convite_id uuid not null references public.convites (id) on delete cascade,
+  nome text not null check (char_length(btrim(nome)) between 2 and 100),
+  email text not null,
+  resposta text not null check (resposta in ('confirmado', 'recusado', 'talvez')),
+  quantidade_pessoas integer not null default 1 check (quantidade_pessoas between 1 and 10),
+  mensagem text check (mensagem is null or char_length(mensagem) <= 300),
+  updated_at timestamptz not null default now(),
+  unique (convite_id, email)
+);
+
+create index if not exists convites_dono_idx
+  on public.convites (dono_id, created_at desc);
+
+create index if not exists confirmacoes_convite_idx
+  on public.confirmacoes_presenca (convite_id, resposta);
