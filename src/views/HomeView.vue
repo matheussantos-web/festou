@@ -3,6 +3,7 @@
     <header class="flex items-center justify-between border-b border-orange-100 px-6 py-5 md:px-12">
       <RouterLink to="/" class="text-2xl font-bold text-rose-700">Festou!</RouterLink>
       <nav class="flex items-center gap-5 text-sm font-semibold">
+        <RouterLink to="/vitrine" class="hover:text-rose-700">Vitrine</RouterLink>
         <RouterLink to="/login" class="hover:text-rose-700">Entrar</RouterLink>
         <RouterLink to="/cadastro" class="rounded-md bg-rose-700 px-4 py-2 text-white hover:bg-rose-800">
           Criar conta
@@ -19,10 +20,10 @@
         Encontre fornecedores, monte seu orçamento e prepare cada detalhe em um só lugar.
       </p>
       <RouterLink
-        to="/cadastro"
+        to="/vitrine"
         class="mt-9 inline-flex rounded-md bg-rose-700 px-6 py-3 font-semibold text-white hover:bg-rose-800"
       >
-        Começar a planejar
+        Explorar a vitrine
       </RouterLink>
     </section>
   </main>

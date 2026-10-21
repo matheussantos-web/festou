@@ -1,18 +1,27 @@
 # Festou!
 
-Plataforma para organizar festas, encontrar fornecedores e montar orcamentos.
+Plataforma de festas e eventos com Vue 3, Vite, Tailwind CSS, Express e Neon PostgreSQL.
 
-## Desenvolvimento
+## Configuracao local
 
-```sh
-npm install
-npm run dev
+1. Revogue a senha Neon que foi compartilhada e crie uma nova credencial no painel do Neon.
+2. Crie `.env` na raiz do projeto com as variaveis abaixo. Nunca compartilhe o valor de `DATABASE_URL`.
+
+```env
+DATABASE_URL=postgresql://USUARIO:SENHA@HOST/neondb?sslmode=require
+APP_ORIGIN=http://127.0.0.1:5173
+PORT=3000
+NODE_ENV=development
 ```
 
-Crie um arquivo `.env` na raiz usando `.env.example` como modelo e preencha as credenciais publicas do projeto Supabase.
+3. Execute `npm run db:setup` para criar as tabelas no Neon.
+4. Execute `npm install` e `npm run dev`.
+5. Abra `http://127.0.0.1:5173`.
 
-## Autenticacao e perfis
+O desenvolvimento inicia o frontend Vite e a API Express em conjunto. O Vite encaminha `/api` para o backend local. A string do banco e as senhas nunca devem ser expostas ao frontend.
 
-Execute o SQL de `supabase/migrations/20261021000000_create_perfis.sql` no SQL Editor do Supabase. A migration cria a tabela `public.perfis`, ativa RLS e cria automaticamente um perfil para cada novo usuario autenticado.
+## Autenticacao e dados
 
-O cadastro suporta os perfis `cliente` e `fornecedor`. Quando a confirmacao de e-mail estiver ativa, o usuario recebe uma mensagem para confirmar o endereco antes de entrar.
+O backend cria perfis `cliente` e `fornecedor`, armazena senhas com scrypt e usa sessoes aleatorias em cookies HttpOnly. Produtos sao lidos pela vitrine publica e so fornecedores autenticados podem anuncia-los. A autorizacao ocorre na API; o Neon nao e acessado pelo navegador.
+
+Para producao, configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production` e um proxy HTTPS que encaminhe `/api` para o servidor Express.

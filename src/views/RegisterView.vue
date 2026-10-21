@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getSupabaseClient } from '../lib/supabase'
+import { api } from '../lib/api'
 
 const router = useRouter()
 const name = ref('')
@@ -18,29 +18,19 @@ async function signUp() {
   isSubmitting.value = true
 
   try {
-    const { data, error } = await getSupabaseClient().auth.signUp({
-      email: email.value,
-      password: password.value,
-      options: {
-        data: {
-          nome: name.value.trim(),
-          tipo_perfil: profileType.value,
-        },
-      },
+    await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        nome: name.value,
+        email: email.value,
+        senha: password.value,
+        tipo_perfil: profileType.value,
+      }),
     })
 
-    if (error) throw error
-
-    if (data.session) {
-      await router.push('/')
-      return
-    }
-
-    successMessage.value = 'Conta criada! Confira seu e-mail para confirmar o cadastro.'
+    await router.push('/vitrine')
   } catch (error) {
-    errorMessage.value = error.message === 'User already registered'
-      ? 'Este e-mail já está cadastrado. Tente entrar.'
-      : error.message || 'Não foi possível criar sua conta. Tente novamente.'
+    errorMessage.value = error.message || 'Não foi possível criar sua conta. Tente novamente.'
   } finally {
     isSubmitting.value = false
   }

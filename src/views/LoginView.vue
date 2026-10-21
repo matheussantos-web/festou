@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { getSupabaseClient } from '../lib/supabase'
+import { useRoute, useRouter } from 'vue-router'
+import { api } from '../lib/api'
 
 const router = useRouter()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
@@ -14,17 +15,18 @@ async function signIn() {
   isSubmitting.value = true
 
   try {
-    const { error } = await getSupabaseClient().auth.signInWithPassword({
-      email: email.value,
-      password: password.value,
+    await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.value, senha: password.value }),
     })
 
-    if (error) throw error
-    await router.push('/')
+    const redirect = route.query.redirect
+    const destination = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+      ? redirect
+      : '/vitrine'
+    await router.push(destination)
   } catch (error) {
-    errorMessage.value = error.message === 'Invalid login credentials'
-      ? 'E-mail ou senha inválidos.'
-      : error.message || 'Não foi possível entrar. Tente novamente.'
+    errorMessage.value = error.message || 'Não foi possível entrar. Tente novamente.'
   } finally {
     isSubmitting.value = false
   }
@@ -37,6 +39,9 @@ async function signIn() {
       <RouterLink to="/" class="text-sm font-semibold text-rose-700">Festou!</RouterLink>
       <h1 class="mt-6 text-3xl font-bold">Que bom ter você de volta</h1>
       <p class="mt-2 text-slate-600">Entre para continuar organizando sua festa.</p>
+      <p v-if="route.query.configurarNeon" role="alert" class="mt-4 text-sm text-amber-800">
+        Configure o Neon em DATABASE_URL e aplique o schema antes de entrar.
+      </p>
 
       <form class="mt-8 space-y-5" @submit.prevent="signIn">
         <div>
