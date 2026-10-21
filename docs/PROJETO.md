@@ -1,6 +1,6 @@
 # Projeto Festou!
 
-> Documento vivo de produto e engenharia. Atualizado em 21/10/2026.
+> Documento vivo de produto e engenharia. Atualizado em 21/10/2026 (auditoria de dependências).
 
 ## Visão geral
 
@@ -24,6 +24,7 @@ Festou! é uma plataforma web para ajudar clientes a organizar festas: descobrir
 | 5. Convites e RSVP | Convite público, respostas dos convidados e painel do anfitrião | Implementada |
 | 6. Identidade visual | Paleta Festou!, tipografia, grafismos e aplicação nas telas | Implementada |
 | 7. Estabilização | Hotfixes de contrato, saneamento de código, acessibilidade, cabeçalho global e suíte de testes | Implementada |
+| 8. Dependências | Vitest 5 e correção transitiva do PostCSS; Tailwind 3 mantido de propósito | Implementada |
 
 Este quadro descreve o que existe no repositório hoje, não um compromisso com um cronograma. Novas etapas e prioridades devem ser definidas conforme o produto evoluir.
 
@@ -162,7 +163,7 @@ Comandos disponíveis:
 
 ## Testes automatizados
 
-A suíte usa Vitest e roda contra o mesmo banco Neon configurado em `.env`. Os testes de integração criam contas com e-mail no domínio `teste.*@festou.test` e removem os dados ao final de cada arquivo (`cleanupTestData`).
+A suíte usa Vitest 5 e roda contra o mesmo banco Neon configurado em `.env`. Os testes de integração criam contas com e-mail no domínio `teste.*@festou.test` e removem os dados ao final de cada arquivo (`cleanupTestData`).
 
 | Arquivo | Cobertura |
 | --- | --- |
@@ -177,6 +178,14 @@ A suíte usa Vitest e roda contra o mesmo banco Neon configurado em `.env`. Os t
 Variáveis usadas nos testes: `AUTH_RATE_LIMIT` e `RSVP_RATE_LIMIT` são elevadas para 1000 em `tests/setup.js`, para que a suíte não seja bloqueada pelo limitador de requisições.
 
 Além da suíte automatizada, `scripts/smoke.mjs` (`npm run smoke`) percorre o fluxo real contra um servidor já em execução: cadastro de fornecedor e cliente, publicação de produto, consulta da vitrine, criação de pedido, negociação de status pelo fornecedor, criação de convite, RSVP com atualização pelo mesmo e-mail, checagem de autorização, rotas do SPA e limpeza dos dados criados.
+
+## Validação da auditoria de dependências
+
+Em 21/10/2026 o `npm audit` apontava 10 vulnerabilidades (3 moderate, 5 high, 2 critical). Tratamento:
+
+- **Vitest 3 → 5.0.5:** elimina as falhas de `@vitest/mocker` e `tinypool` (incluindo as duas críticas). A suíte não precisou de mudança de API; `npm test` segue com 49 testes aprovados.
+- **`postcss-selector-parser` ≥ 7.1.6:** aplicado por `overrides` no `package.json`, sem migrar o Tailwind. O `npm run build` continua gerando o CSS.
+- **`braces` (5 high restantes):** o aviso vale para *todas* as versões publicadas e chega pelo `chokidar`/`micromatch` do Tailwind CSS 3.4.19 (último 3.x). O `npm audit fix --force` instalaria Tailwind 4, breaking change fora desta etapa. O impacto é DoS por padrões globais aninhados em ferramenta de *build*, não no servidor de produção. Aceito até uma migração consciente do Tailwind.
 
 ## Validação executada na etapa de estabilização
 
@@ -193,8 +202,8 @@ Correções aplicadas na etapa: retorno de `created_at` e dos identificadores de
 
 Não há um roadmap fechado neste documento. Ao priorizar a continuação, considerar:
 
-- revisar as vulnerabilidades apontadas pelo `npm audit` e avaliar atualizações de dependências;
 - concluir a revisão visual responsiva e de acessibilidade em todas as rotas;
+- avaliar migração do Tailwind 3 para 4 quando houver folga, para sair do `braces` flagrado no `npm audit`;
 - definir as regras de negócio pendentes para edição/encerramento de convites e acompanhamento dos pedidos;
 - planejar deploy, observabilidade, backups e configuração de produção.
 

@@ -35,6 +35,9 @@
     "supertest": "^7.3.1",
     "tailwindcss": "^3.4.19",
     "vite": "^8.3.4",
-    "vitest": "^3.2.7"
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "postcss-selector-parser": "^7.1.6"
   }
 }
