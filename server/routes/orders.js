@@ -41,7 +41,7 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
           case
             when o.status = 'confirmado'
             then coalesce(
-              (select json_agg(distinct jsonb_build_object('email', f.email, 'whatsapp', f.whatsapp))
+              (select json_agg(distinct jsonb_build_object('email', f.email, 'whatsapp', null))
                from public.itens_pedido ip
                join public.perfis f on f.id = ip.fornecedor_id
                where ip.pedido_id = o.id),

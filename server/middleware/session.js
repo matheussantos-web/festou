@@ -41,7 +41,7 @@ export async function findSession(request) {
   const tokenHash = hashSessionToken(token)
   const sql = getDatabase()
   const [profile] = await sql`
-    select p.id, p.nome, p.email, p.tipo_perfil, p.whatsapp
+    select p.id, p.nome, p.email, p.tipo_perfil, null
     from public.sessoes s
     join public.perfis p on p.id = s.perfil_id
     where s.token_hash = ${tokenHash}
