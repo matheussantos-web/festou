@@ -345,7 +345,7 @@ onMounted(() => {
 
             <!-- Ações -->
             <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-              <div>
+              <div class="flex flex-wrap items-center gap-3">
                 <button
                   v-if="['solicitado', 'em_negociacao'].includes(order.status)"
                   type="button"
@@ -364,6 +364,22 @@ onMounted(() => {
                 >
                   {{ updatingOrderId === order.id ? 'Atualizando...' : '✓ Marcar como concluído' }}
                 </button>
+
+                <template v-if="order.status === 'confirmado' && Array.isArray(order.fornecedor_contato)">
+                  <a
+                    v-for="(contact, idx) in order.fornecedor_contato.filter(c => c && (c.whatsapp || c.email))"
+                    :key="idx"
+                    :href="contact.whatsapp ? `https://wa.me/${String(contact.whatsapp).replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Olá! Gostaria de falar sobre o orçamento #' + order.id.slice(0,8) + ' solicitado pelo Festou!.')}` : `mailto:${contact.email}?subject=${encodeURIComponent('Festou! - Orçamento #' + order.id.slice(0,8))}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-900 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-100"
+                  >
+                    {{ contact.whatsapp ? '💬 Falar com o fornecedor pelo WhatsApp' : '✉️ Falar com o fornecedor por e-mail' }}
+                  </a>
+                  <span v-if="order.fornecedor_contato.length && !order.fornecedor_contato.some(c => c && (c.whatsapp || c.email))" class="text-xs text-slate-400">
+                    Contato indisponível. Peça pelo e-mail cadastrado no painel do fornecedor.
+                  </span>
+                </template>
               </div>
               <span class="text-xs text-slate-400">Status atualizado pelo fornecedor</span>
             </div>

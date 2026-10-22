@@ -15,6 +15,8 @@ const copiedSlug = ref(null)
 const updatingRsvpId = ref(null)
 const editingInvitation = ref(null)
 const isUpdating = ref(false)
+const formErrors = reactive({ titulo: '', anfitriao: '', data_evento: '', local_evento: '', mensagem: '' })
+const editFormErrors = reactive({ titulo: '', anfitriao: '', data_evento: '', local_evento: '', mensagem: '' })
 const deletingInvitationId = ref(null)
 
 const form = reactive({

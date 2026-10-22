@@ -24,10 +24,38 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
         where cliente_id = ${request.user.id}
       `
 
-      const orders = await sql.query(
-        `${clientOrderSelect} where o.cliente_id = $1 group by o.id order by o.created_at desc, o.id limit $2 offset $3`,
-        [request.user.id, limite, offset],
-      )
+      const orders = await sql`
+        select o.id, o.status, o.total_estimado, o.observacao, o.created_at,
+          coalesce(
+            json_agg(json_build_object(
+              'id', i.id,
+              'produto_id', i.produto_id,
+              'nome', i.nome_produto,
+              'categoria', i.categoria,
+              'preco_unitario', i.preco_unitario,
+              'quantidade', i.quantidade,
+              'subtotal', i.subtotal
+            )) filter (where i.id is not null),
+            '[]'::json
+          ) as itens,
+          case
+            when o.status = 'confirmado'
+            then coalesce(
+              (select json_agg(distinct jsonb_build_object('email', f.email, 'whatsapp', f.whatsapp))
+               from public.itens_pedido ip
+               join public.perfis f on f.id = ip.fornecedor_id
+               where ip.pedido_id = o.id),
+              '[]'::json
+            )
+            else '[]'::json
+          end as fornecedor_contato
+        from public.pedidos o
+        left join public.itens_pedido i on i.pedido_id = o.id
+        where o.cliente_id = ${request.user.id}
+        group by o.id
+        order by o.created_at desc, o.id
+        limit ${limite} offset ${offset}
+      `
 
       return response.json({
         orders,
@@ -156,10 +184,15 @@ ordersRouter.post('/', requireUser, async (request, response, next) => {
 
     await sql.transaction(statements)
 
-    const order = await findClientOrderById(orderId)
+    let order = await findClientOrderById(orderId)
 
     if (!order) {
       return response.status(500).json({ message: 'O pedido foi criado, mas não pôde ser carregado. Atualize a página.' })
+    }
+
+    // Garantir campo fornecedor_contato consistente para o cliente
+    if (!('fornecedor_contato' in order)) {
+      order = { ...order, fornecedor_contato: [] }
     }
 
     response.status(201).json({ order })
