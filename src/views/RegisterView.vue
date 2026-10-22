@@ -10,6 +10,9 @@ const email = ref('')
 const password = ref('')
 const profileType = ref('cliente')
 const errorMessage = ref('')
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+function getRedirect(){return '/vitrine'}
+function handleGoogleLogin(){ if(!googleClientId){errorMessage.value='Login com Google nao configurado.';return;}const origin=window.location.origin;const nonce=Math.random().toString(36).slice(2);sessionStorage.setItem('google_nonce',nonce);sessionStorage.setItem('auth_redirect',getRedirect());const redirectUri=origin+'/auth/google/callback';const params=new URLSearchParams({client_id:googleClientId,redirect_uri:redirectUri,response_type:'id_token',scope:'openid email profile',nonce,prompt:'select_account'});window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();}
 const isSubmitting = ref(false)
 
 async function signUp() {

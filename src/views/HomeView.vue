@@ -262,10 +262,16 @@ const steps = [
             Cadastre-se como fornecedor no Festou!, crie seu catálogo e conecte-se com clientes que estão organizando festas agora mesmo.
           </p>
           <div class="mt-8 flex flex-wrap gap-4">
-            <RouterLink to="/cadastro" class="btn btn-secondary">
+            <RouterLink
+              to="/cadastro"
+              class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-festou-midnight shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:bg-festou-yellow hover:shadow-xl"
+            >
               Criar conta de fornecedor
             </RouterLink>
-            <RouterLink to="/fornecedor/painel" class="btn btn-outline">
+            <RouterLink
+              to="/fornecedor/painel"
+              class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/20"
+            >
               Acessar meu painel
             </RouterLink>
           </div>

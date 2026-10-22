@@ -9,6 +9,7 @@ const route = useRoute()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';function getRedirect(){const r=route.query.redirect;return (typeof r==='string'&&r.startsWith('/')&&!r.startsWith('//'))?r:'/vitrine';}function handleGoogleLogin(){if(!googleClientId){errorMessage.value='Login com Google nao configurado.';return;}const o=window.location.origin;const n=Math.random().toString(36).slice(2);sessionStorage.setItem('google_nonce',n);sessionStorage.setItem('auth_redirect',getRedirect());const ru=o+'/auth/google/callback';const pms=new URLSearchParams({client_id:googleClientId,redirect_uri:ru,response_type:'id_token',scope:'openid email profile',nonce:n,prompt:'select_account'});window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+pms.toString();}
 const isSubmitting = ref(false)
 
 async function signIn() {
