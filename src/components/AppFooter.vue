@@ -30,7 +30,7 @@ const year = new Date().getFullYear()
 
         <!-- Navegação -->
         <nav class="md:col-span-3" aria-label="Navegação do rodapé">
-          <h2 class="font-display text-xs font-bold uppercase tracking-widest text-festou-yellow">
+          <h2 class="font-heading text-xs font-bold uppercase tracking-widest text-festou-yellow">
             Festou
           </h2>
           <ul class="mt-4 space-y-2.5 text-sm">
@@ -54,7 +54,7 @@ const year = new Date().getFullYear()
 
         <!-- Conta -->
         <nav class="md:col-span-4" aria-label="Links de conta">
-          <h2 class="font-display text-xs font-bold uppercase tracking-widest text-festou-yellow">
+          <h2 class="font-heading text-xs font-bold uppercase tracking-widest text-festou-yellow">
             Sua conta
           </h2>
           <ul class="mt-4 space-y-2.5 text-sm">

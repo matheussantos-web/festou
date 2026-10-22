@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppFooter from './components/AppFooter.vue'
 import AppHeader from './components/AppHeader.vue'
+import MobileTabBar from './components/MobileTabBar.vue'
 
 const route = useRoute()
 
@@ -20,10 +21,13 @@ const showChrome = computed(() => route.meta?.chrome !== false)
 
   <AppHeader v-if="showChrome" />
 
-  <!-- Espaçador para compensar o header fixo (64px + borda de 1px + fio de gradiente de 3px) -->
-  <div v-if="showChrome" class="h-[68px]" aria-hidden="true"></div>
+  <!-- Espaçador do header fixo (64px + 3px do fio de gradiente) -->
+  <div v-if="showChrome" class="h-[67px]" aria-hidden="true"></div>
 
-  <RouterView />
+  <div :class="showChrome ? 'pb-[4.75rem] md:pb-0' : ''">
+    <RouterView />
+  </div>
 
   <AppFooter v-if="showChrome" />
+  <MobileTabBar v-if="showChrome" />
 </template>

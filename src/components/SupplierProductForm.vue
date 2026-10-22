@@ -165,7 +165,7 @@ defineExpose({ reset })
       <button
         type="submit"
         :disabled="submitting"
-        class="btn-festou-primary flex-1 text-sm font-bold"
+        class="btn btn-primary flex-1 text-sm font-bold"
       >
         {{ submitting ? 'Salvando...' : submitLabel }}
       </button>

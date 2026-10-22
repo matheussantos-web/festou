@@ -10,14 +10,14 @@
 
     <main id="conteudo-principal" class="relative z-10 mx-auto flex max-w-xl flex-col items-center justify-center px-6 py-24 text-center">
       <span class="text-6xl">🎈</span>
-      <p class="mt-4 font-display text-xs font-bold uppercase tracking-widest text-festou-yellow">Erro 404</p>
+      <p class="mt-4 font-heading text-xs font-bold uppercase tracking-widest text-festou-yellow">Erro 404</p>
       <h1 class="mt-2 font-heading text-4xl font-extrabold text-white sm:text-5xl">
         Ops! Página não encontrada
       </h1>
       <p class="mt-3 text-sm text-white/80">
         Parece que essa comemoração mudou de endereço ou a página foi removida.
       </p>
-      <RouterLink to="/" class="btn-festou-primary mt-8 text-sm font-bold">
+      <RouterLink to="/" class="btn btn-primary mt-8 text-sm font-bold">
         Voltar para a página inicial
       </RouterLink>
     </main>

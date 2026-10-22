@@ -164,7 +164,7 @@ onMounted(loadOrders)
     <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
         <div>
-          <span class="festou-badge bg-festou-secondary/12 text-festou-secondary">
+          <span class="badge bg-festou-secondary/12 text-festou-secondary">
             <span aria-hidden="true">💼</span> Gestão do Fornecedor
           </span>
           <h1 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
@@ -176,7 +176,7 @@ onMounted(loadOrders)
         </div>
         <RouterLink
           to="/fornecedor/produtos/novo"
-          class="btn-festou-primary text-xs font-bold"
+          class="btn btn-primary text-xs font-bold"
         >
           + Cadastrar novo produto
         </RouterLink>
@@ -248,7 +248,7 @@ onMounted(loadOrders)
           <article
             v-for="order in orders"
             :key="order.id"
-            class="festou-card p-6"
+            class="card card-hover p-6"
           >
             <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
@@ -393,7 +393,7 @@ onMounted(loadOrders)
             <button
               type="button"
               :disabled="isLoadingMoreOrders"
-              class="btn-festou-secondary text-sm disabled:opacity-60"
+              class="btn btn-outline-dark text-sm disabled:opacity-60"
               @click="loadMoreOrders"
             >
               {{ isLoadingMoreOrders ? 'Carregando...' : 'Carregar mais pedidos' }}
@@ -418,7 +418,7 @@ onMounted(loadOrders)
           <p class="mt-1 text-sm text-slate-600">Comece anunciando seus bolos, doces, brinquedos ou convites na vitrine.</p>
           <RouterLink
             to="/fornecedor/produtos/novo"
-            class="btn-festou-primary mt-5 text-sm"
+            class="btn btn-primary mt-5 text-sm"
           >
             Cadastrar primeiro produto
           </RouterLink>
@@ -427,7 +427,7 @@ onMounted(loadOrders)
           <article
             v-for="product in products"
             :key="product.id"
-            class="festou-card-gradient flex flex-col justify-between overflow-hidden"
+            class="card-gradient flex flex-col justify-between overflow-hidden"
           >
             <div>
               <div class="relative h-44 w-full bg-festou-soft">
@@ -451,9 +451,9 @@ onMounted(loadOrders)
                 <span class="rounded bg-festou-magenta/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-festou-primary">
                   {{ product.categoria }}
                 </span>
-                <h3 class="mt-2 font-display text-lg font-bold text-slate-900">{{ product.nome }}</h3>
+                <h3 class="mt-2 font-heading text-lg font-bold text-slate-900">{{ product.nome }}</h3>
                 <p class="mt-1 line-clamp-2 text-sm text-slate-600">{{ product.descricao }}</p>
-                <p class="mt-3 font-display text-lg font-extrabold text-festou-primary">{{ formatPrice(product.preco) }}</p>
+                <p class="mt-3 font-heading text-lg font-extrabold text-festou-primary">{{ formatPrice(product.preco) }}</p>
                 <p v-if="product.cidade" class="mt-1 text-xs text-slate-500">📍 {{ product.cidade }}</p>
               </div>
             </div>

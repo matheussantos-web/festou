@@ -149,15 +149,15 @@ watch(categoryFilter, (value) => {
 
     <!-- Conteúdo da Vitrine -->
     <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
-      <!-- Filtro de Categorias (Pills) -->
+      <!-- Filtro de Categorias (Chips) -->
       <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-6" role="group" aria-label="Filtrar produtos por categoria">
         <button
           v-for="cat in categories"
           :key="cat.value"
           type="button"
           :aria-pressed="categoryFilter === cat.value"
-          class="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all duration-300 hover:-translate-y-0.5 sm:text-sm"
-          :class="categoryFilter === cat.value ? 'bg-festou-night text-white shadow-festive-soft' : 'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-festou-magenta/40 hover:text-festou-primary'"
+          class="chip"
+          :class="categoryFilter === cat.value ? 'chip-active' : ''"
           @click="categoryFilter = cat.value"
         >
           <span aria-hidden="true">{{ cat.icon }}</span>
@@ -179,7 +179,7 @@ watch(categoryFilter, (value) => {
         <p class="mt-3 text-sm font-medium">Carregando catálogo festivo...</p>
       </div>
 
-      <div v-else-if="errorMessage" class="my-8 rounded-xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-800">
+      <div v-else-if="errorMessage" class="my-8 card p-6 text-center text-rose-800">
         <p class="font-bold">{{ errorMessage }}</p>
         <button type="button" class="mt-3 text-xs font-bold underline hover:text-rose-900" @click="loadProducts">
           Tentar novamente
@@ -191,7 +191,7 @@ watch(categoryFilter, (value) => {
         <article
           v-for="product in filteredProducts"
           :key="product.id"
-          class="festou-card-gradient group flex flex-col justify-between overflow-hidden"
+          class="card-gradient group flex flex-col justify-between overflow-hidden"
         >
           <div>
             <!-- Imagem do Produto -->
@@ -213,7 +213,7 @@ watch(categoryFilter, (value) => {
 
             <!-- Informações -->
             <div class="p-5">
-              <h2 class="font-display text-base font-bold text-slate-900 line-clamp-1 transition-colors duration-300 group-hover:text-festou-primary">
+              <h2 class="font-heading text-base font-bold text-slate-900 line-clamp-1 transition-colors duration-300 group-hover:text-festou-primary">
                 {{ product.nome }}
               </h2>
               <p class="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-2">
@@ -229,14 +229,14 @@ watch(categoryFilter, (value) => {
           <div class="flex items-center justify-between border-t border-slate-100 bg-festou-soft/70 p-4">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Preço</span>
-              <p class="font-display text-lg font-extrabold text-festou-primary">
+              <p class="font-heading text-lg font-extrabold text-festou-primary">
                 {{ formatPrice(product.preco) }}
               </p>
             </div>
             <button
               type="button"
-              class="rounded-full px-4 py-2 text-xs font-bold transition-all duration-300 hover:scale-105"
-              :class="addedProductId === product.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30' : 'bg-festou-primary text-white shadow-festive hover:bg-rose-700'"
+              class="btn btn-secondary btn-sm"
+              :class="addedProductId === product.id ? 'bg-emerald-600 shadow-lg shadow-emerald-600/30 hover:bg-emerald-600' : ''"
               @click="handleAddToCart(product)"
             >
               <span aria-live="polite">{{ addedProductId === product.id ? '✓ Adicionado' : '+ Carrinho' }}</span>
@@ -246,7 +246,7 @@ watch(categoryFilter, (value) => {
       </div>
 
       <!-- Estado Vazio -->
-      <div v-else class="festou-card-gradient my-12 p-12 text-center">
+      <div v-else class="card-gradient my-12 p-12 text-center">
         <span class="text-4xl">🎈</span>
         <h3 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Nenhum produto encontrado</h3>
         <p class="mt-2 text-sm text-slate-600">
@@ -254,7 +254,7 @@ watch(categoryFilter, (value) => {
         </p>
         <button
           type="button"
-          class="btn-festou-secondary mt-5 text-sm"
+          class="btn btn-outline-dark mt-5 text-sm"
           @click="searchQuery = ''; categoryFilter = ''"
         >
           Limpar busca e filtros
@@ -269,7 +269,7 @@ watch(categoryFilter, (value) => {
         <button
           type="button"
           :disabled="isLoadingMore"
-          class="btn-festou-primary text-sm disabled:opacity-60"
+          class="btn btn-primary text-sm disabled:opacity-60"
           @click="loadMore"
         >
           {{ isLoadingMore ? 'Carregando...' : 'Carregar mais produtos' }}

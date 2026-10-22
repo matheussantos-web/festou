@@ -120,11 +120,11 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
     </div>
 
     <!-- Convite Não Encontrado -->
-    <section v-else-if="errorMessage && !invitation" class="festou-card-gradient relative z-10 mx-auto max-w-md p-8 text-center text-slate-800 shadow-xl">
+    <section v-else-if="errorMessage && !invitation" class="card-gradient relative z-10 mx-auto max-w-md p-8 text-center text-slate-800 shadow-xl">
       <span class="text-4xl">🔍</span>
       <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Convite não encontrado</h1>
       <p class="mt-2 text-sm text-slate-600">{{ errorMessage }}</p>
-      <RouterLink to="/" class="btn-festou-primary mt-6 text-xs font-bold">
+      <RouterLink to="/" class="btn btn-primary mt-6 text-xs font-bold">
         Ir para página inicial
       </RouterLink>
     </section>
@@ -194,7 +194,7 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
       </article>
 
       <!-- Seção do Formulário RSVP -->
-      <section class="festou-card-gradient mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
+      <section class="card-gradient mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
         <div class="text-center">
           <h2 class="font-heading text-2xl font-bold text-festou-midnight">Confirmação de Presença</h2>
           <p class="mt-1 text-xs text-slate-500">
@@ -289,7 +289,7 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="btn-festou-primary w-full text-sm font-bold shadow-festive"
+            class="btn btn-primary w-full text-sm font-bold shadow-festive"
           >
             {{ isSubmitting ? 'Registrando presença...' : 'Enviar minha resposta' }}
           </button>

@@ -57,10 +57,10 @@ const steps = [
           </p>
 
           <div class="mt-9 flex flex-wrap items-center gap-4">
-            <RouterLink to="/vitrine" class="btn-festou-primary text-base">
+            <RouterLink to="/vitrine" class="btn btn-primary text-base">
               Explorar a vitrine <span class="ml-2" aria-hidden="true">→</span>
             </RouterLink>
-            <RouterLink to="/convites" class="btn-festou-secondary border-white/40 bg-white/10 text-white backdrop-blur hover:border-white hover:bg-white/20 hover:text-white">
+            <RouterLink to="/convites" class="btn btn-outline">
               Criar convite digital
             </RouterLink>
           </div>
@@ -85,7 +85,7 @@ const steps = [
                 🎂
               </div>
               <div class="min-w-0 flex-1">
-                <span class="festou-badge bg-festou-magenta/15 text-festou-primary">Destaque na Vitrine</span>
+                <span class="badge bg-festou-magenta/15 text-festou-primary">Destaque na Vitrine</span>
                 <p class="mt-1 truncate text-xs font-bold text-slate-900">Bolo Ninho com Morangos</p>
                 <p class="text-xs font-extrabold text-festou-primary">R$ 160,00</p>
               </div>
@@ -178,7 +178,7 @@ const steps = [
     <!-- Seção de Categorias -->
     <section class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12">
       <div class="text-center">
-        <p class="font-display text-xs font-bold uppercase tracking-widest text-festou-primary">Tudo o que sua festa precisa</p>
+        <p class="font-heading text-xs font-bold uppercase tracking-widest text-festou-primary">Tudo o que sua festa precisa</p>
         <h2 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
           Navegue pelas principais categorias
         </h2>
@@ -192,13 +192,13 @@ const steps = [
           v-for="cat in categories"
           :key="cat.slug"
           :to="`/vitrine?categoria=${cat.slug}`"
-          class="festou-card-gradient group flex flex-col justify-between p-6 text-left"
+          class="card-gradient group flex flex-col justify-between p-6 text-left"
         >
           <div>
             <div class="flex h-14 w-14 items-center justify-center rounded-2xl border bg-gradient-to-br text-3xl shadow-sm transition-transform duration-300 group-hover:scale-110" :class="cat.color">
               {{ cat.icon }}
             </div>
-            <h3 class="mt-5 font-display text-xl font-bold text-slate-900 transition-colors duration-300 group-hover:text-festou-primary">
+            <h3 class="mt-5 font-heading text-xl font-bold text-slate-900 transition-colors duration-300 group-hover:text-festou-primary">
               {{ cat.title }}
             </h3>
             <p class="mt-2 text-sm leading-relaxed text-slate-600">
@@ -216,7 +216,7 @@ const steps = [
     <section class="border-y border-slate-200/80 bg-white py-20">
       <div class="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
         <div class="text-center">
-          <p class="font-display text-xs font-bold uppercase tracking-widest text-festou-turquoise">Simples, prático e rápido</p>
+          <p class="font-heading text-xs font-bold uppercase tracking-widest text-festou-turquoise">Simples, prático e rápido</p>
           <h2 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
             Como funciona o Festou!
           </h2>
@@ -226,15 +226,15 @@ const steps = [
           <div
             v-for="step in steps"
             :key="step.number"
-            class="festou-card group relative overflow-hidden p-8"
+            class="card card-hover group relative overflow-hidden p-8"
           >
             <span class="absolute -right-2 -top-4 font-heading text-6xl font-extrabold text-festou-primary/10 transition-colors duration-300 group-hover:text-festou-primary/20">
               {{ step.number }}
             </span>
-            <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-festou-night font-display text-sm font-extrabold text-white shadow-festive-soft">
+            <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-festou-night font-heading text-sm font-extrabold text-white shadow-festive-soft">
               {{ step.number }}
             </span>
-            <h3 class="mt-4 font-display text-xl font-bold text-slate-900">
+            <h3 class="mt-4 font-heading text-xl font-bold text-slate-900">
               {{ step.title }}
             </h3>
             <p class="mt-2 text-sm leading-relaxed text-slate-600">
@@ -252,7 +252,7 @@ const steps = [
         <FestouDecor variant="soft" />
 
         <div class="relative z-10 max-w-2xl">
-          <span class="festou-badge border border-white/25 bg-white/15 text-festou-yellow backdrop-blur">
+          <span class="badge border border-white/25 bg-white/15 text-festou-yellow backdrop-blur">
             Para Confeiteiros, Doceiros e Fornecedores
           </span>
           <h2 class="mt-4 font-heading text-3xl font-extrabold leading-tight sm:text-4xl">
@@ -262,16 +262,10 @@ const steps = [
             Cadastre-se como fornecedor no Festou!, crie seu catálogo e conecte-se com clientes que estão organizando festas agora mesmo.
           </p>
           <div class="mt-8 flex flex-wrap gap-4">
-            <RouterLink
-              to="/cadastro"
-              class="rounded-full bg-festou-magenta-deep px-7 py-3 text-sm font-bold text-white shadow-festive transition-all duration-300 hover:-translate-y-0.5 hover:bg-rose-700 hover:shadow-festive-strong"
-            >
+            <RouterLink to="/cadastro" class="btn btn-secondary">
               Criar conta de fornecedor
             </RouterLink>
-            <RouterLink
-              to="/fornecedor/painel"
-              class="rounded-full border-2 border-white/40 px-6 py-3 text-sm font-bold text-white backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10"
-            >
+            <RouterLink to="/fornecedor/painel" class="btn btn-outline">
               Acessar meu painel
             </RouterLink>
           </div>

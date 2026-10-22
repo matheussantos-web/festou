@@ -50,6 +50,19 @@ function formatInvitationDate(value) {
   return formatDate(value, { dateStyle: 'full', timeStyle: 'short' })
 }
 
+function toEventDateTimeString(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error('Informe a data e o horário do evento.')
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('A data e o horário do evento são inválidos.')
+  }
+
+  return date.toISOString()
+}
+
 // O input datetime-local espera a data no fuso do navegador.
 function toLocalDateTimeInput(value) {
   if (!value) return ''
@@ -97,7 +110,7 @@ async function createInvitation() {
       method: 'POST',
       body: JSON.stringify({
         ...form,
-        data_evento: new Date(form.data_evento).toISOString(),
+        data_evento: toEventDateTimeString(form.data_evento),
       }),
     })
 
@@ -149,7 +162,7 @@ async function updateInvitation() {
       body: JSON.stringify({
         titulo: editForm.titulo,
         anfitriao: editForm.anfitriao,
-        data_evento: new Date(editForm.data_evento).toISOString(),
+        data_evento: toEventDateTimeString(editForm.data_evento),
         local_evento: editForm.local_evento,
         mensagem: editForm.mensagem,
         tema: editForm.tema,
@@ -236,7 +249,7 @@ onMounted(loadInvitations)
     <main id="conteudo-principal" class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
       <!-- Cabeçalho -->
       <div class="border-b border-slate-200/80 pb-6">
-        <span class="festou-badge bg-festou-magenta/12 text-festou-primary">
+        <span class="badge bg-festou-magenta/12 text-festou-primary">
           <span aria-hidden="true">💌</span> Convites Interativos
         </span>
         <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
@@ -256,7 +269,7 @@ onMounted(loadInvitations)
 
       <div class="mt-8 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <!-- Formulário de Criação -->
-        <section class="festou-card-gradient p-6 sm:p-8">
+        <section class="card-gradient p-6 sm:p-8">
           <template v-if="editingInvitation">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -346,7 +359,7 @@ onMounted(loadInvitations)
               <button
                 type="submit"
                 :disabled="isUpdating"
-                class="btn-festou-primary w-full text-sm"
+                class="btn btn-primary w-full text-sm"
               >
                 {{ isUpdating ? 'Salvando...' : 'Salvar alterações' }}
               </button>
@@ -439,7 +452,7 @@ onMounted(loadInvitations)
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="btn-festou-primary w-full text-sm"
+                class="btn btn-primary w-full text-sm"
               >
                 {{ isSubmitting ? 'Gerando convite digital...' : 'Criar convite digital' }}
               </button>
@@ -477,7 +490,7 @@ onMounted(loadInvitations)
             Carregando seus convites...
           </div>
 
-          <div v-else-if="!invitations.length" class="festou-card mt-6 p-8 text-center text-slate-600">
+          <div v-else-if="!invitations.length" class="card card-hover mt-6 p-8 text-center text-slate-600">
             <span class="text-3xl">💌</span>
             <p class="mt-2 text-sm font-semibold">Você ainda não criou convites.</p>
             <p class="text-xs text-slate-500">Preencha o formulário ao lado para gerar o seu primeiro convite digital.</p>
@@ -487,7 +500,7 @@ onMounted(loadInvitations)
             <article
               v-for="invitation in invitations"
               :key="invitation.id"
-              class="festou-card p-5"
+              class="card card-hover p-5"
             >
               <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>

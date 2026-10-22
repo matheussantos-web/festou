@@ -62,8 +62,8 @@ onMounted(loadProduct)
         </RouterLink>
       </div>
 
-      <div class="festou-card-gradient mt-6 p-6 sm:p-10">
-        <span class="festou-badge bg-festou-secondary/12 text-festou-secondary">
+      <div class="card-gradient mt-6 p-6 sm:p-10">
+        <span class="badge bg-festou-secondary/12 text-festou-secondary">
           <span aria-hidden="true">✏️</span> Editar anúncio
         </span>
         <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight">

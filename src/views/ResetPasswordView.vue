@@ -55,7 +55,7 @@ async function resetPassword() {
     <div class="pointer-events-none absolute -left-20 top-10 h-72 w-72 animate-festou-float rounded-full bg-festou-magenta/30 blur-3xl"></div>
     <div class="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 animate-festou-float rounded-full bg-festou-cyan/25 blur-3xl [animation-delay:1.5s]"></div>
 
-    <section class="festou-glass-light relative w-full max-w-md p-8 sm:p-10">
+    <section class="glass-light relative w-full max-w-md p-8 sm:p-10">
       <div class="text-center">
         <RouterLink to="/" class="festou-wordmark inline-flex items-center gap-0.5 text-3xl">
           <span>Festou<span>!</span></span>
@@ -112,7 +112,7 @@ async function resetPassword() {
         <button
           type="submit"
           :disabled="isSubmitting || Boolean(successMessage)"
-          class="btn-festou-primary mt-2 w-full text-sm font-bold"
+          class="btn btn-primary mt-2 w-full text-sm font-bold"
         >
           {{ isSubmitting ? 'Salvando...' : 'Salvar nova senha' }}
         </button>

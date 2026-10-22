@@ -171,7 +171,7 @@ onMounted(() => {
             <article
               v-for="item in cartItems"
               :key="item.id"
-              class="festou-card-gradient flex flex-wrap items-center justify-between gap-4 p-5"
+              class="card-gradient flex flex-wrap items-center justify-between gap-4 p-5"
             >
               <div class="flex items-center gap-4">
                 <img
@@ -218,7 +218,7 @@ onMounted(() => {
             </article>
 
             <!-- Observação para os fornecedores -->
-            <div class="festou-surface mt-6 p-6">
+            <div class="card mt-6 p-6">
               <label for="order-note" class="mb-2 block text-sm font-bold text-festou-midnight">
                 Observações gerais para os fornecedores (opcional)
               </label>
@@ -234,13 +234,13 @@ onMounted(() => {
           </div>
 
           <!-- Carrinho Vazio -->
-          <div v-else class="festou-card-gradient p-12 text-center">
+          <div v-else class="card-gradient p-12 text-center">
             <span class="text-4xl">🛒</span>
             <h2 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Seu carrinho está vazio</h2>
             <p class="mt-2 text-sm text-slate-600">
               Navegue pelos produtos e serviços da vitrine e monte seu orçamento para a festa.
             </p>
-            <RouterLink to="/vitrine" class="btn-festou-primary mt-6 text-sm">
+            <RouterLink to="/vitrine" class="btn btn-primary mt-6 text-sm">
               Explorar a vitrine
             </RouterLink>
           </div>
@@ -248,7 +248,7 @@ onMounted(() => {
 
         <!-- Resumo Lateral -->
         <aside v-if="cartItems.length" class="h-fit">
-          <div class="festou-card-gradient sticky top-28 p-6">
+          <div class="card-gradient sticky top-28 p-6">
             <h2 class="font-heading text-xl font-bold text-festou-midnight">Resumo do Orçamento</h2>
             <div class="mt-4 space-y-2.5 border-b border-slate-100 pb-4 text-sm text-slate-600">
               <div class="flex justify-between">
@@ -275,7 +275,8 @@ onMounted(() => {
             <button
               type="button"
               :disabled="isSubmitting || !cartItems.length"
-              class="btn-festou-primary mt-6 w-full text-sm"
+              class="btn btn-primary mt-6 w-full"
+              :class="isSubmitting ? 'is-loading' : ''"
               @click="requestQuote"
             >
               {{ isSubmitting ? 'Enviando solicitação...' : 'Solicitar orçamento' }}
@@ -297,7 +298,7 @@ onMounted(() => {
           Carregando histórico de pedidos...
         </div>
 
-        <div v-else-if="!orders.length" class="festou-surface mt-6 p-8 text-center text-slate-600">
+        <div v-else-if="!orders.length" class="card mt-6 p-8 text-center text-slate-600">
           Você ainda não realizou nenhuma solicitação de orçamento.
         </div>
 
@@ -305,7 +306,7 @@ onMounted(() => {
           <article
             v-for="order in orders"
             :key="order.id"
-            class="festou-surface p-6 transition-all hover:shadow-md"
+            class="card p-6 transition-all hover:shadow-md"
           >
             <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
@@ -375,7 +376,7 @@ onMounted(() => {
             <button
               type="button"
               :disabled="isLoadingMore"
-              class="btn-festou-secondary text-sm disabled:opacity-60"
+              class="btn btn-outline-dark text-sm disabled:opacity-60"
               @click="loadMoreOrders"
             >
               {{ isLoadingMore ? 'Carregando...' : 'Carregar mais solicitações' }}
@@ -383,6 +384,27 @@ onMounted(() => {
           </div>
         </div>
       </section>
+      <!-- Barra fixa do carrinho (mobile) -->
+      <div
+        v-if="cartItems.length"
+        class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-xl lg:hidden"
+      >
+        <div class="mx-auto flex max-w-md items-center justify-between gap-3">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total estimado</p>
+            <p class="font-heading text-lg font-extrabold text-festou-primary">{{ formatPrice(cartTotalCents / 100) }}</p>
+          </div>
+          <button
+            type="button"
+            :disabled="isSubmitting"
+            class="btn btn-primary btn-sm min-w-[9rem]"
+            :class="isSubmitting ? 'is-loading' : ''"
+            @click="requestQuote"
+          >
+            {{ isSubmitting ? 'Enviando...' : 'Solicitar orçamento' }}
+          </button>
+        </div>
+      </div>
     </main>
   </div>
 </template>
