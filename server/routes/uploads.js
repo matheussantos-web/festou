@@ -39,7 +39,11 @@ function storageErrorMessage(result, bucket, projectHost) {
 
 function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, '')
-  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim()
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const rawKey = secretKey || serviceRoleKey
+  const keySource = secretKey ? 'SUPABASE_SECRET_KEY' : 'SUPABASE_SERVICE_ROLE_KEY'
+  const key = rawKey?.replace(/^Bearer\s+/i, '').replace(/^(['"])(.*)\1$/, '$2').trim()
   if (!url || !key) return null
 
   try {
@@ -49,7 +53,6 @@ function getSupabaseConfig() {
     return null
   }
 
-  const keySource = process.env.SUPABASE_SECRET_KEY ? 'SUPABASE_SECRET_KEY' : 'SUPABASE_SERVICE_ROLE_KEY'
   const keyFormat = key.startsWith('sb_secret_') ? 'secret' : key.startsWith('eyJ') ? 'legacy_jwt' : 'other'
   return { url, key, keySource, keyFormat }
 }
