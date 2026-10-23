@@ -29,10 +29,10 @@ class StorageError extends Error {
   }
 }
 
-function storageErrorMessage(result, bucket) {
+function storageErrorMessage(result, bucket, projectHost) {
   const message = result.message || result.error || ''
   if (/bucket not found/i.test(message)) {
-    return `O bucket "${bucket}" nao foi encontrado no projeto Supabase configurado no Render. Confira se SUPABASE_URL e a chave pertencem ao mesmo projeto e se o bucket tem esse nome exato.`
+    return `O bucket "${bucket}" nao foi encontrado pelo Supabase em ${projectHost}. Confira se esse projeto contem o bucket com esse ID.`
   }
   return message || `Nao foi possivel acessar o bucket ${bucket}.`
 }
@@ -49,7 +49,9 @@ function getSupabaseConfig() {
     return null
   }
 
-  return { url, key }
+  const keySource = process.env.SUPABASE_SECRET_KEY ? 'SUPABASE_SECRET_KEY' : 'SUPABASE_SERVICE_ROLE_KEY'
+  const keyFormat = key.startsWith('sb_secret_') ? 'secret' : key.startsWith('eyJ') ? 'legacy_jwt' : 'other'
+  return { url, key, keySource, keyFormat }
 }
 
 function supabaseKeyHeaders(key) {
@@ -61,7 +63,8 @@ function supabaseKeyHeaders(key) {
   return headers
 }
 
-async function checkPublicBucket({ url, key }, bucket) {
+async function checkPublicBucket({ url, key, keySource, keyFormat }, bucket) {
+  const projectHost = new URL(url).host
   const response = await fetch(`${url}/storage/v1/bucket/${bucket}`, {
     headers: supabaseKeyHeaders(key),
     signal: AbortSignal.timeout(10000),
@@ -69,7 +72,16 @@ async function checkPublicBucket({ url, key }, bucket) {
   const result = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new StorageError(storageErrorMessage(result, bucket), response.status)
+    console.error('[uploads] Falha ao consultar bucket no Supabase', {
+      stage: 'bucket_lookup',
+      projectHost,
+      keySource,
+      keyFormat,
+      bucket,
+      upstreamStatus: response.status,
+      upstreamMessage: result.message || result.error || null,
+    })
+    throw new StorageError(storageErrorMessage(result, bucket, projectHost), response.status)
   }
   if (result.public !== true) {
     throw new StorageError(`O bucket ${bucket} precisa estar publico para exibir as fotos no Festou.`, 400)
@@ -82,6 +94,7 @@ function fileExtension(file, contentType) {
 }
 
 async function uploadToSupabase(bucket, path, file, contentType, config) {
+  const projectHost = new URL(config.url).host
   const encodedPath = path.split('/').map(encodeURIComponent).join('/')
   const response = await fetch(`${config.url}/storage/v1/object/${bucket}/${encodedPath}`, {
     method: 'POST',
@@ -96,7 +109,16 @@ async function uploadToSupabase(bucket, path, file, contentType, config) {
   })
   const result = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new StorageError(storageErrorMessage(result, bucket) || 'O Supabase nao conseguiu salvar a imagem.', response.status)
+    console.error('[uploads] Falha ao enviar imagem ao Supabase', {
+      stage: 'object_upload',
+      projectHost,
+      keySource: config.keySource,
+      keyFormat: config.keyFormat,
+      bucket,
+      upstreamStatus: response.status,
+      upstreamMessage: result.message || result.error || null,
+    })
+    throw new StorageError(storageErrorMessage(result, bucket, projectHost) || 'O Supabase nao conseguiu salvar a imagem.', response.status)
   }
 
   return `${config.url}/storage/v1/object/public/${bucket}/${encodedPath}`
