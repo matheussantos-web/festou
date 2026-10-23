@@ -12,6 +12,10 @@ import {
 } from '../lib/cart'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
+import OrderChat from '../components/OrderChat.vue'
+import { useSession } from '../lib/session'
+
+const { user } = useSession()
 
 const orders = ref([])
 const note = ref('')
@@ -86,7 +90,7 @@ async function requestQuote() {
   isSubmitting.value = true
 
   try {
-    const { order } = await api('/orders', {
+    const result = await api('/orders', {
       method: 'POST',
       body: JSON.stringify({
         items: cartItems.value.map((item) => ({ produto_id: item.id, quantidade: item.quantidade })),
@@ -94,10 +98,13 @@ async function requestQuote() {
       }),
     })
 
-    orders.value.unshift(order)
+    const createdOrders = asArray(result.orders).length ? result.orders : result.order ? [result.order] : []
+    orders.value = [...createdOrders, ...orders.value]
     clearCart()
     note.value = ''
-    successMessage.value = `Solicitação enviada! Total estimado: ${formatPrice(order.total_estimado)}.`
+    successMessage.value = createdOrders.length > 1
+      ? `${createdOrders.length} solicitações enviadas, uma para cada fornecedor.`
+      : `Solicitação enviada! Total estimado: ${formatPrice(createdOrders[0]?.total_estimado)}.`
     await loadOrders()
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível enviar a solicitação.'
@@ -320,6 +327,7 @@ onMounted(() => {
                   </span>
                 </div>
                 <p class="mt-1 text-xs text-slate-500">Enviada em {{ formatDate(order.created_at) }}</p>
+                <p v-if="order.fornecedor_nome" class="mt-1 text-sm font-semibold text-festou-secondary">Fornecedor: {{ order.fornecedor_nome }}</p>
               </div>
 
               <div class="text-right">
@@ -383,6 +391,12 @@ onMounted(() => {
               </div>
               <span class="text-xs text-slate-400">Status atualizado pelo fornecedor</span>
             </div>
+
+            <OrderChat
+              :order-id="order.id"
+              :current-user-id="user?.id || ''"
+              :disabled="['cancelado', 'recusado'].includes(order.status)"
+            />
           </article>
 
           <div v-if="pagination?.temMais" class="flex flex-col items-center gap-2 pt-2">

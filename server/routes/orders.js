@@ -26,6 +26,9 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
 
       const orders = await sql`
         select o.id, o.status, o.total_estimado, o.observacao, o.created_at,
+          (select string_agg(distinct f.nome, ', ' order by f.nome)
+           from public.itens_pedido ip join public.perfis f on f.id = ip.fornecedor_id
+           where ip.pedido_id = o.id) as fornecedor_nome,
           coalesce(
             json_agg(json_build_object(
               'id', i.id,
@@ -160,42 +163,100 @@ ordersRouter.post('/', requireUser, async (request, response, next) => {
         subtotalCents,
       }
     })
-    const totalCents = orderItems.reduce((total, item) => total + item.subtotalCents, 0)
-    const total = (totalCents / 100).toFixed(2)
-    const orderId = randomUUID()
-    const statements = [
-      sql`
-        insert into public.pedidos (id, cliente_id, total_estimado, observacao)
-        values (${orderId}, ${request.user.id}, ${total}, ${input.observacao})
-        returning id
-      `,
-    ]
+    const itemsBySupplier = new Map()
+    for (const item of orderItems) {
+      const supplierId = item.product.fornecedor_id
+      if (!itemsBySupplier.has(supplierId)) itemsBySupplier.set(supplierId, [])
+      itemsBySupplier.get(supplierId).push(item)
+    }
 
-    statements.push(...orderItems.map(({ product, quantity, unitPrice, subtotal }) => sql`
-      insert into public.itens_pedido (
-        pedido_id, produto_id, fornecedor_id, nome_produto, categoria,
-        preco_unitario, quantidade, subtotal
-      ) values (
-        ${orderId},
-        ${product.id}, ${product.fornecedor_id}, ${product.nome}, ${product.categoria},
-        ${unitPrice}, ${quantity}, ${subtotal}
-      )
-    `))
+    const groupedItems = [...itemsBySupplier.values()]
+    const orderIds = groupedItems.map(() => randomUUID())
+    const statements = []
+    groupedItems.forEach((supplierItems, index) => {
+      const supplierTotalCents = supplierItems.reduce((sum, item) => sum + item.subtotalCents, 0)
+      const supplierTotal = (supplierTotalCents / 100).toFixed(2)
+      statements.push(sql`
+        insert into public.pedidos (id, cliente_id, total_estimado, observacao)
+        values (${orderIds[index]}, ${request.user.id}, ${supplierTotal}, ${input.observacao})
+      `)
+      statements.push(...supplierItems.map(({ product, quantity, unitPrice, subtotal }) => sql`
+        insert into public.itens_pedido (
+          pedido_id, produto_id, fornecedor_id, nome_produto, categoria,
+          preco_unitario, quantidade, subtotal
+        ) values (
+          ${orderIds[index]}, ${product.id}, ${product.fornecedor_id}, ${product.nome}, ${product.categoria},
+          ${unitPrice}, ${subtotal}
+        )
+      `))
+    })
 
     await sql.transaction(statements)
-
-    let order = await findClientOrderById(orderId)
-
-    if (!order) {
-      return response.status(500).json({ message: 'O pedido foi criado, mas não pôde ser carregado. Atualize a página.' })
+    const orders = await Promise.all(orderIds.map((id) => findClientOrderById(id)))
+    if (orders.some((order) => !order)) {
+      return response.status(500).json({ message: 'Os pedidos foram criados, mas nao puderam ser carregados. Atualize a pagina.' })
     }
+    response.status(201).json({ orders, ...(orders.length === 1 ? { order: orders[0] } : {}) })
+  } catch (error) {
+    return next(error)
+  }
+})
 
-    // Garantir campo fornecedor_contato consistente para o cliente
-    if (!('fornecedor_contato' in order)) {
-      order = { ...order, fornecedor_contato: [] }
-    }
+ordersRouter.get('/:id/messages', requireUser, async (request, response, next) => {
+  try {
+    const orderId = orderIdSchema.parse(request.params.id)
+    const sql = getDatabase()
+    const [access] = await sql`
+      select o.id from public.pedidos o
+      where o.id = ${orderId}
+        and (o.cliente_id = ${request.user.id} or exists (
+          select 1 from public.itens_pedido i
+          where i.pedido_id = o.id and i.fornecedor_id = ${request.user.id}
+        ))
+      limit 1
+    `
+    if (!access) return response.status(404).json({ message: 'Conversa nao encontrada.' })
 
-    response.status(201).json({ order })
+    const messages = await sql`
+      select m.id, m.texto, m.created_at, m.autor_id,
+        p.nome as autor_nome, p.tipo_perfil as autor_tipo
+      from public.mensagens_pedido m
+      join public.perfis p on p.id = m.autor_id
+      where m.pedido_id = ${orderId}
+      order by m.created_at asc, m.id asc
+      limit 200
+    `
+    return response.json({ messages })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+ordersRouter.post('/:id/messages', requireUser, async (request, response, next) => {
+  try {
+    const orderId = orderIdSchema.parse(request.params.id)
+    const texto = z.string().trim().min(1, 'Digite uma mensagem.').max(2000, 'A mensagem deve ter no maximo 2.000 caracteres.').parse(request.body?.texto)
+    const sql = getDatabase()
+    const [access] = await sql`
+      select o.id from public.pedidos o
+      where o.id = ${orderId}
+        and o.status not in ('cancelado', 'recusado')
+        and (o.cliente_id = ${request.user.id} or exists (
+          select 1 from public.itens_pedido i
+          where i.pedido_id = o.id and i.fornecedor_id = ${request.user.id}
+        ))
+      limit 1
+    `
+    if (!access) return response.status(404).json({ message: 'Conversa nao encontrada.' })
+
+    const [message] = await sql`
+      insert into public.mensagens_pedido (pedido_id, autor_id, texto)
+      values (${orderId}, ${request.user.id}, ${texto})
+      returning id, texto, created_at, autor_id
+    `
+    return response.status(201).json({
+      message: { ...message, autor_nome: request.user.nome, autor_tipo: request.user.tipo_perfil },
+    })
   } catch (error) {
     return next(error)
   }

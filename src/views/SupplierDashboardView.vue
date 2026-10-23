@@ -3,6 +3,10 @@ import { onMounted, ref } from 'vue'
 import { api, asArray } from '../lib/api'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
+import OrderChat from '../components/OrderChat.vue'
+import { useSession } from '../lib/session'
+
+const { user } = useSession()
 
 const activeTab = ref('pedidos') // 'pedidos' | 'produtos'
 const orders = ref([])
@@ -384,6 +388,11 @@ onMounted(loadOrders)
                 O e-mail do cliente aparece aqui após a confirmação do pedido.
               </span>
             </div>
+            <OrderChat
+              :order-id="order.id"
+              :current-user-id="user?.id || ''"
+              :disabled="['cancelado', 'recusado'].includes(order.status)"
+            />
           </article>
 
           <div v-if="ordersPagination?.temMais" class="flex flex-col items-center gap-2 pt-2">

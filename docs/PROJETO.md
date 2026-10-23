@@ -199,6 +199,8 @@ Comandos disponíveis:
 | `PATCH` | `/api/supplier/products/:id/toggle-active` | Alternar visibilidade (pausar ou reativar) de produto na vitrine |
 | `GET` | `/api/orders` | Consultar pedidos conforme perfil autenticado; aceita `pagina` e `limite`, devolve `pagination` e, para fornecedor, `summary.pendentes` |
 | `POST` | `/api/orders` | Criar pedido/orçamento como cliente |
+| `GET` | `/api/orders/:id/messages` | Listar mensagens da conversa entre cliente e fornecedor vinculada ao pedido |
+| `POST` | `/api/orders/:id/messages` | Enviar mensagem na conversa do pedido (máximo de 2.000 caracteres) |
 | `POST` | `/api/invitations` | Criar convite como cliente |
 | `GET` | `/api/invitations/mine` | Listar convites e respostas do anfitrião |
 | `PATCH` | `/api/invitations/:id/rsvp-status` | Reabrir ou encerrar confirmações de presença como cliente |
@@ -326,7 +328,8 @@ Não há um roadmap fechado neste documento. Ao priorizar a continuação, consi
 - avaliar migração do Tailwind 3 para 4 quando houver folga, para sair do `braces` flagrado no `npm audit`;
 - avaliar verificação de e-mail no cadastro (hoje a conta já entra direto) e confirmação de troca de e-mail;
 - mover o limitador de requisições para um store compartilhado se a API passar a rodar em mais de uma instância (as sessões já ficam no banco);
-- definir status por item se pedidos com vários fornecedores passarem a precisar de negociação independente;
+- cada novo pedido já agrupa itens por fornecedor para permitir negociação independente; pedidos antigos com vários fornecedores continuam acessíveis aos participantes originais;
+- usar notificações em tempo real para mensagens quando a operação justificar substituir a atualização periódica atual;
 - planejar deploy, observabilidade, backups e configuração de produção.
 
 ## Como manter este documento
