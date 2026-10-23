@@ -3,14 +3,23 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { setSession } from '../lib/session'
+import { googleLoginUrl, isGoogleConfigured } from '../lib/googleAuth'
+import GoogleAuthButton from '../components/GoogleAuthButton.vue'
 
 const router = useRouter()
 const route = useRoute()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';function getRedirect(){const r=route.query.redirect;return (typeof r==='string'&&r.startsWith('/')&&!r.startsWith('//'))?r:'/vitrine';}function handleGoogleLogin(){if(!googleClientId){errorMessage.value='Login com Google nao configurado.';return;}const o=window.location.origin;const n=Math.random().toString(36).slice(2);sessionStorage.setItem('google_nonce',n);sessionStorage.setItem('auth_redirect',getRedirect());const ru=o+'/auth/google/callback';const pms=new URLSearchParams({client_id:googleClientId,redirect_uri:ru,response_type:'id_token',scope:'openid email profile',nonce:n,prompt:'select_account'});window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+pms.toString();}
 const isSubmitting = ref(false)
+
+function handleGoogleLogin() {
+  if (!isGoogleConfigured()) {
+    errorMessage.value = 'Login com Google ainda não configurado. Defina VITE_GOOGLE_CLIENT_ID no .env.'
+    return
+  }
+  window.location.href = googleLoginUrl(route.query.redirect)
+}
 
 async function signIn() {
   errorMessage.value = ''
@@ -69,7 +78,17 @@ async function signIn() {
         {{ errorMessage }}
       </div>
 
-      <form class="mt-6 space-y-4" @submit.prevent="signIn">
+      <div class="mt-6">
+        <GoogleAuthButton @click="handleGoogleLogin" />
+
+        <div class="my-5 flex items-center gap-3" aria-hidden="true">
+          <span class="h-px flex-1 bg-slate-200"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">ou</span>
+          <span class="h-px flex-1 bg-slate-200"></span>
+        </div>
+      </div>
+
+      <form class="space-y-4" @submit.prevent="signIn">
         <div>
           <label for="email" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
             E-mail

@@ -58,3 +58,11 @@ export const resetPasswordLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Muitas tentativas. Aguarde alguns minutos.' },
 })
+
+export const googleLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: authRateLimit,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+})

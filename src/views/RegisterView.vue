@@ -1,19 +1,57 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { setSession } from '../lib/session'
+import { consumeGoogleRedirect, googleLoginUrl, isGoogleConfigured } from '../lib/googleAuth'
+import GoogleAuthButton from '../components/GoogleAuthButton.vue'
 
 const router = useRouter()
+const route = useRoute()
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const profileType = ref('cliente')
 const errorMessage = ref('')
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-function getRedirect(){return '/vitrine'}
-function handleGoogleLogin(){ if(!googleClientId){errorMessage.value='Login com Google nao configurado.';return;}const origin=window.location.origin;const nonce=Math.random().toString(36).slice(2);sessionStorage.setItem('google_nonce',nonce);sessionStorage.setItem('auth_redirect',getRedirect());const redirectUri=origin+'/auth/google/callback';const params=new URLSearchParams({client_id:googleClientId,redirect_uri:redirectUri,response_type:'id_token',scope:'openid email profile',nonce,prompt:'select_account'});window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();}
 const isSubmitting = ref(false)
+
+// Chegou aqui depois do Google avisar que a conta ainda nao existe.
+// Basta escolher o tipo de perfil e enviar o token que ja foi guardado.
+const googleSignupPending = computed(() => route.query.google === '1')
+
+async function handleGoogleLogin() {
+  errorMessage.value = ''
+
+  if (googleSignupPending.value) {
+    const idToken = sessionStorage.getItem('google_id_token')
+    if (!idToken) {
+      await router.replace('/cadastro')
+      return
+    }
+
+    isSubmitting.value = true
+    try {
+      const { user } = await api('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ id_token: idToken, tipo_perfil: profileType.value }),
+      })
+      setSession(user)
+      await router.replace(consumeGoogleRedirect())
+    } catch (error) {
+      errorMessage.value = error.message || 'Não foi possível concluir o cadastro com o Google.'
+      sessionStorage.removeItem('google_id_token')
+    } finally {
+      isSubmitting.value = false
+    }
+    return
+  }
+
+  if (!isGoogleConfigured()) {
+    errorMessage.value = 'Login com Google ainda não configurado. Defina VITE_GOOGLE_CLIENT_ID no .env.'
+    return
+  }
+  window.location.href = googleLoginUrl(profileType.value === 'fornecedor' ? '/fornecedor/painel' : '/vitrine')
+}
 
 async function signUp() {
   errorMessage.value = ''
@@ -58,10 +96,15 @@ async function signUp() {
           <span>Festou<span>!</span></span>
         </RouterLink>
         <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">
-          Crie sua conta no Festou!
+          {{ googleSignupPending ? 'Quase lá!' : 'Crie sua conta no Festou!' }}
         </h1>
         <p class="mt-1 text-sm text-slate-600">
-          Junte-se à maior comunidade de celebrações e eventos.
+          <template v-if="googleSignupPending">
+            Escolha o tipo de perfil para concluir seu cadastro com o Google.
+          </template>
+          <template v-else>
+            Junte-se à maior comunidade de celebrações e eventos.
+          </template>
         </p>
       </div>
 
@@ -69,7 +112,20 @@ async function signUp() {
         {{ errorMessage }}
       </div>
 
-      <form class="mt-6 space-y-4" @submit.prevent="signUp">
+      <div v-if="!googleSignupPending" class="mt-6">
+        <GoogleAuthButton @click="handleGoogleLogin" />
+
+        <div class="my-5 flex items-center gap-3" aria-hidden="true">
+          <span class="h-px flex-1 bg-slate-200"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">ou</span>
+          <span class="h-px flex-1 bg-slate-200"></span>
+        </div>
+      </div>
+
+      <form
+        class="space-y-4"
+        @submit.prevent="googleSignupPending ? handleGoogleLogin() : signUp()"
+      >
         <!-- Seletor de Perfil Elegante em Cards -->
         <fieldset>
           <legend class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -106,7 +162,7 @@ async function signUp() {
           </div>
         </fieldset>
 
-        <div>
+        <div v-if="!googleSignupPending">
           <label for="name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
             Nome completo ou da empresa
           </label>
@@ -123,7 +179,7 @@ async function signUp() {
           />
         </div>
 
-        <div>
+        <div v-if="!googleSignupPending">
           <label for="email" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
             E-mail
           </label>
@@ -140,7 +196,7 @@ async function signUp() {
           />
         </div>
 
-        <div>
+        <div v-if="!googleSignupPending">
           <label for="password" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
             Senha de acesso
           </label>
@@ -162,7 +218,15 @@ async function signUp() {
           :disabled="isSubmitting"
           class="btn btn-primary mt-2 w-full text-sm font-bold"
         >
-          {{ isSubmitting ? 'Criando sua conta...' : 'Cadastrar no Festou!' }}
+          <template v-if="isSubmitting">
+            {{ googleSignupPending ? 'Concluindo cadastro...' : 'Criando sua conta...' }}
+          </template>
+          <template v-else-if="googleSignupPending">
+            Continuar com Google
+          </template>
+          <template v-else>
+            Cadastrar no Festou!
+          </template>
         </button>
       </form>
 

@@ -8,7 +8,13 @@ import {
 } from '../security.js'
 import { clearSessionCookie, hashSessionToken, sessionCookieName } from '../security.js'
 import { findSession, sendProfile, startSession } from '../middleware/session.js'
-import { loginByEmailLimiter, loginLimiter, registerLimiter } from '../middleware/rateLimits.js'
+import { OAuth2Client } from 'google-auth-library'
+import {
+  googleLimiter,
+  loginByEmailLimiter,
+  loginLimiter,
+  registerLimiter,
+} from '../middleware/rateLimits.js'
 import { loginSchema, registerSchema } from '../schemas/auth.js'
 
 export const authRouter = Router()
@@ -96,5 +102,65 @@ authRouter.post('/logout', async (request, response, next) => {
     response.status(204).end()
   } catch (error) {
     next(error)
+  }
+})
+
+
+authRouter.post('/google', googleLimiter, async (request, response, next) => {
+  try {
+    const idToken = request.body?.id_token
+    const tipoPerfil = request.body?.tipo_perfil
+
+    if (!idToken) {
+      return response.status(400).json({ message: 'Token do Google ausente.' })
+    }
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return response.status(500).json({ message: 'Login com Google nao configurado no servidor.' })
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    })
+    const payload = ticket.getPayload()
+    if (!payload?.email) {
+      return response.status(401).json({ message: 'Token do Google invalido.' })
+    }
+
+    const email = payload.email.toLowerCase()
+    const nome = payload.name || email.split('@')[0]
+    const sql = getDatabase()
+
+    const [existing] = await sql`
+      select id, nome, email, tipo_perfil
+      from public.perfis
+      where lower(email) = ${email}
+      limit 1
+    `
+
+    if (existing) {
+      const user = await startSession(existing, response)
+      return response.json({ user })
+    }
+
+    if (tipoPerfil !== 'cliente' && tipoPerfil !== 'fornecedor') {
+      return response.status(409).json({
+        message: 'Escolha se a conta e de cliente ou fornecedor.',
+        precisa_perfil: true,
+      })
+    }
+
+    const [profile] = await sql`
+      insert into public.perfis (nome, email, senha_hash, tipo_perfil)
+      values (${nome}, ${email}, ${await getDummyPasswordHash()}, ${tipoPerfil})
+      returning id, nome, email, tipo_perfil
+    `
+
+    const user = await startSession(profile, response)
+    return response.status(201).json({ user })
+  } catch (error) {
+    console.error('Erro ao autenticar com Google:', error?.message ?? error)
+    return response.status(401).json({ message: 'Nao foi possivel entrar com o Google.' })
   }
 })

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import AuthGoogleCallback from '../views/AuthGoogleCallback.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -47,6 +48,12 @@ const router = createRouter({
     { path: '/', name: 'home', component: HomeView },
     { path: '/login', name: 'login', component: LoginView, meta: { chrome: false } },
     { path: '/cadastro', name: 'cadastro', component: RegisterView, meta: { chrome: false } },
+    {
+      path: '/auth/google/callback',
+      name: 'auth-google-callback',
+      component: AuthGoogleCallback,
+      meta: { chrome: false },
+    },
     { path: '/recuperar-senha', name: 'recuperar-senha', component: ForgotPasswordView, meta: { chrome: false } },
     { path: '/redefinir-senha', name: 'redefinir-senha', component: ResetPasswordView, meta: { chrome: false } },
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },

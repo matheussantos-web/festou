@@ -72,4 +72,17 @@ Clientes também podem criar convites digitais em `/convites`, escolher um tema 
 
 Fornecedores anunciam produtos em `/fornecedor/produtos/novo` e os editam, pausam ou excluem em `/fornecedor/painel`. Os orçamentos recebidos ficam na aba "Orçamentos Recebidos", também paginada, onde o fornecedor negocia, confirma ou recusa cada pedido. Toda rota de fornecedor confere a posse do recurso: um fornecedor não alcança o produto nem o pedido de outro. O e-mail do cliente só é liberado depois que o pedido é confirmado; antes disso o fornecedor vê o endereço mascarado (`t***@dominio`).
 
+## Login com Google
+
+As telas de login e cadastro também oferecem "Continuar com Google" (OAuth 2.0, fluxo `id_token`). Se o e-mail ainda não tiver conta, o cadastro é concluído depois que o usuário escolhe o tipo de perfil (cliente ou fornecedor). O backend valida o token com `google-auth-library` e cria a sessão pelo mesmo cookie das rotas de login e cadastro.
+
+Para habilitar, no [Google Cloud Console](https://console.cloud.google.com/) crie um **OAuth client ID** do tipo **Web application**, adicione os valores de `APP_ORIGIN` em *Authorized JavaScript origins* e preencha no `.env` (o mesmo Client ID nos dois lados):
+
+```env
+GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
+```
+
+Sem essas variáveis o botão aparece, mas avisa que o login com Google ainda não foi configurado.
+
 Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express — nesse cenário, ajuste `TRUST_PROXY` para o número de proxies na frente da aplicação.
