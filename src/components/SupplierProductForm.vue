@@ -32,6 +32,7 @@ const form = reactive(emptyForm())
 const imagePreview = ref('')
 const imageError = ref('')
 const isUploadingImage = ref(false)
+const photoInput = ref(null)
 let temporaryPreviewUrl = ''
 
 function clearTemporaryPreview() {
@@ -92,6 +93,10 @@ function removeImage() {
   imagePreview.value = ''
   imageError.value = ''
   clearTemporaryPreview()
+}
+
+function openPhotoPicker() {
+  photoInput.value?.click()
 }
 
 function submit() {
@@ -208,12 +213,22 @@ onBeforeUnmount(clearTemporaryPreview)
           </div>
           <input
             id="product-photo"
+            ref="photoInput"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             :disabled="isUploadingImage || submitting"
-            class="form-control bg-white file:mr-4 file:rounded-full file:border-0 file:bg-festou-primary file:px-4 file:py-2 file:font-bold file:text-white"
+            class="sr-only"
             @change="handleImageChange"
           />
+          <button
+            type="button"
+            :disabled="isUploadingImage || submitting"
+            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-festou-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-festou-primary disabled:cursor-not-allowed disabled:opacity-60"
+            @click="openPhotoPicker"
+          >
+            <span aria-hidden="true">📷</span>
+            {{ imagePreview ? 'Trocar foto' : 'Escolher foto' }}
+          </button>
           <p class="mt-2 text-xs text-slate-500">JPG, PNG ou WebP - ate 5 MB. A foto e enviada ao selecionar.</p>
           <p v-if="isUploadingImage" role="status" class="mt-2 text-sm font-semibold text-festou-primary">Enviando foto...</p>
           <p v-if="imageError" role="alert" class="mt-2 text-sm font-semibold text-rose-700">{{ imageError }}</p>
