@@ -103,9 +103,22 @@ async function uploadImage(request, response, next, kind) {
 
     const file = request.body
     const contentType = request.get('content-type')?.split(';')[0].trim().toLowerCase()
+    const fileSize = Buffer.isBuffer(file) ? file.length : 0
+    if (!fileSize) {
+      console.warn('[uploads] Corpo da imagem vazio ou nao reconhecido', {
+        kind,
+        contentType: contentType || null,
+        contentLength: request.get('content-length') || null,
+      })
+      return response.status(400).json({
+        message: 'A imagem nao chegou ao servidor. Selecione o arquivo novamente e tente enviar em JPG, PNG ou WebP.',
+      })
+    }
+
     const extension = Buffer.isBuffer(file) ? fileExtension(file, contentType) : null
     if (!extension) {
-      return response.status(400).json({ message: 'Envie uma imagem JPG, PNG ou WebP valida.' })
+      console.warn('[uploads] Formato de imagem invalido', { kind, contentType, contentLength: fileSize })
+      return response.status(400).json({ message: 'O arquivo recebido nao e uma imagem JPG, PNG ou WebP valida.' })
     }
 
     await checkPublicBucket(config, bucket)
