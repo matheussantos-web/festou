@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api, asArray } from '../lib/api'
 import { formatDate } from '../lib/format'
+import InvitationThemeCard from '../components/InvitationThemeCard.vue'
+import { getInvitationTheme, invitationThemes } from '../lib/invitationThemes'
 
 const appOrigin = window.location.origin
 const invitations = ref([])
@@ -42,11 +44,24 @@ const minimumDate = computed(() => {
   return date.toISOString().slice(0, 16)
 })
 
-const themes = [
-  { value: 'jardim', label: '🌸 Jardim Encantado' },
-  { value: 'colorido', label: '🎨 Colorido & Vibrante' },
-  { value: 'ceu-estrelado', label: '✨ Céu Estrelado' },
-]
+const themes = Object.entries(invitationThemes).map(([value, theme]) => ({ value, label: theme.label }))
+const previewTheme = computed(() => getInvitationTheme(form.tema))
+function validateField(field) {
+  const messages = {
+    titulo: form.titulo.trim().length < 3 ? 'Informe o nome da celebração (mínimo de 3 caracteres).' : '',
+    anfitriao: form.anfitriao.trim().length < 2 ? 'Informe quem está convidando (mínimo de 2 caracteres).' : '',
+    data_evento: !form.data_evento || Number.isNaN(new Date(form.data_evento).getTime())
+      ? 'Informe uma data e um horário válidos.'
+      : new Date(form.data_evento).getTime() < Date.now() ? 'A data do evento não pode estar no passado.' : '',
+    local_evento: form.local_evento.trim().length < 3 ? 'Informe o local do evento (mínimo de 3 caracteres).' : '',
+  }
+  formErrors[field] = messages[field] || ''
+}
+
+function validateForm() {
+  ;['titulo', 'anfitriao', 'data_evento', 'local_evento'].forEach(validateField)
+  return Object.values(formErrors).every((message) => !message)
+}
 
 function formatInvitationDate(value) {
   return formatDate(value, { dateStyle: 'full', timeStyle: 'short' })
@@ -105,6 +120,7 @@ async function createInvitation() {
   errorMessage.value = ''
   successMessage.value = ''
   createdInvitation.value = null
+  if (!validateForm()) return
   isSubmitting.value = true
 
   try {
@@ -255,7 +271,7 @@ onMounted(loadInvitations)
           <span aria-hidden="true">💌</span> Convites Interativos
         </span>
         <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
-          Meus Convites Digitais & RSVP
+          Meus Convites Digitais
         </h1>
         <p class="mt-2 text-slate-600">
           Crie convites personalizados, envie o link pelo WhatsApp e acompanhe a lista de convidados em tempo real.
@@ -287,9 +303,9 @@ onMounted(loadInvitations)
               </button>
             </div>
 
-            <form class="mt-6 space-y-4" @submit.prevent="updateInvitation">
+            <form class="mt-6 space-y-5" @submit.prevent="updateInvitation">
               <div>
-                <label for="edit-title" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Nome da celebração</label>
+                <label for="edit-title" class="form-label">Nome da celebração</label>
                 <input
                   id="edit-title"
                   v-model.trim="editForm.titulo"
@@ -297,12 +313,12 @@ onMounted(loadInvitations)
                   minlength="3"
                   maxlength="100"
                   required
-                  class="w-full text-sm"
+                  class="form-control"
                 />
               </div>
 
               <div>
-                <label for="edit-host" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quem convida (anfitrião)</label>
+                <label for="edit-host" class="form-label">Quem convida (anfitrião)</label>
                 <input
                   id="edit-host"
                   v-model.trim="editForm.anfitriao"
@@ -310,32 +326,32 @@ onMounted(loadInvitations)
                   minlength="2"
                   maxlength="100"
                   required
-                  class="w-full text-sm"
+                  class="form-control"
                 />
               </div>
 
               <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label for="edit-date" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Data e horário</label>
+                  <label for="edit-date" class="form-label">Data e horário</label>
                   <input
                     id="edit-date"
                     v-model="editForm.data_evento"
                     type="datetime-local"
                     :min="minimumDate"
                     required
-                    class="w-full text-sm"
+                    class="form-control"
                   />
                 </div>
                 <div>
-                  <label for="edit-theme" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Tema visual</label>
-                  <select id="edit-theme" v-model="editForm.tema" class="w-full text-sm">
+                  <label for="edit-theme" class="form-label">Tema visual</label>
+                  <select id="edit-theme" v-model="editForm.tema" class="form-control">
                     <option v-for="theme in themes" :key="theme.value" :value="theme.value">{{ theme.label }}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label for="edit-location" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Local ou endereço</label>
+                <label for="edit-location" class="form-label">Local ou endereço</label>
                 <input
                   id="edit-location"
                   v-model.trim="editForm.local_evento"
@@ -343,18 +359,18 @@ onMounted(loadInvitations)
                   minlength="3"
                   maxlength="180"
                   required
-                  class="w-full text-sm"
+                  class="form-control"
                 />
               </div>
 
               <div>
-                <label for="edit-message" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Mensagem aos convidados (opcional)</label>
+                <label for="edit-message" class="form-label">Mensagem aos convidados (opcional)</label>
                 <textarea
                   id="edit-message"
                   v-model.trim="editForm.mensagem"
                   rows="3"
                   maxlength="500"
-                  class="w-full text-sm"
+                  class="form-control form-control--textarea"
                 ></textarea>
               </div>
 
@@ -372,53 +388,62 @@ onMounted(loadInvitations)
             <h2 class="font-heading text-2xl font-bold text-festou-midnight">Criar Novo Convite</h2>
             <p class="mt-1 text-xs text-slate-500">Preencha as informações da celebração para gerar a página pública.</p>
 
-            <form class="mt-6 space-y-4" @submit.prevent="createInvitation">
+            <form class="mt-6 space-y-5" @submit.prevent="createInvitation">
               <div>
-                <label for="invite-title" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Nome da celebração</label>
+                <label for="invite-title" class="form-label">Nome da celebração</label>
                 <input
                   id="invite-title"
                   v-model.trim="form.titulo"
+                  @blur="validateField('titulo')"
+                  @input="validateField('titulo')"
+                  :aria-invalid="Boolean(formErrors.titulo)"
                   type="text"
                   minlength="3"
                   maxlength="100"
                   required
                   placeholder="Ex: Aniversário de 5 anos do Lucas"
-                  class="w-full text-sm"
+                  class="form-control"
                 />
               </div>
 
               <div>
-                <label for="host-name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quem convida (anfitrião)</label>
+                <label for="host-name" class="form-label">Quem convida (anfitrião)</label>
                 <input
                   id="host-name"
                   v-model.trim="form.anfitriao"
+                  @blur="validateField('anfitriao')"
+                  @input="validateField('anfitriao')"
+                  :aria-invalid="Boolean(formErrors.anfitriao)"
                   type="text"
                   minlength="2"
                   maxlength="100"
                   required
                   placeholder="Ex: Família Silva ou Marina & Pedro"
-                  class="w-full text-sm"
+                  class="form-control"
                 />
               </div>
 
               <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label for="event-date" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Data e horário</label>
+                  <label for="event-date" class="form-label">Data e horário</label>
                   <input
                     id="event-date"
                     v-model="form.data_evento"
+                  @blur="validateField('data_evento')"
+                  @input="validateField('data_evento')"
+                  :aria-invalid="Boolean(formErrors.data_evento)"
                     type="datetime-local"
                     :min="minimumDate"
                     required
-                    class="w-full text-sm"
+                    class="form-control"
                   />
                 </div>
                 <div>
-                  <label for="invite-theme" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Tema visual</label>
+                  <label for="invite-theme" class="form-label">Tema visual</label>
                   <select
                     id="invite-theme"
                     v-model="form.tema"
-                    class="w-full text-sm"
+                    class="form-control"
                   >
                     <option v-for="theme in themes" :key="theme.value" :value="theme.value">{{ theme.label }}</option>
                   </select>
@@ -426,30 +451,43 @@ onMounted(loadInvitations)
               </div>
 
               <div>
-                <label for="event-location" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Local ou endereço</label>
+                <label for="event-location" class="form-label">Local ou endereço</label>
                 <input
                   id="event-location"
                   v-model.trim="form.local_evento"
+                  @blur="validateField('local_evento')"
+                  @input="validateField('local_evento')"
+                  :aria-invalid="Boolean(formErrors.local_evento)"
                   type="text"
                   minlength="3"
                   maxlength="180"
                   required
                   placeholder="Ex: Buffet Estrela Mágica, Rua das Flores, 123"
-                  class="w-full text-sm"
+                  class="form-control"
                 />
               </div>
 
               <div>
-                <label for="invite-message" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Mensagem aos convidados (opcional)</label>
+                <label for="invite-message" class="form-label">Mensagem aos convidados (opcional)</label>
                 <textarea
                   id="invite-message"
                   v-model.trim="form.mensagem"
                   rows="3"
                   maxlength="500"
                   placeholder="Venha comemorar essa data tão especial com a gente! Traga seu sorriso."
-                  class="w-full text-sm"
+                  class="form-control form-control--textarea"
                 ></textarea>
               </div>
+
+              <section aria-label="Pré-visualização do convite" class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600">Prévia ao vivo</h3>
+                  <span class="rounded-full px-2.5 py-1 text-[11px] font-bold" :class="previewTheme.tag">{{ previewTheme.label }}</span>
+                </div>
+                <div class="rounded-2xl p-3 transition-colors duration-300" :class="previewTheme.bg">
+                  <InvitationThemeCard :invitation="form" compact />
+                </div>
+              </section>
 
               <button
                 type="submit"
@@ -498,7 +536,7 @@ onMounted(loadInvitations)
             <p class="text-xs text-slate-500">Preencha o formulário ao lado para gerar o seu primeiro convite digital.</p>
           </div>
 
-          <div v-else class="mt-6 space-y-4">
+                  <div v-else class="mt-6 space-y-4">
             <article
               v-for="invitation in invitations"
               :key="invitation.id"

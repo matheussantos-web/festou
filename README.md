@@ -85,4 +85,4 @@ VITE_GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
 
 Sem essas variáveis o botão aparece, mas avisa que o login com Google ainda não foi configurado.
 
-Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express — nesse cenário, ajuste `TRUST_PROXY` para o número de proxies na frente da aplicação.
+Para produção, execute `npm run build` e inicie com `npm start`: o mesmo processo passa a servir o SPA compilado em `dist/` com fallback de rota e a API em `/api`. Configure `DATABASE_URL`, `APP_ORIGIN=https://festou.th.app.br`, `NODE_ENV=production`, `HOST=0.0.0.0` e um proxy HTTPS que encaminhe o tráfego para o servidor Express — nesse cenário, ajuste `TRUST_PROXY` para o número de proxies na frente da aplicação.

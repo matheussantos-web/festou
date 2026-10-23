@@ -61,9 +61,9 @@ defineExpose({ reset })
 </script>
 
 <template>
-  <form class="space-y-5" @submit.prevent="submit">
+  <form class="space-y-6" @submit.prevent="submit">
     <div>
-      <label for="product-name" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+      <label for="product-name" class="form-label">
         Nome do produto ou serviço
       </label>
       <input
@@ -74,20 +74,20 @@ defineExpose({ reset })
         maxlength="120"
         required
         placeholder="Ex: Bolo de Chocolate Belga com Morangos"
-        class="w-full text-sm"
+        class="form-control"
       />
     </div>
 
-    <div class="grid gap-5 sm:grid-cols-2">
+    <div class="grid gap-6 sm:grid-cols-2">
       <div>
-        <label for="category" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+        <label for="category" class="form-label">
           Categoria
         </label>
         <select
           id="category"
           v-model="form.categoria"
           required
-          class="w-full text-sm"
+          class="form-control"
         >
           <option value="bolos">🎂 Bolos</option>
           <option value="doces">🍬 Doces</option>
@@ -97,7 +97,7 @@ defineExpose({ reset })
       </div>
 
       <div>
-        <label for="price" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+        <label for="price" class="form-label">
           Preço sugerido (R$)
         </label>
         <input
@@ -109,13 +109,13 @@ defineExpose({ reset })
           step="0.01"
           required
           placeholder="150.00"
-          class="w-full text-sm"
+          class="form-control"
         />
       </div>
     </div>
 
     <div>
-      <label for="description" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+      <label for="description" class="form-label">
         Descrição detalhada
       </label>
       <textarea
@@ -126,13 +126,13 @@ defineExpose({ reset })
         maxlength="1000"
         required
         placeholder="Descreva os ingredientes, dimensões, quantidade de fatias ou detalhes do serviço..."
-        class="w-full text-sm"
+        class="form-control form-control--textarea"
       ></textarea>
     </div>
 
-    <div class="grid gap-5 sm:grid-cols-2">
+    <div class="grid gap-6 sm:grid-cols-2">
       <div>
-        <label for="city" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+        <label for="city" class="form-label">
           Cidade de atendimento (opcional)
         </label>
         <input
@@ -141,12 +141,12 @@ defineExpose({ reset })
           type="text"
           maxlength="100"
           placeholder="Ex: São Paulo - SP"
-          class="w-full text-sm"
+          class="form-control"
         />
       </div>
 
       <div>
-        <label for="image-url" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">
+        <label for="image-url" class="form-label">
           URL da imagem (opcional)
         </label>
         <input
@@ -155,7 +155,7 @@ defineExpose({ reset })
           type="url"
           maxlength="2048"
           placeholder="https://exemplo.com/foto.jpg"
-          class="w-full text-sm"
+          class="form-control"
         />
         <p class="mt-1 text-xs text-slate-500">O link precisa começar com https://.</p>
       </div>

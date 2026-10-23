@@ -88,6 +88,32 @@
 }
 
 @layer components {
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #334155;
+    font-size: 0.925rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .form-control {
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.8125rem 1rem;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .form-control--textarea {
+    min-height: 9rem;
+    resize: vertical;
+  }
+
+  select.form-control {
+    padding-right: 2.75rem;
+  }
+
   /* Wordmark textual da marca Festou! */
   .festou-wordmark {
     font-family: 'Baloo 2', 'Inter', sans-serif;
@@ -343,6 +369,144 @@
     animation: festou-shimmer 1.6s linear infinite;
     border-radius: 1rem;
   }
+}
+
+@layer components {
+  .invitation-bg-garden {
+    background-color: #f0fdf4;
+    background-image:
+      radial-gradient(circle at 8% 16%, rgba(244, 114, 182, 0.2), transparent 18rem),
+      radial-gradient(circle at 92% 78%, rgba(134, 239, 172, 0.32), transparent 22rem),
+      linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 48%, #fff7ed 100%);
+  }
+
+  .invitation-bg-sky {
+    background-color: #070b24;
+    background-image:
+      radial-gradient(1.5px 1.5px at 8% 18%, rgba(255, 255, 255, 0.95) 50%, transparent 100%),
+      radial-gradient(1px 1px at 21% 44%, rgba(191, 219, 254, 0.9) 50%, transparent 100%),
+      radial-gradient(2px 2px at 37% 12%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+      radial-gradient(1px 1px at 56% 31%, rgba(196, 181, 253, 0.9) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 72% 16%, rgba(255, 255, 255, 0.95) 50%, transparent 100%),
+      radial-gradient(1px 1px at 89% 42%, rgba(191, 219, 254, 0.9) 50%, transparent 100%),
+      radial-gradient(ellipse at 50% -10%, rgba(79, 70, 229, 0.55), transparent 58%),
+      linear-gradient(160deg, #11183f 0%, #080d28 55%, #030617 100%);
+    background-attachment: fixed;
+  }
+
+  .invitation-theme-card--garden {
+    border: 1px solid rgba(74, 132, 91, 0.32);
+    background: linear-gradient(145deg, rgba(255, 255, 250, 0.97), rgba(240, 253, 244, 0.96));
+    box-shadow: 0 28px 80px -42px rgba(22, 101, 52, 0.45);
+    color: #193b2b;
+  }
+
+  .invitation-theme-card--colorido {
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.62), rgba(147, 51, 234, 0.46) 52%, rgba(255, 45, 152, 0.4));
+    box-shadow: 0 30px 90px -40px rgba(15, 10, 44, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    backdrop-filter: blur(12px);
+  }
+
+  .invitation-theme-card--ceu {
+    border: 1px solid rgba(125, 211, 252, 0.34);
+    background: linear-gradient(150deg, rgba(23, 37, 84, 0.94), rgba(20, 30, 70, 0.9) 58%, rgba(49, 46, 129, 0.86));
+    box-shadow: 0 30px 90px -38px rgba(2, 6, 23, 0.9), inset 0 1px 0 rgba(191, 219, 254, 0.14);
+    color: #f8fafc;
+    backdrop-filter: blur(12px);
+  }
+
+  .invitation-theme-title {
+    color: #183b2b;
+    text-wrap: balance;
+  }
+
+  .invitation-theme-card--colorido .invitation-theme-title,
+  .invitation-theme-card--ceu .invitation-theme-title {
+    color: #ffffff;
+  }
+
+  .invitation-theme-card--garden .invitation-host-name { text-decoration-color: #f472b6; }
+  .invitation-theme-card--colorido .invitation-host-name { text-decoration-color: #fde047; }
+  .invitation-theme-card--ceu .invitation-host-name { text-decoration-color: #67e8f9; }
+
+  .invitation-event-details {
+    background: rgba(22, 101, 52, 0.07);
+  }
+
+  .invitation-theme-card--colorido .invitation-event-details {
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .invitation-theme-card--ceu .invitation-event-details {
+    background: rgba(2, 6, 23, 0.36);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .invitation-card-garden-ornaments,
+  .invitation-card-colorido-ornaments,
+  .invitation-card-sky-ornaments {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .invitation-flower,
+  .invitation-leaf,
+  .invitation-sparkle {
+    position: absolute;
+    line-height: 1;
+  }
+
+  .invitation-flower { color: #e879a9; }
+  .invitation-flower--one { top: 1rem; left: 1.25rem; font-size: 2.2rem; opacity: 0.75; }
+  .invitation-flower--two { right: 1.4rem; bottom: 1rem; font-size: 1.7rem; opacity: 0.58; }
+  .invitation-leaf { color: #5b9b6a; font-size: 2.7rem; opacity: 0.48; }
+  .invitation-leaf--one { top: 0.8rem; right: 1.2rem; transform: rotate(-35deg); }
+  .invitation-leaf--two { bottom: 0.8rem; left: 1.2rem; transform: rotate(145deg); }
+
+  .invitation-card-colorido-ornaments span {
+    position: absolute;
+    top: 1rem;
+    width: 0.55rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    opacity: 0.8;
+  }
+  .invitation-card-colorido-ornaments span:nth-child(1) { left: 12%; background: #fde047; transform: rotate(-28deg); }
+  .invitation-card-colorido-ornaments span:nth-child(2) { left: 27%; background: #67e8f9; transform: rotate(28deg); }
+  .invitation-card-colorido-ornaments span:nth-child(3) { left: 44%; background: #fb7185; transform: rotate(-15deg); }
+  .invitation-card-colorido-ornaments span:nth-child(4) { right: 39%; background: #a7f3d0; transform: rotate(22deg); }
+  .invitation-card-colorido-ornaments span:nth-child(5) { right: 23%; background: #fde047; transform: rotate(-24deg); }
+  .invitation-card-colorido-ornaments span:nth-child(6) { right: 10%; background: #f9a8d4; transform: rotate(18deg); }
+
+  .invitation-moon {
+    position: absolute;
+    top: 1.4rem;
+    right: 1.6rem;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    background: #fde68a;
+    box-shadow: 0 0 34px rgba(253, 230, 138, 0.35);
+  }
+  .invitation-moon::after {
+    position: absolute;
+    top: -0.22rem;
+    left: 0.7rem;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    background: #172554;
+    content: '';
+  }
+  .invitation-sparkle { color: #bfdbfe; text-shadow: 0 0 12px rgba(191, 219, 254, 0.8); }
+  .invitation-sparkle--one { top: 3.8rem; right: 4.1rem; font-size: 1.1rem; }
+  .invitation-sparkle--two { top: 1.4rem; left: 1.7rem; font-size: 1.3rem; }
+  .invitation-sparkle--three { right: 1.7rem; bottom: 1.8rem; font-size: 0.9rem; }
 }
 
 @layer utilities {

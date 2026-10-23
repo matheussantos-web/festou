@@ -2,8 +2,9 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FestouDecor from '../components/FestouDecor.vue'
+import InvitationThemeCard from '../components/InvitationThemeCard.vue'
 import { api } from '../lib/api'
-import { formatDate } from '../lib/format'
+import { getInvitationTheme } from '../lib/invitationThemes'
 
 const route = useRoute()
 const invitation = ref(null)
@@ -27,35 +28,7 @@ const rsvpOptions = [
   { value: 'recusado', label: '✕ Não poderei ir', color: 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600' },
 ]
 
-const themeStyles = {
-  jardim: {
-    bg: 'bg-gradient-to-b from-emerald-50 via-teal-50/40 to-slate-100 text-slate-900',
-    card: 'border-emerald-200/80 bg-white/90 shadow-xl',
-    accent: 'text-festou-primary',
-    tag: 'bg-festou-magenta/12 text-festou-primary',
-    decorated: false,
-  },
-  colorido: {
-    bg: 'bg-festou-night text-white',
-    card: 'border-white/25 bg-white/10 text-white shadow-2xl backdrop-blur-md',
-    accent: 'text-festou-yellow',
-    tag: 'border border-white/30 bg-white/20 text-white',
-    decorated: true,
-  },
-  'ceu-estrelado': {
-    bg: 'bg-festou-dusk text-white',
-    card: 'border-festou-cyan/25 bg-white/10 text-white shadow-2xl backdrop-blur-md',
-    accent: 'text-festou-yellow',
-    tag: 'border border-festou-cyan/30 bg-festou-cyan/20 text-festou-cyan',
-    decorated: true,
-  },
-}
-
-const currentTheme = computed(() => themeStyles[invitation.value?.tema] || themeStyles.jardim)
-
-function formatEventDate(value) {
-  return formatDate(value, { dateStyle: 'full', timeStyle: 'short' })
-}
+const currentTheme = computed(() => getInvitationTheme(invitation.value?.tema))
 
 function getGoogleCalendarUrl(inv) {
   if (!inv) return '#'
@@ -108,7 +81,7 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
 <template>
   <main class="relative min-h-screen overflow-hidden px-4 py-8 transition-colors duration-500 sm:px-8 sm:py-14" :class="currentTheme.bg">
     <!-- Decoração festiva dos temas noturnos -->
-    <template v-if="currentTheme.decorated">
+    <template v-if="currentTheme.kind === 'colorido'">
       <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
       <FestouDecor />
     </template>
@@ -142,56 +115,20 @@ watch(() => route.params.slug, loadInvitation, { immediate: true })
       </header>
 
       <!-- Cartão Principal do Convite -->
-      <article
-        class="relative mt-4 overflow-hidden rounded-3xl border p-8 text-center sm:p-12 transition-all"
-        :class="currentTheme.card"
-      >
-        <span class="text-xs font-bold uppercase tracking-widest opacity-80">
-          Você está convidado para celebrar
-        </span>
-
-        <h1 class="mt-4 font-heading text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-          {{ invitation.titulo }}
-        </h1>
-
-        <p class="mt-3 text-lg font-medium opacity-90">
-          Com carinho, <strong class="underline decoration-festou-primary underline-offset-4">{{ invitation.anfitriao }}</strong>
-        </p>
-
-        <p v-if="invitation.mensagem" class="mx-auto mt-6 max-w-lg text-sm leading-relaxed opacity-85">
-          "{{ invitation.mensagem }}"
-        </p>
-
-        <!-- Detalhes de Data e Local -->
-        <div class="mt-8 grid gap-4 rounded-2xl bg-black/10 p-5 text-left backdrop-blur-sm sm:grid-cols-2">
-          <div class="flex items-start gap-3">
-            <span class="text-2xl">📅</span>
-            <div>
-              <p class="text-[11px] font-bold uppercase tracking-wider opacity-70">Quando</p>
-              <p class="mt-0.5 text-sm font-bold">{{ formatEventDate(invitation.data_evento) }}</p>
-            </div>
+      <InvitationThemeCard :invitation="invitation">
+        <template #actions>
+          <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a
+              :href="getGoogleCalendarUrl(invitation)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 rounded-full border border-current/20 bg-white/20 px-4 py-1.5 text-xs font-bold shadow-sm backdrop-blur transition hover:bg-white/30"
+            >
+              <span>+ Adicionar ao Google Agenda</span>
+            </a>
           </div>
-          <div class="flex items-start gap-3">
-            <span class="text-2xl">📍</span>
-            <div>
-              <p class="text-[11px] font-bold uppercase tracking-wider opacity-70">Onde</p>
-              <p class="mt-0.5 text-sm font-bold">{{ invitation.local_evento }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Botão Adicionar à Agenda -->
-        <div class="mt-6 flex flex-wrap justify-center gap-3">
-          <a
-            :href="getGoogleCalendarUrl(invitation)"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 rounded-full border border-current/20 bg-white/20 px-4 py-1.5 text-xs font-bold shadow-sm backdrop-blur transition hover:bg-white/30"
-          >
-            <span>+ Adicionar ao Google Agenda</span>
-          </a>
-        </div>
-      </article>
+        </template>
+      </InvitationThemeCard>
 
       <!-- Seção do Formulário RSVP -->
       <section class="card-gradient mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
