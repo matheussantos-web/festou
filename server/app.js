@@ -17,6 +17,7 @@ import { invitationsRouter } from './routes/invitations.js'
 import { ordersRouter } from './routes/orders.js'
 import { passwordResetRouter } from './routes/passwordReset.js'
 import { productsRouter, supplierProductsRouter } from './routes/products.js'
+import { uploadsRouter } from './routes/uploads.js'
 
 function requestOrigin(request) {
   const host = request.get('host')
@@ -58,6 +59,7 @@ export function createApp() {
   app.use('/api/invitations', invitationsRouter)
   app.use('/api/products', productsRouter)
   app.use('/api/supplier/products', supplierProductsRouter)
+  app.use('/api/uploads', uploadsRouter)
   app.use('/api/orders', ordersRouter)
 
   app.use('/api', createNotFoundHandler())

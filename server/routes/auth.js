@@ -27,7 +27,7 @@ authRouter.post('/register', registerLimiter, async (request, response, next) =>
     const [profile] = await sql`
       insert into public.perfis (nome, email, senha_hash, tipo_perfil)
       values (${input.nome}, ${input.email}, ${passwordHash}, ${input.tipo_perfil})
-      returning id, nome, email, tipo_perfil
+      returning id, nome, email, tipo_perfil, avatar_url
     `
 
     const user = await startSession(profile, response)
@@ -45,7 +45,7 @@ authRouter.post('/login', loginLimiter, loginByEmailLimiter, async (request, res
     const input = loginSchema.parse(request.body)
     const sql = getDatabase()
     const [profile] = await sql`
-      select id, nome, email, tipo_perfil, senha_hash
+      select id, nome, email, tipo_perfil, avatar_url, whatsapp, senha_hash
       from public.perfis
       where email = ${input.email}
       limit 1
@@ -133,7 +133,7 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
     const sql = getDatabase()
 
     const [existing] = await sql`
-      select id, nome, email, tipo_perfil
+      select id, nome, email, tipo_perfil, avatar_url, whatsapp
       from public.perfis
       where lower(email) = ${email}
       limit 1
@@ -154,7 +154,7 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
     const [profile] = await sql`
       insert into public.perfis (nome, email, senha_hash, tipo_perfil)
       values (${nome}, ${email}, ${await getDummyPasswordHash()}, ${tipoPerfil})
-      returning id, nome, email, tipo_perfil
+      returning id, nome, email, tipo_perfil, avatar_url
     `
 
     const user = await startSession(profile, response)

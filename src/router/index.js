@@ -13,6 +13,7 @@ import SupplierDashboardView from '../views/SupplierDashboardView.vue'
 import CartView from '../views/CartView.vue'
 import InvitationsView from '../views/InvitationsView.vue'
 import PublicInvitationView from '../views/PublicInvitationView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import { loadSession } from '../lib/session'
 
 async function resolveSession() {
@@ -41,6 +42,12 @@ function createProfileGuard(tipoPerfil, destino) {
 
 const requireSupplier = createProfileGuard('fornecedor', 'fornecedor')
 const requireCustomer = createProfileGuard('cliente', 'carrinho')
+const requireAuthenticated = async (to) => {
+  const { user, error } = await resolveSession()
+  if (error) return { name: 'login', query: { erroConexao: '1', redirect: to.fullPath } }
+  if (!user) return { name: 'login', query: { redirect: to.fullPath } }
+  return true
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,6 +64,7 @@ const router = createRouter({
     { path: '/recuperar-senha', name: 'recuperar-senha', component: ForgotPasswordView, meta: { chrome: false } },
     { path: '/redefinir-senha', name: 'redefinir-senha', component: ResetPasswordView, meta: { chrome: false } },
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
+    { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },
     { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCustomer },
     { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
     {

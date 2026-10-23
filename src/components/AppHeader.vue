@@ -125,7 +125,8 @@ onBeforeUnmount(() => {
             aria-haspopup="menu"
             @click="isUserMenuOpen = !isUserMenuOpen"
           >
-            <span class="grid h-9 w-9 place-items-center rounded-full bg-festou-yellow font-heading text-base font-extrabold text-festou-midnight">
+            <img v-if="currentUser.avatar_url" :src="currentUser.avatar_url" alt="" class="h-9 w-9 rounded-full object-cover" />
+            <span v-else class="grid h-9 w-9 place-items-center rounded-full bg-festou-yellow font-heading text-base font-extrabold text-festou-midnight">
               {{ userInitial }}
             </span>
             <span class="max-w-[7rem] truncate">{{ firstName }}</span>
@@ -152,6 +153,13 @@ onBeforeUnmount(() => {
               <strong class="text-sm text-slate-900">{{ currentUser.nome }}</strong>
             </p>
             <div class="my-1 h-px bg-slate-100"></div>
+            <RouterLink
+              to="/perfil"
+              class="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
+              role="menuitem"
+            >
+              Minha foto de perfil
+            </RouterLink>
             <RouterLink
               v-if="currentUser.tipo_perfil === 'cliente'"
               to="/convites"
@@ -241,11 +249,15 @@ onBeforeUnmount(() => {
       <div class="mt-4 border-t border-white/10 pt-4">
         <template v-if="currentUser">
           <p class="mb-3 flex items-center gap-2 text-xs text-white/70">
-            <span class="grid h-8 w-8 place-items-center rounded-full bg-festou-yellow font-heading text-sm font-extrabold text-festou-midnight">
+            <img v-if="currentUser.avatar_url" :src="currentUser.avatar_url" alt="" class="h-8 w-8 rounded-full object-cover" />
+            <span v-else class="grid h-8 w-8 place-items-center rounded-full bg-festou-yellow font-heading text-sm font-extrabold text-festou-midnight">
               {{ userInitial }}
             </span>
             {{ currentUser.nome }}
           </p>
+          <RouterLink to="/perfil" class="mb-3 inline-flex min-h-10 items-center rounded-full border border-white/25 px-4 text-sm font-bold text-white transition-colors hover:bg-white/10" @click="closeMobileMenu">
+            Minha foto de perfil
+          </RouterLink>
           <button
             type="button"
             class="inline-flex min-h-11 items-center rounded-full border border-white/25 px-4 text-sm font-bold text-white transition-colors hover:bg-white/10"

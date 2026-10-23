@@ -43,6 +43,7 @@ Este quadro descreve o que existe no repositório hoje, não um compromisso com 
 | `/login` | Público | Entrada na conta |
 | `/recuperar-senha` | Público | Pedido do link de redefinição de senha |
 | `/redefinir-senha` | Público | Criação de nova senha a partir do token do link |
+| `/perfil` | Usuário autenticado | Envio da foto de perfil |
 | `/vitrine` | Público | Busca e filtro por categoria de produto |
 | `/carrinho` | Cliente autenticado | Ajuste de itens, envio de orçamento e histórico |
 | `/fornecedor/painel` | Fornecedor autenticado | Gestão de orçamentos recebidos e catálogo de produtos |
@@ -192,6 +193,8 @@ Comandos disponíveis:
 | `POST` | `/api/auth/reset-password` | Trocar a senha com o token do link e encerrar as sessões da conta |
 | `GET` | `/api/products` | Consultar vitrine; aceita `categoria`, `pagina` e `limite` e devolve `pagination` com total e total de páginas |
 | `POST` | `/api/products` | Publicar produto como fornecedor |
+| `POST` | `/api/uploads/product` | Enviar foto de produto ao bucket `produtos` como fornecedor |
+| `POST` | `/api/uploads/profile` | Enviar e salvar foto de perfil no bucket `perfil` |
 | `GET` | `/api/supplier/products` | Consultar catálogo completo do fornecedor autenticado (ativos e pausados) |
 | `GET` | `/api/supplier/products/:id` | Consultar um produto do fornecedor autenticado |
 | `PATCH` | `/api/supplier/products/:id` | Editar produto do fornecedor autenticado |
