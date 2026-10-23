@@ -29,6 +29,14 @@ class StorageError extends Error {
   }
 }
 
+function storageErrorMessage(result, bucket, status) {
+  const message = result.message || result.error || ''
+  if (status === 404 && /bucket not found/i.test(message)) {
+    return `O bucket "${bucket}" nao foi encontrado no projeto Supabase configurado no Render. Confira se SUPABASE_URL e a chave pertencem ao mesmo projeto e se o bucket tem esse nome exato.`
+  }
+  return message || `Nao foi possivel acessar o bucket ${bucket}.`
+}
+
 function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, '')
   const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -52,7 +60,7 @@ async function checkPublicBucket({ url, key }, bucket) {
   const result = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new StorageError(result.message || `Nao foi possivel acessar o bucket ${bucket}.`, response.status)
+    throw new StorageError(storageErrorMessage(result, bucket, response.status), response.status)
   }
   if (result.public !== true) {
     throw new StorageError(`O bucket ${bucket} precisa estar publico para exibir as fotos no Festou.`, 400)
@@ -79,7 +87,7 @@ async function uploadToSupabase(bucket, path, file, contentType, config) {
   })
   const result = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new StorageError(result.message || result.error || 'O Supabase nao conseguiu salvar a imagem.', response.status)
+    throw new StorageError(storageErrorMessage(result, bucket, response.status) || 'O Supabase nao conseguiu salvar a imagem.', response.status)
   }
 
   return `${config.url}/storage/v1/object/public/${bucket}/${encodedPath}`
