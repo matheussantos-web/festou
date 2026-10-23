@@ -186,7 +186,7 @@ ordersRouter.post('/', requireUser, async (request, response, next) => {
           preco_unitario, quantidade, subtotal
         ) values (
           ${orderIds[index]}, ${product.id}, ${product.fornecedor_id}, ${product.nome}, ${product.categoria},
-          ${unitPrice}, ${subtotal}
+          ${unitPrice}, ${quantity}, ${subtotal}
         )
       `))
     })
