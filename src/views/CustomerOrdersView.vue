@@ -5,6 +5,7 @@ import { api, asArray } from '../lib/api'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
 import OrderChat from '../components/OrderChat.vue'
+import OrderReview from '../components/OrderReview.vue'
 import { useSession } from '../lib/session'
 
 const route = useRoute()
@@ -69,6 +70,7 @@ async function loadMoreOrders() {
 }
 
 async function updateOrderStatus(order, nextStatus) {
+  if (nextStatus === 'negocio_fechado' && !window.confirm('Confirma que o acordo foi fechado com este fornecedor?')) return
   if (nextStatus === 'cancelado' && !window.confirm('Deseja cancelar esta solicitação de orçamento?')) return
   if (nextStatus === 'servico_concluido' && !window.confirm('Confirma que o serviço foi concluído?')) return
 
@@ -187,7 +189,16 @@ onBeforeUnmount(() => {
             <button
               v-if="['solicitado', 'em_negociacao'].includes(order.status)"
               type="button"
-              :disabled="updatingOrderId === order.id"
+              :disabled="updatingOrderId !== null"
+              class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+              @click="updateOrderStatus(order, 'negocio_fechado')"
+            >
+              {{ updatingOrderId === order.id ? 'Atualizando...' : 'Fechar negócio' }}
+            </button>
+            <button
+              v-if="['solicitado', 'em_negociacao'].includes(order.status)"
+              type="button"
+              :disabled="updatingOrderId !== null"
               class="rounded-full border border-rose-200 px-4 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
               @click="updateOrderStatus(order, 'cancelado')"
             >
@@ -196,7 +207,7 @@ onBeforeUnmount(() => {
             <button
               v-if="order.status === 'negocio_fechado'"
               type="button"
-              :disabled="updatingOrderId === order.id"
+              :disabled="updatingOrderId !== null"
               class="rounded-full bg-festou-turquoise px-4 py-2 text-xs font-bold text-white hover:bg-cyan-800 disabled:opacity-50"
               @click="updateOrderStatus(order, 'servico_concluido')"
             >
@@ -216,6 +227,8 @@ onBeforeUnmount(() => {
             </template>
             <span v-if="order.status === 'servico_concluido'" class="text-xs font-semibold text-festou-turquoise">Serviço concluído</span>
           </div>
+
+          <OrderReview v-if="order.status === 'servico_concluido'" :order-id="order.id" perspective="cliente" />
 
           <OrderChat
             :order-id="order.id"

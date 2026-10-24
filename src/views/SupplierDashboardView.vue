@@ -4,6 +4,7 @@ import { api, asArray } from '../lib/api'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
 import OrderChat from '../components/OrderChat.vue'
+import OrderReview from '../components/OrderReview.vue'
 import { useSession } from '../lib/session'
 
 const { user } = useSession()
@@ -102,6 +103,7 @@ function selectTab(tab) {
 }
 
 async function updateOrderStatus(order, nextStatus) {
+  if (nextStatus === 'negocio_fechado' && !window.confirm('Confirma que o acordo foi fechado com este cliente?')) return
   if (nextStatus === 'recusado') {
     const confirmed = window.confirm('Deseja realmente recusar este orçamento? O cliente será notificado da recusa.')
     if (!confirmed) return
@@ -217,6 +219,9 @@ onBeforeUnmount(() => {
       </p>
       <p v-if="actionError" role="alert" class="mt-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">
         {{ actionError }}
+      </p>
+      <p v-if="updatingOrderId" role="status" class="mt-3 text-sm font-semibold text-festou-secondary">
+        Atualizando o status do orçamento...
       </p>
 
       <!-- Abas de navegação -->
@@ -346,7 +351,7 @@ onBeforeUnmount(() => {
                 <template v-if="order.status === 'solicitado'">
                   <button
                     type="button"
-                    :disabled="updatingOrderId === order.id"
+                    :disabled="updatingOrderId !== null"
                     class="rounded-full bg-festou-secondary px-3.5 py-2 text-xs font-bold text-white shadow-festive-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'em_negociacao')"
                   >
@@ -354,7 +359,7 @@ onBeforeUnmount(() => {
                   </button>
                   <button
                     type="button"
-                    :disabled="updatingOrderId === order.id"
+                    :disabled="updatingOrderId !== null"
                     class="rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'negocio_fechado')"
                   >
@@ -362,7 +367,7 @@ onBeforeUnmount(() => {
                   </button>
                   <button
                     type="button"
-                    :disabled="updatingOrderId === order.id"
+                    :disabled="updatingOrderId !== null"
                     class="rounded-full border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 transition-all duration-300 hover:bg-rose-50 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'recusado')"
                   >
@@ -373,7 +378,7 @@ onBeforeUnmount(() => {
                 <template v-else-if="order.status === 'em_negociacao'">
                   <button
                     type="button"
-                    :disabled="updatingOrderId === order.id"
+                    :disabled="updatingOrderId !== null"
                     class="rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'negocio_fechado')"
                   >
@@ -381,7 +386,7 @@ onBeforeUnmount(() => {
                   </button>
                   <button
                     type="button"
-                    :disabled="updatingOrderId === order.id"
+                    :disabled="updatingOrderId !== null"
                     class="rounded-full border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 transition-all duration-300 hover:bg-rose-50 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'recusado')"
                   >
@@ -392,7 +397,7 @@ onBeforeUnmount(() => {
                 <template v-else-if="order.status === 'negocio_fechado'">
                   <button
                     type="button"
-                    :disabled="updatingOrderId === order.id"
+                    :disabled="updatingOrderId !== null"
                     class="rounded-full bg-festou-turquoise px-3.5 py-2 text-xs font-bold text-white shadow-festive-soft transition hover:bg-cyan-800 disabled:opacity-50"
                     @click="updateOrderStatus(order, 'servico_concluido')"
                   >
@@ -425,6 +430,7 @@ onBeforeUnmount(() => {
                 O e-mail do cliente aparece aqui após a confirmação do pedido.
               </span>
             </div>
+            <OrderReview v-if="order.status === 'servico_concluido'" :order-id="order.id" perspective="fornecedor" />
             <OrderChat
               :order-id="order.id"
               :current-user-id="user?.id || ''"

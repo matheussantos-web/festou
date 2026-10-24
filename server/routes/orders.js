@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { getDatabase } from '../db.js'
 import { requireUser } from '../middleware/session.js'
 import { clientOrderSelect, findClientOrderById } from '../queries/orders.js'
-import { orderSchema, updateOrderStatusSchema } from '../schemas/orders.js'
+import { orderReviewSchema, orderSchema, updateOrderStatusSchema } from '../schemas/orders.js'
 import { buildPagination, readPagination } from '../schemas/pagination.js'
 
 export const ordersRouter = Router()
@@ -262,6 +262,94 @@ ordersRouter.post('/:id/messages', requireUser, async (request, response, next) 
   }
 })
 
+ordersRouter.get('/:id/review', requireUser, async (request, response, next) => {
+  try {
+    const orderId = orderIdSchema.parse(request.params.id)
+    const sql = getDatabase()
+    const [order] = await sql`
+      select o.id, o.status, o.cliente_id,
+        (select i.fornecedor_id from public.itens_pedido i
+         where i.pedido_id = o.id limit 1) as fornecedor_id
+      from public.pedidos o
+      where o.id = ${orderId}
+      limit 1
+    `
+
+    if (!order) return response.status(404).json({ message: 'Pedido nao encontrado.' })
+
+    const isClient = request.user.tipo_perfil === 'cliente' && order.cliente_id === request.user.id
+    const [supplierAccess] = request.user.tipo_perfil === 'fornecedor'
+      ? await sql`
+          select 1 from public.itens_pedido
+          where pedido_id = ${orderId} and fornecedor_id = ${request.user.id}
+          limit 1
+        `
+      : [null]
+
+    if (!isClient && !supplierAccess) {
+      return response.status(404).json({ message: 'Avaliacao nao encontrada.' })
+    }
+
+    const [review] = await sql`
+      select id, nota, comentario, created_at, updated_at
+      from public.avaliacoes_fornecedor
+      where pedido_id = ${orderId}
+      limit 1
+    `
+
+    return response.json({ review: review || null, can_review: isClient && order.status === 'servico_concluido' })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+ordersRouter.post('/:id/review', requireUser, async (request, response, next) => {
+  try {
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem avaliar o servico.' })
+    }
+
+    const orderId = orderIdSchema.parse(request.params.id)
+    const input = orderReviewSchema.parse(request.body)
+    const sql = getDatabase()
+    const [order] = await sql`
+      select o.id, o.status,
+        (select i.fornecedor_id from public.itens_pedido i
+         where i.pedido_id = o.id limit 1) as fornecedor_id
+      from public.pedidos o
+      where o.id = ${orderId} and o.cliente_id = ${request.user.id}
+      limit 1
+    `
+
+    if (!order) return response.status(404).json({ message: 'Pedido nao encontrado.' })
+    if (order.status !== 'servico_concluido') {
+      return response.status(409).json({ message: 'A avaliacao fica disponivel apos a conclusao do servico.' })
+    }
+    if (!order.fornecedor_id) {
+      return response.status(409).json({ message: 'Este pedido nao possui fornecedor para avaliar.' })
+    }
+
+    const [review] = await sql`
+      insert into public.avaliacoes_fornecedor (
+        pedido_id, cliente_id, fornecedor_id, nota, comentario
+      ) values (
+        ${orderId}, ${request.user.id}, ${order.fornecedor_id}, ${input.nota}, ${input.comentario}
+      )
+      on conflict (pedido_id) do update set
+        nota = excluded.nota,
+        comentario = excluded.comentario,
+        updated_at = now()
+      where public.avaliacoes_fornecedor.cliente_id = ${request.user.id}
+      returning id, nota, comentario, created_at, updated_at
+    `
+
+    if (!review) return response.status(409).json({ message: 'Nao foi possivel atualizar esta avaliacao.' })
+    return response.json({ message: 'Avaliacao salva com sucesso.', review })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 ordersRouter.patch('/:id/status', requireUser, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
@@ -287,6 +375,10 @@ ordersRouter.patch('/:id/status', requireUser, async (request, response, next) =
       if (input.status === 'cancelado') {
         if (!['solicitado', 'em_negociacao'].includes(order.status)) {
           return response.status(400).json({ message: 'Apenas pedidos pendentes ou em negociação podem ser cancelados.' })
+        }
+      } else if (input.status === 'negocio_fechado') {
+        if (!['solicitado', 'em_negociacao'].includes(order.status)) {
+          return response.status(400).json({ message: 'Somente orcamentos pendentes ou em negociacao podem ser fechados.' })
         }
       } else if (input.status === 'servico_concluido') {
         if (order.status !== 'negocio_fechado') {
@@ -324,9 +416,13 @@ ordersRouter.patch('/:id/status', requireUser, async (request, response, next) =
     const [updatedOrder] = await sql`
       update public.pedidos
       set status = ${input.status}
-      where id = ${order.id}
+      where id = ${order.id} and status = ${order.status}
       returning id, status
     `
+
+    if (!updatedOrder) {
+      return response.status(409).json({ message: 'O status mudou enquanto a solicitacao era processada. Atualize e tente novamente.' })
+    }
 
     response.json({
       message: 'Status do pedido atualizado com sucesso.',

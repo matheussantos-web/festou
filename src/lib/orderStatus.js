@@ -1,6 +1,6 @@
 export const orderStatusStyles = {
-  solicitado: 'bg-festou-yellow/20 text-festou-accent border border-festou-yellow/40',
-  em_negociacao: 'bg-festou-secondary/12 text-festou-secondary border border-festou-secondary/30',
+  solicitado: 'bg-slate-100 text-slate-700 border border-slate-200',
+  em_negociacao: 'bg-festou-yellow/25 text-festou-accent border border-festou-yellow/50',
   negocio_fechado: 'bg-emerald-100 text-emerald-900 border border-emerald-200',
   servico_concluido: 'bg-festou-cyan/15 text-festou-turquoise border border-festou-cyan/30',
   recusado: 'bg-rose-100 text-rose-900 border border-rose-200',

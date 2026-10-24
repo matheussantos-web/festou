@@ -14,4 +14,9 @@ export const updateOrderStatusSchema = z.object({
   }),
 })
 
+export const orderReviewSchema = z.object({
+  nota: z.number().int().min(1).max(5),
+  comentario: z.string().trim().max(1000).optional().transform((value) => value || null),
+})
+
 export const orderStatusEnum = updateOrderStatusSchema.shape.status
