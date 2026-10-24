@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
               class="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
               role="menuitem"
             >
-              Minha foto de perfil
+              Meu perfil
             </RouterLink>
             <RouterLink
               v-if="currentUser.tipo_perfil === 'cliente'"
@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
             {{ currentUser.nome }}
           </p>
           <RouterLink to="/perfil" class="mb-3 inline-flex min-h-10 items-center rounded-full border border-white/25 px-4 text-sm font-bold text-white transition-colors hover:bg-white/10" @click="closeMobileMenu">
-            Minha foto de perfil
+            Meu perfil
           </RouterLink>
           <button
             type="button"
