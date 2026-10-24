@@ -81,7 +81,7 @@ export function createApp() {
       try {
         const sql = getDatabase()
         const [invitation] = await sql`
-          select slug, titulo, anfitriao, data_evento, local_evento, tema
+          select slug, titulo, anfitriao, mensagem, data_evento, local_evento, tema
           from public.convites
           where slug = ${request.params.slug}
           limit 1

@@ -14,7 +14,8 @@ const brand = {
   cyan: [0, 194, 209],
 }
 
-const brandLogo = decodeBrandPng(readFileSync(new URL('../public/03_logo_horizontal.png', import.meta.url)))
+// Versao horizontal processada para remover o fundo branco do arquivo original.
+const brandLogo = decodeBrandPng(readFileSync(new URL('../public/festou-logo-horizontal.png', import.meta.url)))
 
 const glyphRows = {
   A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
@@ -61,8 +62,7 @@ function pngChunk(type, data) {
   return Buffer.concat([length, name, data, checksum])
 }
 
-// O brand kit e uma PNG RGB simples. Decodificamos uma vez no carregamento do
-// modulo para compor o logotipo e as ilustracoes oficiais em cada preview.
+// Decodifica PNG RGB ou RGBA uma vez para compor o logo com seu canal alpha.
 function decodeBrandPng(buffer) {
   let width = 0
   let height = 0
@@ -87,11 +87,12 @@ function decodeBrandPng(buffer) {
     offset += length + 12
   }
 
-  if (bitDepth !== 8 || colorType !== 2 || !width || !height) {
-    throw new Error('O arquivo festou-marca.png precisa ser uma PNG RGB de 8 bits.')
+  if (bitDepth !== 8 || ![2, 6].includes(colorType) || !width || !height) {
+    throw new Error('A logo do Festou precisa ser uma PNG RGB/RGBA de 8 bits.')
   }
 
-  const bytesPerPixel = 3
+  const channels = colorType === 6 ? 4 : 3
+  const bytesPerPixel = channels
   const rowLength = width * bytesPerPixel
   const compressedPixels = inflateSync(Buffer.concat(imageData))
   const pixels = Buffer.alloc(rowLength * height)
@@ -131,7 +132,7 @@ function decodeBrandPng(buffer) {
     sourceOffset += rowLength
   }
 
-  return { width, height, pixels }
+  return { width, height, channels, pixels }
 }
 
 function normalizeText(value) {
@@ -196,8 +197,8 @@ function drawInvitationText(pixels, value, x, y, scale, color) {
 }
 
 function drawBrandLogo(pixels) {
-  // Mantem a proporcao do arquivo horizontal enviado para o brand kit.
-  const targetWidth = 520
+  // Sem placa/container: os pixels transparentes revelam o fundo roxo do card.
+  const targetWidth = 350
   const targetHeight = Math.round(targetWidth * brandLogo.height / brandLogo.width)
   const targetX = Math.round((WIDTH - targetWidth) / 2)
   const targetY = 16
@@ -212,17 +213,20 @@ function drawBrandLogo(pixels) {
       const sourceX0 = Math.max(0, Math.floor(sourceX))
       const sourceX1 = Math.min(brandLogo.width - 1, sourceX0 + 1)
       const weightX = Math.max(0, sourceX - sourceX0)
-      const sourceOffset00 = (sourceY0 * brandLogo.width + sourceX0) * 3
-      const sourceOffset01 = (sourceY0 * brandLogo.width + sourceX1) * 3
-      const sourceOffset10 = (sourceY1 * brandLogo.width + sourceX0) * 3
-      const sourceOffset11 = (sourceY1 * brandLogo.width + sourceX1) * 3
+      const sourceOffset00 = (sourceY0 * brandLogo.width + sourceX0) * brandLogo.channels
+      const sourceOffset01 = (sourceY0 * brandLogo.width + sourceX1) * brandLogo.channels
+      const sourceOffset10 = (sourceY1 * brandLogo.width + sourceX0) * brandLogo.channels
+      const sourceOffset11 = (sourceY1 * brandLogo.width + sourceX1) * brandLogo.channels
       const targetOffset = ((targetY + y) * WIDTH + targetX + x) * CHANNELS
       for (let channel = 0; channel < 3; channel += 1) {
         const top = brandLogo.pixels[sourceOffset00 + channel] * (1 - weightX) + brandLogo.pixels[sourceOffset01 + channel] * weightX
         const bottom = brandLogo.pixels[sourceOffset10 + channel] * (1 - weightX) + brandLogo.pixels[sourceOffset11 + channel] * weightX
-        pixels[targetOffset + channel] = Math.round(top * (1 - weightY) + bottom * weightY)
+        const color = top * (1 - weightY) + bottom * weightY
+        const topAlpha = brandLogo.channels === 4 ? brandLogo.pixels[sourceOffset00 + 3] * (1 - weightX) + brandLogo.pixels[sourceOffset01 + 3] * weightX : 255
+        const bottomAlpha = brandLogo.channels === 4 ? brandLogo.pixels[sourceOffset10 + 3] * (1 - weightX) + brandLogo.pixels[sourceOffset11 + 3] * weightX : 255
+        const alpha = (topAlpha * (1 - weightY) + bottomAlpha * weightY) / 255
+        pixels[targetOffset + channel] = Math.round(color * alpha + pixels[targetOffset + channel] * (1 - alpha))
       }
-      pixels[targetOffset + 3] = 255
     }
   }
 }
@@ -245,8 +249,9 @@ function drawBrandEdgeDetails(pixels) {
   drawBalloon(pixels, 1120, 264, 19, 25, brand.cyan)
   drawBalloon(pixels, 110, 315, 15, 21, brand.yellow)
   drawBalloon(pixels, 1090, 326, 15, 21, brand.pink)
-  drawCastle(pixels, 22, 540, 1)
-  drawCastle(pixels, 1024, 540, 1)
+  // Decoracao sutil nas bordas; o rodape e o centro ficam livres para leitura.
+  drawCastle(pixels, 22, 600, 1)
+  drawCastle(pixels, 1024, 600, 1)
 }
 
 function setPixel(pixels, x, y, color) {
@@ -387,30 +392,37 @@ export function renderInvitationPng(invitation) {
     }
   }
 
-  // Compoe decoracoes vetoriais nas bordas e o logo horizontal enviado.
+  // Compoe decoracoes discretas e o logo transparente sobre o proprio fundo.
   drawBrandEdgeDetails(pixels)
   drawBrandLogo(pixels)
 
   const textCenter = WIDTH / 2
-  const textWidth = 830
+  const textWidth = 900
 
   const title = normalizeText(invitation.titulo || 'SUA FESTA COM A GENTE')
-  const titleScale = titleScaleFor(title.length)
+  const titleScale = Math.min(titleScaleFor(title.length), 7)
   const titleMaxLength = Math.floor(textWidth / (6 * titleScale))
-  const titleLines = wrapText(title, titleMaxLength, 3)
+  const titleLines = wrapText(title, titleMaxLength, 2)
   const titleLineHeight = titleScale * 9
-  const titleY = 224
+  const titleY = 170
   titleLines.forEach((line, index) => centeredText(pixels, line, textCenter, titleY + index * titleLineHeight, titleScale, brand.white))
 
-  const date = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(invitation.data_evento))
-  const dateLines = wrapText(date, 36, 2)
-  const detailsY = Math.max(360, titleY + titleLines.length * titleLineHeight + 28)
-  centeredText(pixels, 'DATA E HORARIO', textCenter, detailsY, 3, brand.yellow)
-  const dateY = detailsY + 38
-  dateLines.forEach((line, index) => centeredText(pixels, line, textCenter, dateY + index * 27, 3, brand.white))
+  const titleBottom = titleY + titleLines.length * titleLineHeight
+  const message = normalizeText(invitation.mensagem || 'VOCE ESTA CONVIDADO')
+  const messageLines = wrapText(message, 64, 1)
+  const messageY = titleBottom + 12
+  messageLines.forEach((line, index) => centeredText(pixels, line, textCenter, messageY + index * 27, 3, brand.pink))
 
-  const locationLines = wrapText(invitation.local_evento, 36, 2)
-  const locationLabelY = dateY + dateLines.length * 27 + 24
+  const date = invitation.data_evento
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(invitation.data_evento))
+    : 'DATA A CONFIRMAR'
+  const dateLines = wrapText(date, 40, 2)
+  const detailsY = Math.max(326, messageY + messageLines.length * 27 + 18)
+  centeredText(pixels, 'DATA E HORARIO', textCenter, detailsY, 3, brand.yellow)
+  dateLines.forEach((line, index) => centeredText(pixels, line, textCenter, detailsY + 30 + index * 27, 3, brand.white))
+
+  const locationLines = wrapText(invitation.local_evento || 'LOCAL A CONFIRMAR', 40, 2)
+  const locationLabelY = detailsY + 78 + (dateLines.length - 1) * 27
   centeredText(pixels, 'LOCAL', textCenter, locationLabelY, 3, brand.yellow)
   locationLines.forEach((line, index) => centeredText(pixels, line, textCenter, locationLabelY + 30 + index * 27, 3, brand.white))
 
