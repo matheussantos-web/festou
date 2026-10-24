@@ -7,6 +7,7 @@ import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import ProductCatalogView from '../views/ProductCatalogView.vue'
+import ProductDetailView from '../views/ProductDetailView.vue'
 import SupplierProductCreateView from '../views/SupplierProductCreateView.vue'
 import SupplierProductEditView from '../views/SupplierProductEditView.vue'
 import SupplierDashboardView from '../views/SupplierDashboardView.vue'
@@ -65,6 +66,7 @@ const router = createRouter({
     { path: '/recuperar-senha', name: 'recuperar-senha', component: ForgotPasswordView, meta: { chrome: false } },
     { path: '/redefinir-senha', name: 'redefinir-senha', component: ResetPasswordView, meta: { chrome: false } },
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
+    { path: '/produto/:id', name: 'produto-detalhe', component: ProductDetailView },
     { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },
     { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCustomer },
     { path: '/orcamentos', name: 'meus-orcamentos', component: CustomerOrdersView, beforeEnter: requireCustomer },

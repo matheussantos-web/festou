@@ -21,6 +21,9 @@ export const productSchema = z.object({
   imagem_url: z.union([z.literal(''), httpsUrl])
     .optional()
     .transform((value) => value || null),
+  imagens_url: z.array(httpsUrl).max(5, 'Adicione no maximo 5 fotos.')
+    .optional()
+    .default([]),
 })
 
 export const productUpdateSchema = productSchema.partial().refine(

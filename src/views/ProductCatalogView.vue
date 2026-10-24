@@ -212,7 +212,9 @@ watch(categoryFilter, (value) => {
             <!-- Informações -->
             <div class="p-5">
               <h2 class="font-heading text-base font-bold text-slate-900 line-clamp-1 transition-colors duration-300 group-hover:text-festou-primary">
-                {{ product.nome }}
+                <RouterLink :to="{ name: 'produto-detalhe', params: { id: product.id } }" class="focus-visible:rounded-sm focus-visible:outline-festou-cyan">
+                  {{ product.nome }}
+                </RouterLink>
               </h2>
               <p class="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-2">
                 {{ product.descricao }}
@@ -231,14 +233,19 @@ watch(categoryFilter, (value) => {
                 {{ formatPrice(product.preco) }}
               </p>
             </div>
-            <button
-              type="button"
-              class="btn btn-secondary btn-sm"
-              :class="addedProductId === product.id ? 'bg-emerald-600 shadow-lg shadow-emerald-600/30 hover:bg-emerald-600' : ''"
-              @click="handleAddToCart(product)"
-            >
-              <span aria-live="polite">{{ addedProductId === product.id ? '✓ Adicionado' : '+ Carrinho' }}</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <RouterLink :to="{ name: 'produto-detalhe', params: { id: product.id } }" class="rounded-full border border-festou-purple/30 px-3 py-2 text-xs font-bold text-festou-purple transition hover:bg-festou-purple/10">
+                Detalhes
+              </RouterLink>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :class="addedProductId === product.id ? 'bg-emerald-600 shadow-lg shadow-emerald-600/30 hover:bg-emerald-600' : ''"
+                @click="handleAddToCart(product)"
+              >
+                <span aria-live="polite">{{ addedProductId === product.id ? '✓ Adicionado' : '+ Carrinho' }}</span>
+              </button>
+            </div>
           </div>
         </article>
       </div>

@@ -47,14 +47,14 @@ productsRouter.get('/', async (request, response, next) => {
 
     const products = category
       ? await sql`
-        select id, nome, descricao, categoria, preco, cidade, imagem_url, created_at
+        select id, nome, descricao, categoria, preco, cidade, imagem_url, imagens_url, created_at
         from public.produtos
         where ativo = true and categoria = ${category}
         order by created_at desc, id
         limit ${limite} offset ${offset}
       `
       : await sql`
-        select id, nome, descricao, categoria, preco, cidade, imagem_url, created_at
+        select id, nome, descricao, categoria, preco, cidade, imagem_url, imagens_url, created_at
         from public.produtos
         where ativo = true
         order by created_at desc, id
@@ -64,6 +64,56 @@ productsRouter.get('/', async (request, response, next) => {
     response.json({
       products,
       pagination: buildPagination({ pagina, limite, total }),
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+productsRouter.get('/:id', async (request, response, next) => {
+  try {
+    const productId = productIdSchema.parse(request.params.id)
+    const sql = getDatabase()
+    const [product] = await sql`
+      select id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, created_at,
+             fornecedor_id
+      from public.produtos
+      where id = ${productId} and ativo = true
+      limit 1
+    `
+
+    if (!product) return response.status(404).json({ message: 'Produto nao encontrado na vitrine.' })
+
+    const [supplierRows, reviewSummaryRows, reviews] = await Promise.all([
+      sql`
+        select id, nome, avatar_url, cover_url, biografia, whatsapp,
+               instagram_url, facebook_url, site_url
+        from public.perfis
+        where id = ${product.fornecedor_id} and tipo_perfil = 'fornecedor'
+        limit 1
+      `,
+      sql`
+        select count(*)::int as total,
+               coalesce(round(avg(nota)::numeric, 1), 0)::float as media
+        from public.avaliacoes_fornecedor
+        where fornecedor_id = ${product.fornecedor_id}
+      `,
+      sql`
+        select a.id, a.nota, a.comentario, a.created_at, p.nome as cliente_nome
+        from public.avaliacoes_fornecedor a
+        join public.perfis p on p.id = a.cliente_id
+        where a.fornecedor_id = ${product.fornecedor_id}
+        order by a.created_at desc
+        limit 10
+      `,
+    ])
+
+    const { fornecedor_id, ...publicProduct } = product
+    response.json({
+      product: publicProduct,
+      supplier: supplierRows[0] ?? null,
+      review_summary: reviewSummaryRows[0] ?? { total: 0, media: 0 },
+      reviews,
     })
   } catch (error) {
     next(error)
@@ -80,12 +130,12 @@ productsRouter.post('/', requireUser, async (request, response, next) => {
     const sql = getDatabase()
     const [product] = await sql`
       insert into public.produtos (
-        fornecedor_id, nome, categoria, descricao, preco, cidade, imagem_url
+        fornecedor_id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url
       ) values (
         ${request.user.id}, ${input.nome}, ${input.categoria}, ${input.descricao},
-        ${input.preco}, ${input.cidade}, ${input.imagem_url}
+        ${input.preco}, ${input.cidade}, ${input.imagem_url}, ${input.imagens_url}
       )
-      returning id, nome, categoria, descricao, preco, cidade, imagem_url, created_at
+      returning id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, created_at
     `
 
     response.status(201).json({ product })
@@ -100,7 +150,7 @@ supplierProductsRouter.get('/', requireUser, async (request, response, next) => 
 
     const sql = getDatabase()
     const products = await sql`
-      select id, nome, categoria, descricao, preco, cidade, imagem_url, ativo, created_at
+      select id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, ativo, created_at
       from public.produtos
       where fornecedor_id = ${request.user.id}
       order by created_at desc
@@ -157,7 +207,7 @@ supplierProductsRouter.get('/:id', requireUser, async (request, response, next) 
     const productId = productIdSchema.parse(request.params.id)
     const sql = getDatabase()
     const [product] = await sql`
-      select id, nome, categoria, descricao, preco, cidade, imagem_url, ativo, created_at
+      select id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, ativo, created_at
       from public.produtos
       where id = ${productId} and fornecedor_id = ${request.user.id}
       limit 1
@@ -180,7 +230,7 @@ supplierProductsRouter.patch('/:id', requireUser, async (request, response, next
     const productId = productIdSchema.parse(request.params.id)
     const input = productUpdateSchema.parse(request.body)
     const { assignments, values } = buildUpdate(
-      ['nome', 'categoria', 'descricao', 'preco', 'cidade', 'imagem_url'],
+      ['nome', 'categoria', 'descricao', 'preco', 'cidade', 'imagem_url', 'imagens_url'],
       input,
     )
 
@@ -189,7 +239,7 @@ supplierProductsRouter.patch('/:id', requireUser, async (request, response, next
       `update public.produtos
        set ${assignments.join(', ')}
        where id = $${values.length + 1} and fornecedor_id = $${values.length + 2}
-       returning id, nome, categoria, descricao, preco, cidade, imagem_url, ativo, created_at`,
+       returning id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, ativo, created_at`,
       [...values, productId, request.user.id],
     )
 

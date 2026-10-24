@@ -27,18 +27,19 @@ const emptyForm = () => ({
   preco: null,
   cidade: '',
   imagem_url: '',
+  imagens_url: [],
 })
 
 const form = reactive(emptyForm())
-const imagePreview = ref('')
+const imageGallery = ref([])
 const imageError = ref('')
 const isUploadingImage = ref(false)
 const photoInput = ref(null)
-let temporaryPreviewUrl = ''
+const temporaryPreviewUrls = new Set()
 
 function clearTemporaryPreview() {
-  if (temporaryPreviewUrl) URL.revokeObjectURL(temporaryPreviewUrl)
-  temporaryPreviewUrl = ''
+  temporaryPreviewUrls.forEach((url) => URL.revokeObjectURL(url))
+  temporaryPreviewUrls.clear()
 }
 
 function fill(product) {
@@ -50,8 +51,9 @@ function fill(product) {
     preco: product?.preco ?? null,
     cidade: product?.cidade ?? '',
     imagem_url: product?.imagem_url ?? '',
+    imagens_url: product?.imagens_url?.length ? [...product.imagens_url] : (product?.imagem_url ? [product.imagem_url] : []),
   })
-  imagePreview.value = form.imagem_url
+  imageGallery.value = form.imagens_url.map((src) => ({ src, pending: false }))
   imageError.value = ''
 }
 
@@ -60,40 +62,55 @@ watch(() => props.product, fill, { immediate: true })
 function reset() {
   clearTemporaryPreview()
   Object.assign(form, emptyForm())
-  imagePreview.value = ''
+  imageGallery.value = []
   imageError.value = ''
 }
 
 async function handleImageChange(event) {
-  const file = event.target.files?.[0]
+  const files = Array.from(event.target.files ?? [])
   event.target.value = ''
-  if (!file) return
+  if (!files.length) return
 
   imageError.value = ''
-  clearTemporaryPreview()
-  temporaryPreviewUrl = URL.createObjectURL(file)
-  imagePreview.value = temporaryPreviewUrl
+  const availableSlots = Math.max(0, 5 - imageGallery.value.length)
+  if (!availableSlots) {
+    imageError.value = 'O anuncio pode ter no maximo 5 fotos.'
+    return
+  }
+  const filesToUpload = files.slice(0, availableSlots)
+  if (filesToUpload.length < files.length) imageError.value = 'Foram selecionadas apenas as fotos que cabem no limite de 5.'
   isUploadingImage.value = true
 
   try {
-    const result = await uploadImage(file, 'product')
-    form.imagem_url = result.image_url
-    clearTemporaryPreview()
-    imagePreview.value = result.image_url
-  } catch (error) {
-    imagePreview.value = form.imagem_url
-    imageError.value = error.message || 'Nao foi possivel enviar a foto.'
-    clearTemporaryPreview()
+    for (const file of filesToUpload) {
+      const previewUrl = URL.createObjectURL(file)
+      temporaryPreviewUrls.add(previewUrl)
+      const preview = { src: previewUrl, pending: true }
+      imageGallery.value.push(preview)
+      try {
+        const result = await uploadImage(file, 'product')
+        const index = imageGallery.value.indexOf(preview)
+        if (index >= 0) imageGallery.value[index] = { src: result.image_url, pending: false }
+        form.imagens_url.push(result.image_url)
+        if (!form.imagem_url) form.imagem_url = result.image_url
+      } catch (error) {
+        imageGallery.value = imageGallery.value.filter((image) => image !== preview)
+        imageError.value = error.message || 'Nao foi possivel enviar uma das fotos.'
+      } finally {
+        URL.revokeObjectURL(previewUrl)
+        temporaryPreviewUrls.delete(previewUrl)
+      }
+    }
   } finally {
     isUploadingImage.value = false
   }
 }
 
-function removeImage() {
-  form.imagem_url = ''
-  imagePreview.value = ''
+function removeImage(image) {
+  imageGallery.value = imageGallery.value.filter((entry) => entry !== image)
+  form.imagens_url = form.imagens_url.filter((url) => url !== image.src)
+  if (form.imagem_url === image.src) form.imagem_url = form.imagens_url[0] || ''
   imageError.value = ''
-  clearTemporaryPreview()
 }
 
 function openPhotoPicker() {
@@ -108,6 +125,7 @@ function submit() {
     preco: form.preco,
     cidade: form.cidade,
     imagem_url: form.imagem_url,
+    imagens_url: form.imagens_url,
   })
 }
 
@@ -203,12 +221,13 @@ onBeforeUnmount(clearTemporaryPreview)
       <div>
         <label for="product-photo" class="form-label">Foto do produto (opcional)</label>
         <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-          <img
-            v-if="imagePreview"
-            :src="imagePreview"
-            alt="Pre-visualizacao da foto do produto"
-            class="mb-4 h-44 w-full rounded-xl object-cover"
-          />
+          <div v-if="imageGallery.length" class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div v-for="(image, index) in imageGallery" :key="image.src" class="relative aspect-square overflow-hidden rounded-xl bg-white">
+              <img :src="image.src" :alt="`Foto ${index + 1} do produto`" class="h-full w-full object-cover" />
+              <span v-if="image.pending" class="absolute inset-x-0 bottom-0 bg-festou-dark/75 px-2 py-1 text-center text-xs font-bold text-white">Enviando...</span>
+              <button type="button" :disabled="image.pending || submitting" class="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/95 text-lg font-bold text-rose-700 shadow disabled:opacity-50" :aria-label="`Remover foto ${index + 1}`" @click="removeImage(image)">×</button>
+            </div>
+          </div>
           <div v-else class="mb-4 grid h-36 place-items-center rounded-xl bg-white text-sm font-semibold text-slate-400">
             A foto escolhida aparecera aqui
           </div>
@@ -216,6 +235,7 @@ onBeforeUnmount(clearTemporaryPreview)
             id="product-photo"
             ref="photoInput"
             type="file"
+            multiple
             accept="image/jpeg,image/png,image/webp"
             :disabled="isUploadingImage || submitting"
             class="sr-only"
@@ -228,14 +248,11 @@ onBeforeUnmount(clearTemporaryPreview)
             @click="openPhotoPicker"
           >
             <span aria-hidden="true">📷</span>
-            {{ imagePreview ? 'Trocar foto' : 'Escolher foto' }}
+            {{ imageGallery.length ? 'Adicionar fotos' : 'Escolher fotos' }}
           </button>
-          <p class="mt-2 text-xs text-slate-500">JPG, PNG ou WebP - ate 5 MB. A foto e enviada ao selecionar.</p>
-          <p v-if="isUploadingImage" role="status" class="mt-2 text-sm font-semibold text-festou-primary">Enviando foto...</p>
+          <p class="mt-2 text-xs text-slate-500">Adicione até 5 fotos JPG, PNG ou WebP (5 MB por imagem). Os arquivos são enviados ao selecionar.</p>
+          <p v-if="isUploadingImage" role="status" class="mt-2 text-sm font-semibold text-festou-primary">Enviando fotos...</p>
           <p v-if="imageError" role="alert" class="mt-2 text-sm font-semibold text-rose-700">{{ imageError }}</p>
-          <button v-if="form.imagem_url" type="button" class="mt-3 text-sm font-bold text-rose-700 hover:underline" @click="removeImage">
-            Remover foto do anuncio
-          </button>
         </div>
       </div>
     </div>
