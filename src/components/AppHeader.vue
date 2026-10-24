@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { cartCount } from '../lib/cart'
-import { clearSession, loadSession, useSession } from '../lib/session'
+import { clearSession, useSession } from '../lib/session'
 
 const router = useRouter()
 const { user: currentUser } = useSession()
@@ -48,7 +48,6 @@ function handlePointerDown(event) {
 watch(() => router.currentRoute.value.fullPath, closeMobileMenu)
 
 onMounted(() => {
-  loadSession()
   window.addEventListener('keydown', handleKeydown)
   document.addEventListener('pointerdown', handlePointerDown)
 })

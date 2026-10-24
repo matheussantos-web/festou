@@ -1,13 +1,48 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppFooter from './components/AppFooter.vue'
 import AppHeader from './components/AppHeader.vue'
 import MobileTabBar from './components/MobileTabBar.vue'
+import { useSession } from './lib/session'
+import { clearNotificationCounts, refreshNotificationCounts, setNotificationUser } from './lib/notifications'
 
 const route = useRoute()
+const { user: currentUser, loadSession } = useSession()
 
 const showChrome = computed(() => route.meta?.chrome !== false)
+let notificationRefreshTimer
+
+watch(currentUser, (user) => {
+  if (user?.id) {
+    setNotificationUser(user.id)
+    refreshNotificationCounts()
+  } else {
+    clearNotificationCounts()
+  }
+}, { immediate: true })
+
+watch(() => route.path, (path) => {
+  if (currentUser.value?.id && ['/orcamentos', '/fornecedor/painel'].includes(path)) {
+    refreshNotificationCounts()
+  }
+}, { immediate: true })
+
+function refreshNotificationsWhenVisible() {
+  if (currentUser.value?.id && document.visibilityState === 'visible') refreshNotificationCounts()
+}
+
+onMounted(() => {
+  // A sessão e as contagens são iniciadas no layout raiz, não dependem da rota.
+  loadSession()
+  document.addEventListener('visibilitychange', refreshNotificationsWhenVisible)
+  notificationRefreshTimer = window.setInterval(refreshNotificationsWhenVisible, 30_000)
+})
+
+onBeforeUnmount(() => {
+  window.clearInterval(notificationRefreshTimer)
+  document.removeEventListener('visibilitychange', refreshNotificationsWhenVisible)
+})
 </script>
 
 <template>

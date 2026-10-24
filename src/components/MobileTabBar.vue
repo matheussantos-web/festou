@@ -1,12 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed } from 'vue'
 import { cartCount } from '../lib/cart'
 import { useSession } from '../lib/session'
-import { clearNotificationCounts, refreshNotificationCounts, setNotificationUser, useNotifications } from '../lib/notifications'
+import { useNotifications } from '../lib/notifications'
 
 const { user: currentUser } = useSession()
-const route = useRoute()
 const { pendingOrderCount, unreadMessageCount } = useNotifications()
 
 const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor')
@@ -15,36 +13,6 @@ const orderNavigationLabel = computed(() => {
   return `${destination}: ${pendingOrderCount.value} pendentes e ${unreadMessageCount.value} mensagens não lidas`
 })
 
-let refreshTimer
-
-function refreshIfVisible() {
-  if (currentUser.value && document.visibilityState === 'visible') refreshNotificationCounts()
-}
-
-watch(currentUser, (user) => {
-  if (user?.id) {
-    setNotificationUser(user.id)
-    refreshNotificationCounts()
-  }
-  else clearNotificationCounts()
-}, { immediate: true })
-
-// Revalida ao entrar nas telas que contêm os pedidos e suas conversas.
-watch(() => route.path, (path) => {
-  if (currentUser.value?.id && ['/orcamentos', '/fornecedor/painel'].includes(path)) {
-    refreshNotificationCounts()
-  }
-}, { immediate: true })
-
-onMounted(() => {
-  document.addEventListener('visibilitychange', refreshIfVisible)
-  refreshTimer = window.setInterval(refreshIfVisible, 30_000)
-})
-
-onBeforeUnmount(() => {
-  window.clearInterval(refreshTimer)
-  document.removeEventListener('visibilitychange', refreshIfVisible)
-})
 </script>
 
 <template>
