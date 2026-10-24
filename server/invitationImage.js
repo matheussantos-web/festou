@@ -5,9 +5,9 @@ const HEIGHT = 630
 const CHANNELS = 4
 
 const palettes = {
-  jardim: { top: [224, 244, 230], bottom: [255, 245, 220], card: [255, 255, 250], ink: [31, 74, 59], accent: [39, 132, 91], detail: [218, 163, 76] },
-  colorido: { top: [50, 24, 100], bottom: [184, 43, 111], card: [255, 248, 253], ink: [42, 25, 74], accent: [226, 54, 139], detail: [255, 184, 72] },
-  'ceu-estrelado': { top: [15, 25, 66], bottom: [53, 48, 112], card: [244, 248, 255], ink: [26, 38, 82], accent: [40, 142, 190], detail: [255, 205, 105] },
+  jardim: { top: [232, 248, 235], bottom: [255, 248, 230], ink: [31, 74, 59], accent: [39, 132, 91], detail: [218, 163, 76] },
+  colorido: { top: [50, 24, 100], bottom: [125, 28, 91], ink: [255, 255, 255], accent: [255, 224, 105], detail: [255, 184, 72] },
+  'ceu-estrelado': { top: [17, 24, 63], bottom: [3, 6, 23], ink: [248, 250, 252], accent: [191, 219, 254], detail: [255, 230, 138] },
 }
 
 const glyphRows = {
@@ -116,6 +116,32 @@ function drawInvitationText(pixels, value, x, y, scale, color) {
   }
 }
 
+function drawSkyDecoration(pixels) {
+  const stars = [
+    [92, 88, 3], [238, 148, 2], [391, 72, 2], [548, 131, 2],
+    [728, 83, 2], [877, 151, 3], [1032, 116, 2], [1110, 214, 2],
+    [128, 510, 2], [1061, 502, 3], [925, 553, 2], [294, 553, 2],
+  ]
+  const starColor = [219, 234, 254]
+
+  for (const [centerX, centerY, radius] of stars) {
+    for (let y = centerY - radius; y <= centerY + radius; y += 1) {
+      for (let x = centerX - radius; x <= centerX + radius; x += 1) {
+        if ((x - centerX) ** 2 + (y - centerY) ** 2 > radius ** 2) continue
+        const offset = (y * WIDTH + x) * CHANNELS
+        pixels[offset] = starColor[0]
+        pixels[offset + 1] = starColor[1]
+        pixels[offset + 2] = starColor[2]
+        pixels[offset + 3] = 255
+      }
+    }
+  }
+
+  // Lua crescente no canto superior direito, como no tema CÃ©u Estrelado.
+  roundedRect(pixels, 1030, 62, 52, 52, 26, [255, 230, 138])
+  roundedRect(pixels, 1046, 52, 52, 52, 26, [29, 38, 83])
+}
+
 function wrapText(value, maxLength, maxLines = 2) {
   const words = normalizeText(value).split(' ').filter(Boolean)
   const lines = []
@@ -194,37 +220,33 @@ export function renderInvitationPng(invitation) {
     }
   }
 
-  // Cartao central e detalhes simples criam um visual coerente com cada tema.
-  roundedRect(pixels, 54, 32, 1092, 566, 34, palette.card)
-  roundedRect(pixels, 80, 58, 1040, 10, 5, palette.accent)
-  roundedRect(pixels, 492, 112, 216, 6, 3, palette.detail)
+  // A imagem OG representa somente o cartao: sem moldura externa, cabecalho,
+  // acoes de pagina ou rodape. O fundo do cartao ocupa os 1200x630 pixels.
+  if (invitation.tema === 'ceu-estrelado') drawSkyDecoration(pixels)
 
-  centeredText(pixels, 'CONVITE DIGITAL', WIDTH / 2, 78, 4, palette.accent)
-  centeredText(pixels, 'VOCE ESTA CONVIDADO PARA', WIDTH / 2, 137, 3, palette.ink)
+  centeredText(pixels, 'CONVITE DIGITAL', WIDTH / 2, 66, 4, palette.accent)
+  centeredText(pixels, 'VOCE ESTA CONVIDADO PARA', WIDTH / 2, 124, 3, palette.ink)
 
   const title = normalizeText(invitation.titulo)
   const titleScale = titleScaleFor(title.length)
   const titleMaxLength = Math.floor(940 / (6 * titleScale))
   const titleLines = wrapText(title, titleMaxLength, 3)
   const titleLineHeight = titleScale * 9
-  const titleY = 180
+  const titleY = 165
   titleLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, titleY + index * titleLineHeight, titleScale, palette.ink))
 
   const host = wrapText(`COM CARINHO, ${invitation.anfitriao}`, 39, 2)
-  const hostY = titleY + titleLines.length * titleLineHeight + 14
+  const hostY = titleY + titleLines.length * titleLineHeight + 12
   host.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, hostY + index * 30, 4, palette.accent))
 
   const date = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(invitation.data_evento))
   const dateLines = wrapText(date, 48, 2)
-  const dateY = hostY + host.length * 30 + 16
+  const dateY = hostY + host.length * 30 + 22
   dateLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, dateY + index * 27, 3, palette.ink))
 
   const locationLines = wrapText(`LOCAL: ${invitation.local_evento}`, 48, 2)
-  const locationY = dateY + dateLines.length * 27 + 14
+  const locationY = dateY + dateLines.length * 27 + 18
   locationLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, locationY + index * 27, 3, palette.ink))
-
-  roundedRect(pixels, 510, 548, 180, 4, 2, palette.detail)
-  centeredText(pixels, 'FESTOU!', WIDTH / 2, 563, 3, palette.accent)
 
   const scanlines = Buffer.alloc((WIDTH * CHANNELS + 1) * HEIGHT)
   for (let y = 0; y < HEIGHT; y += 1) {
