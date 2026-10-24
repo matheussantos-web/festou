@@ -11,6 +11,7 @@ import SupplierProductCreateView from '../views/SupplierProductCreateView.vue'
 import SupplierProductEditView from '../views/SupplierProductEditView.vue'
 import SupplierDashboardView from '../views/SupplierDashboardView.vue'
 import CartView from '../views/CartView.vue'
+import CustomerOrdersView from '../views/CustomerOrdersView.vue'
 import InvitationsView from '../views/InvitationsView.vue'
 import PublicInvitationView from '../views/PublicInvitationView.vue'
 import ProfileView from '../views/ProfileView.vue'
@@ -66,6 +67,7 @@ const router = createRouter({
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
     { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },
     { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCustomer },
+    { path: '/orcamentos', name: 'meus-orcamentos', component: CustomerOrdersView, beforeEnter: requireCustomer },
     { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
     {
       path: '/convite/:slug',

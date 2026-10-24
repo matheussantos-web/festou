@@ -42,7 +42,7 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
             '[]'::json
           ) as itens,
           case
-            when o.status = 'confirmado'
+            when o.status in ('negocio_fechado', 'servico_concluido')
             then coalesce(
               (select json_agg(distinct jsonb_build_object('email', f.email, 'whatsapp', null))
                from public.itens_pedido ip
@@ -86,7 +86,7 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
           -- O contato completo só é liberado depois que o pedido é confirmado;
           -- antes disso o fornecedor vê o e-mail mascarado (LGPD).
           case
-            when o.status in ('confirmado', 'concluido') then c.email
+            when o.status in ('negocio_fechado', 'servico_concluido') then c.email
             else regexp_replace(c.email, '^(.)[^@]*(@.*)$', '\\1***\\2')
           end as cliente_email,
           sum(i.subtotal) as total_fornecedor,
@@ -288,9 +288,9 @@ ordersRouter.patch('/:id/status', requireUser, async (request, response, next) =
         if (!['solicitado', 'em_negociacao'].includes(order.status)) {
           return response.status(400).json({ message: 'Apenas pedidos pendentes ou em negociação podem ser cancelados.' })
         }
-      } else if (input.status === 'concluido') {
-        if (order.status !== 'confirmado') {
-          return response.status(400).json({ message: 'Apenas pedidos confirmados podem ser marcados como concluídos.' })
+      } else if (input.status === 'servico_concluido') {
+        if (order.status !== 'negocio_fechado') {
+          return response.status(400).json({ message: 'Apenas negócios fechados podem ser marcados como serviço concluído.' })
         }
       } else {
         return response.status(403).json({ message: 'Clientes só podem cancelar ou concluir seus pedidos.' })
@@ -307,12 +307,14 @@ ordersRouter.patch('/:id/status', requireUser, async (request, response, next) =
         return response.status(403).json({ message: 'Você não possui produtos vinculados a este pedido.' })
       }
 
-      const allowedForSupplier = ['em_negociacao', 'confirmado', 'recusado']
-      if (!allowedForSupplier.includes(input.status)) {
-        return response.status(400).json({ message: 'Status inválido para fornecedor.' })
-      }
-
-      if (!['solicitado', 'em_negociacao'].includes(order.status)) {
+      if (['solicitado', 'em_negociacao'].includes(order.status)) {
+        const allowedForSupplier = ['em_negociacao', 'negocio_fechado', 'recusado']
+        if (!allowedForSupplier.includes(input.status)) {
+          return response.status(400).json({ message: 'Status inválido para esta etapa do orçamento.' })
+        }
+      } else if (order.status === 'negocio_fechado' && input.status !== 'servico_concluido') {
+        return response.status(400).json({ message: 'Após fechar o negócio, só é possível marcar o serviço como concluído.' })
+      } else if (order.status !== 'negocio_fechado') {
         return response.status(400).json({ message: 'Este pedido não pode mais ter o status alterado pelo fornecedor.' })
       }
     } else {

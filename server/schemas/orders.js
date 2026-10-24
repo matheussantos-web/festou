@@ -9,7 +9,7 @@ export const orderSchema = z.object({
 })
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['solicitado', 'em_negociacao', 'confirmado', 'recusado', 'cancelado', 'concluido'], {
+  status: z.enum(['solicitado', 'em_negociacao', 'negocio_fechado', 'servico_concluido', 'recusado', 'cancelado'], {
     errorMap: () => ({ message: 'Status do pedido inválido.' }),
   }),
 })

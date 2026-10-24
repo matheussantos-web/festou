@@ -1,28 +1,28 @@
 export const orderStatusStyles = {
   solicitado: 'bg-festou-yellow/20 text-festou-accent border border-festou-yellow/40',
   em_negociacao: 'bg-festou-secondary/12 text-festou-secondary border border-festou-secondary/30',
-  confirmado: 'bg-emerald-100 text-emerald-900 border border-emerald-200',
-  concluido: 'bg-festou-cyan/15 text-festou-turquoise border border-festou-cyan/30',
+  negocio_fechado: 'bg-emerald-100 text-emerald-900 border border-emerald-200',
+  servico_concluido: 'bg-festou-cyan/15 text-festou-turquoise border border-festou-cyan/30',
   recusado: 'bg-rose-100 text-rose-900 border border-rose-200',
   cancelado: 'bg-slate-100 text-slate-700 border border-slate-200',
 }
 
 const orderStatusLabels = {
   customer: {
-    solicitado: 'Aguardando fornecedor',
+    solicitado: 'Pendente',
     em_negociacao: 'Em negociação',
-    confirmado: 'Confirmado',
+    negocio_fechado: 'Negócio fechado',
     recusado: 'Recusado',
     cancelado: 'Cancelado',
-    concluido: 'Concluído',
+    servico_concluido: 'Serviço concluído',
   },
   supplier: {
-    solicitado: 'Novo orçamento',
+    solicitado: 'Pendente',
     em_negociacao: 'Em negociação',
-    confirmado: 'Confirmado',
+    negocio_fechado: 'Negócio fechado',
     recusado: 'Recusado',
     cancelado: 'Cancelado pelo cliente',
-    concluido: 'Concluído',
+    servico_concluido: 'Serviço concluído',
   },
 }
 

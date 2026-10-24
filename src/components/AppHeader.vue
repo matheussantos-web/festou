@@ -81,6 +81,9 @@ onBeforeUnmount(() => {
           <RouterLink to="/convites" class="nav-link" active-class="nav-link-active">
             Meus convites
           </RouterLink>
+          <RouterLink v-if="currentUser" to="/orcamentos" class="nav-link" active-class="nav-link-active">
+            Meus Orçamentos
+          </RouterLink>
           <RouterLink
             to="/carrinho"
             class="ml-1 inline-flex min-h-11 items-center gap-2 rounded-full bg-festou-yellow px-4 text-sm font-extrabold text-festou-midnight shadow-festive transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#FFE463]"
@@ -170,6 +173,14 @@ onBeforeUnmount(() => {
             </RouterLink>
             <RouterLink
               v-if="currentUser.tipo_perfil === 'cliente'"
+              to="/orcamentos"
+              class="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
+              role="menuitem"
+            >
+              Meus Orçamentos
+            </RouterLink>
+            <RouterLink
+              v-if="currentUser.tipo_perfil === 'cliente'"
               to="/carrinho"
               class="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
               role="menuitem"
@@ -231,6 +242,9 @@ onBeforeUnmount(() => {
         <template v-if="!currentUser || currentUser.tipo_perfil === 'cliente'">
           <RouterLink to="/convites" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
             Meus convites
+          </RouterLink>
+          <RouterLink v-if="currentUser" to="/orcamentos" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
+            Meus Orçamentos
           </RouterLink>
           <RouterLink to="/carrinho" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
             Carrinho ({{ cartCount }})

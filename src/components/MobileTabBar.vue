@@ -13,7 +13,7 @@ const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor
     class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     aria-label="Atalhos do aplicativo"
   >
-    <div class="mx-auto grid max-w-md grid-cols-4 px-2">
+    <div class="mx-auto grid max-w-md px-2" :class="isSupplier ? 'grid-cols-4' : 'grid-cols-5'">
       <RouterLink
         to="/"
         class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
@@ -77,6 +77,19 @@ const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor
           <path stroke-linecap="round" stroke-linejoin="round" d="m3 7 9 6 9-6" />
         </svg>
         {{ isSupplier ? 'Anunciar' : 'Convites' }}
+      </RouterLink>
+
+      <RouterLink
+        v-if="!isSupplier"
+        to="/orcamentos"
+        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
+        active-class="text-festou-primary"
+        aria-label="Meus Orçamentos"
+      >
+        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+        </svg>
+        Orçamentos
       </RouterLink>
     </div>
   </nav>

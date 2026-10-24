@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { api, asArray } from '../lib/api'
 import { formatDate, formatPrice } from '../lib/format'
 import { orderStatusLabel, orderStatusStyle } from '../lib/orderStatus'
@@ -28,36 +28,45 @@ const ordersTotal = ref(0)
 const pendingCount = ref(0)
 
 const ordersPageSize = 10
+let refreshTimer
+let isFetchingOrders = false
 
 // O backend mascara o e-mail até a confirmação; só libera o mailto quando o
 // endereço completo chega na resposta.
 function canContactClient(order) {
   const email = order.cliente_email || ''
-  const confirmed = order.status === 'confirmado' || order.status === 'concluido'
+  const confirmed = ['negocio_fechado', 'servico_concluido'].includes(order.status)
   return confirmed && email !== '' && !email.includes('***')
 }
 
-async function loadOrders({ append = false } = {}) {
+async function loadOrders({ append = false, silent = false } = {}) {
+  if (isFetchingOrders) return
+  isFetchingOrders = true
   if (append) {
     isLoadingMoreOrders.value = true
-  } else {
+  } else if (!silent) {
     isLoadingOrders.value = true
     ordersPage.value = 1
   }
-  ordersError.value = ''
+  if (!silent) ordersError.value = ''
 
   try {
-    const result = await api(`/orders?pagina=${ordersPage.value}&limite=${ordersPageSize}`)
-    const items = asArray(result.orders)
+    const pagesToLoad = append
+      ? [ordersPage.value]
+      : Array.from({ length: silent ? ordersPage.value : 1 }, (_, index) => index + 1)
+    const results = await Promise.all(pagesToLoad.map((page) => api(`/orders?pagina=${page}&limite=${ordersPageSize}`)))
+    const items = results.flatMap((result) => asArray(result.orders))
+    const uniqueItems = [...new Map(items.map((order) => [order.id, order])).values()]
 
-    orders.value = append ? [...orders.value, ...items] : items
-    ordersPagination.value = result.pagination ?? null
-    ordersTotal.value = result.pagination?.total ?? items.length
-    pendingCount.value = result.summary?.pendentes ?? 0
+    orders.value = append ? [...orders.value, ...uniqueItems] : uniqueItems
+    ordersPagination.value = results[0]?.pagination ?? ordersPagination.value
+    ordersTotal.value = results[0]?.pagination?.total ?? uniqueItems.length
+    pendingCount.value = results[0]?.summary?.pendentes ?? pendingCount.value
     loadedTabs.add('pedidos')
   } catch (error) {
-    ordersError.value = error.message || 'Não foi possível carregar os pedidos recebidos.'
+    if (!silent) ordersError.value = error.message || 'Não foi possível carregar os pedidos recebidos.'
   } finally {
+    isFetchingOrders = false
     isLoadingOrders.value = false
     isLoadingMoreOrders.value = false
   }
@@ -97,6 +106,7 @@ async function updateOrderStatus(order, nextStatus) {
     const confirmed = window.confirm('Deseja realmente recusar este orçamento? O cliente será notificado da recusa.')
     if (!confirmed) return
   }
+  if (nextStatus === 'servico_concluido' && !window.confirm('Confirma que este serviço foi concluído?')) return
 
   actionError.value = ''
   successMessage.value = ''
@@ -111,8 +121,9 @@ async function updateOrderStatus(order, nextStatus) {
     if (order.status === 'solicitado' && nextStatus !== 'solicitado') {
       pendingCount.value = Math.max(0, pendingCount.value - 1)
     }
-    order.status = nextStatus
+    order.status = result.order?.status || nextStatus
     successMessage.value = result.message || 'Status do pedido atualizado com sucesso.'
+    await loadOrders({ silent: true })
   } catch (error) {
     actionError.value = error.message || 'Não foi possível atualizar o status do pedido.'
   } finally {
@@ -159,7 +170,22 @@ async function deleteProduct(product) {
   }
 }
 
-onMounted(loadOrders)
+function refreshOrdersWhenVisible() {
+  if (activeTab.value === 'pedidos' && document.visibilityState === 'visible') loadOrders({ silent: true })
+}
+
+onMounted(() => {
+  loadOrders()
+  refreshTimer = window.setInterval(refreshOrdersWhenVisible, 15000)
+  document.addEventListener('visibilitychange', refreshOrdersWhenVisible)
+  window.addEventListener('focus', refreshOrdersWhenVisible)
+})
+
+onBeforeUnmount(() => {
+  window.clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', refreshOrdersWhenVisible)
+  window.removeEventListener('focus', refreshOrdersWhenVisible)
+})
 </script>
 
 <template>
@@ -330,9 +356,9 @@ onMounted(loadOrders)
                     type="button"
                     :disabled="updatingOrderId === order.id"
                     class="rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50"
-                    @click="updateOrderStatus(order, 'confirmado')"
+                    @click="updateOrderStatus(order, 'negocio_fechado')"
                   >
-                    Confirmar pedido
+                    Fechar negócio
                   </button>
                   <button
                     type="button"
@@ -349,9 +375,9 @@ onMounted(loadOrders)
                     type="button"
                     :disabled="updatingOrderId === order.id"
                     class="rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50"
-                    @click="updateOrderStatus(order, 'confirmado')"
+                    @click="updateOrderStatus(order, 'negocio_fechado')"
                   >
-                    Confirmar pedido
+                    Fechar negócio
                   </button>
                   <button
                     type="button"
@@ -363,8 +389,19 @@ onMounted(loadOrders)
                   </button>
                 </template>
 
-                <span v-else-if="order.status === 'confirmado'" class="text-xs font-semibold text-emerald-800">
-                  ✓ Pedido confirmado! Entre em contato com o cliente para combinar entrega/detalhes.
+                <template v-else-if="order.status === 'negocio_fechado'">
+                  <button
+                    type="button"
+                    :disabled="updatingOrderId === order.id"
+                    class="rounded-full bg-festou-turquoise px-3.5 py-2 text-xs font-bold text-white shadow-festive-soft transition hover:bg-cyan-800 disabled:opacity-50"
+                    @click="updateOrderStatus(order, 'servico_concluido')"
+                  >
+                    Marcar serviço concluído
+                  </button>
+                  <span class="text-xs font-semibold text-emerald-800">Negócio fechado. Combine a entrega ou execução do serviço.</span>
+                </template>
+                <span v-else-if="order.status === 'servico_concluido'" class="text-xs font-semibold text-festou-turquoise">
+                  ✓ Serviço concluído.
                 </span>
                 <span v-else-if="order.status === 'concluido'" class="text-xs font-semibold text-festou-turquoise">
                   ✓ Pedido finalizado e concluído pelo cliente.
