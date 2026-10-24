@@ -112,8 +112,8 @@ watch(categoryFilter, (value) => {
   <div class="min-h-screen bg-festou-soft text-slate-900">
 
     <!-- Hero Header da Vitrine -->
-    <section class="relative overflow-hidden bg-festou-night py-12 text-white md:py-16">
-      <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-midnight/70 via-festou-midnight/25 to-festou-midnight/35"></div>
+    <section class="relative overflow-hidden bg-festou-dark py-12 text-white md:py-16">
+      <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-dark/70 via-festou-dark/25 to-festou-dark/35"></div>
       <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
       <div class="pointer-events-none absolute -right-16 top-0 h-64 w-64 animate-festou-float rounded-full bg-festou-magenta/30 blur-3xl"></div>
 
@@ -206,7 +206,7 @@ watch(categoryFilter, (value) => {
               <div v-else class="grid h-full w-full place-items-center bg-gradient-to-br from-festou-magenta/20 via-festou-secondary/10 to-festou-cyan/20 text-4xl font-extrabold text-festou-primary">
                 {{ product.nome.slice(0, 2).toUpperCase() }}
               </div>
-              <span class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-bold text-festou-midnight shadow-sm backdrop-blur">
+              <span class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-bold text-festou-dark shadow-sm backdrop-blur">
                 {{ categories.find((c) => c.value === product.categoria)?.label || product.categoria }}
               </span>
             </div>
@@ -248,7 +248,7 @@ watch(categoryFilter, (value) => {
       <!-- Estado Vazio -->
       <div v-else class="card-gradient my-12 p-12 text-center">
         <span class="text-4xl">🎈</span>
-        <h3 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Nenhum produto encontrado</h3>
+        <h3 class="mt-4 font-heading text-2xl font-bold text-festou-dark">Nenhum produto encontrado</h3>
         <p class="mt-2 text-sm text-slate-600">
           Não encontramos produtos para os filtros selecionados. Tente buscar por outro termo ou categoria.
         </p>

@@ -78,7 +78,7 @@ onBeforeUnmount(() => window.clearInterval(refreshTimer))
 
 <template>
   <section class="mt-5 rounded-2xl border border-festou-secondary/15 bg-festou-secondary/5 p-4 sm:p-5" aria-label="Avaliacao do servico">
-    <h3 class="font-heading text-lg font-bold text-festou-midnight">
+    <h3 class="font-heading text-lg font-bold text-festou-dark">
       {{ perspective === 'cliente' ? 'Avalie este fornecedor' : 'Feedback do cliente' }}
     </h3>
 

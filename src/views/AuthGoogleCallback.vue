@@ -35,14 +35,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-festou-night px-5">
+  <div class="flex min-h-screen items-center justify-center bg-festou-dark px-5">
     <section class="glass-light w-full max-w-md p-8 text-center">
       <RouterLink to="/" class="festou-wordmark inline-flex items-center gap-0.5 text-3xl">
         <span>Festou<span>!</span></span>
       </RouterLink>
 
       <template v-if="errorMessage">
-        <h1 class="mt-4 font-heading text-xl font-bold text-festou-midnight">
+        <h1 class="mt-4 font-heading text-xl font-bold text-festou-dark">
           Não foi possível continuar
         </h1>
         <p class="mt-2 text-sm text-slate-600">{{ errorMessage }}</p>
@@ -52,7 +52,7 @@ onMounted(async () => {
       </template>
 
       <template v-else>
-        <h1 class="mt-4 font-heading text-xl font-bold text-festou-midnight">
+        <h1 class="mt-4 font-heading text-xl font-bold text-festou-dark">
           Entrando com o Google...
         </h1>
         <p class="mt-2 text-sm text-slate-600">Só um instante enquanto confirmamos seus dados.</p>

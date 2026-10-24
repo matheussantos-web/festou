@@ -118,7 +118,7 @@ onBeforeUnmount(() => {
       <header class="flex flex-wrap items-end justify-between gap-5 border-b border-slate-200/80 pb-6">
         <div>
           <span class="badge bg-festou-secondary/12 text-festou-secondary">Área do cliente</span>
-          <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">Meus Orçamentos</h1>
+          <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-dark sm:text-4xl">Meus Orçamentos</h1>
           <p class="mt-2 max-w-2xl text-slate-600">Acompanhe conversas, negociações e a conclusão dos serviços com cada fornecedor.</p>
         </div>
         <RouterLink to="/carrinho" class="btn btn-primary text-sm">Ir para o carrinho</RouterLink>
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
 
       <div v-if="isLoading" role="status" class="py-16 text-center text-slate-500">Carregando seus orçamentos...</div>
       <div v-else-if="!orders.length" class="card-gradient mt-6 p-10 text-center">
-        <h2 class="font-heading text-xl font-bold text-festou-midnight">Você ainda não enviou um orçamento</h2>
+        <h2 class="font-heading text-xl font-bold text-festou-dark">Você ainda não enviou um orçamento</h2>
         <p class="mt-2 text-sm text-slate-600">Adicione produtos ao carrinho e envie sua solicitação para começar uma conversa.</p>
         <RouterLink to="/vitrine" class="btn btn-primary mt-5 text-sm">Explorar fornecedores</RouterLink>
       </div>

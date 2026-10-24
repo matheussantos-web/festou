@@ -199,7 +199,7 @@ onBeforeUnmount(() => {
           <span class="badge bg-festou-secondary/12 text-festou-secondary">
             <span aria-hidden="true">💼</span> Gestão do Fornecedor
           </span>
-          <h1 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
+          <h1 class="mt-2 font-heading text-3xl font-extrabold text-festou-dark sm:text-4xl">
             Painel de Controle
           </h1>
           <p class="mt-1 text-sm text-slate-600">

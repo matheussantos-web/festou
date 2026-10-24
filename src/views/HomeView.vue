@@ -31,9 +31,9 @@ const steps = [
   <div id="conteudo-principal" class="min-h-screen bg-festou-soft text-slate-900">
 
     <!-- Hero Section: Noite Festiva -->
-    <section class="relative overflow-hidden bg-festou-night py-16 text-white sm:py-24">
+    <section class="relative overflow-hidden bg-festou-dark py-16 text-white sm:py-24">
       <!-- Profundidade da noite + confetes -->
-      <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-midnight/70 via-festou-midnight/25 to-festou-midnight/35"></div>
+      <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-dark/70 via-festou-dark/25 to-festou-dark/35"></div>
       <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
       <FestouDecor />
 
@@ -60,7 +60,7 @@ const steps = [
             <RouterLink to="/vitrine" class="btn btn-primary text-base">
               Explorar a vitrine <span class="ml-2" aria-hidden="true">→</span>
             </RouterLink>
-            <RouterLink to="/convites" class="btn btn-outline">
+            <RouterLink to="/convites" class="btn btn-primary">
               Criar convite digital
             </RouterLink>
           </div>
@@ -95,7 +95,7 @@ const steps = [
           <!-- Card Central: Preview do Convite Digital Interativo -->
           <div class="relative z-10 overflow-hidden rounded-3xl border border-white/60 bg-white shadow-2xl transition duration-500 hover:shadow-festive-glow">
             <!-- Topo do Convite -->
-            <div class="bg-festou-night p-6 text-white">
+            <div class="bg-festou-dark p-6 text-white">
               <div class="flex items-center justify-between">
                 <span class="rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold backdrop-blur">
                   💌 Convite Digital
@@ -179,7 +179,7 @@ const steps = [
     <section class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12">
       <div class="text-center">
         <p class="font-heading text-xs font-bold uppercase tracking-widest text-festou-primary">Tudo o que sua festa precisa</p>
-        <h2 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
+        <h2 class="mt-2 font-heading text-3xl font-extrabold text-festou-dark sm:text-4xl">
           Navegue pelas principais categorias
         </h2>
         <p class="mx-auto mt-3 max-w-2xl text-slate-600">
@@ -217,7 +217,7 @@ const steps = [
       <div class="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
         <div class="text-center">
           <p class="font-heading text-xs font-bold uppercase tracking-widest text-festou-turquoise">Simples, prático e rápido</p>
-          <h2 class="mt-2 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
+          <h2 class="mt-2 font-heading text-3xl font-extrabold text-festou-dark sm:text-4xl">
             Como funciona o Festou!
           </h2>
         </div>
@@ -231,7 +231,7 @@ const steps = [
             <span class="absolute -right-2 -top-4 font-heading text-6xl font-extrabold text-festou-primary/10 transition-colors duration-300 group-hover:text-festou-primary/20">
               {{ step.number }}
             </span>
-            <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-festou-night font-heading text-sm font-extrabold text-white shadow-festive-soft">
+            <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-festou-dark font-heading text-sm font-extrabold text-white shadow-festive-soft">
               {{ step.number }}
             </span>
             <h3 class="mt-4 font-heading text-xl font-bold text-slate-900">
@@ -264,7 +264,7 @@ const steps = [
           <div class="mt-8 flex flex-wrap gap-4">
             <RouterLink
               to="/cadastro"
-              class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-festou-midnight shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:bg-festou-yellow hover:shadow-xl"
+              class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-festou-dark shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:bg-festou-yellow hover:shadow-xl"
             >
               Criar conta de fornecedor
             </RouterLink>

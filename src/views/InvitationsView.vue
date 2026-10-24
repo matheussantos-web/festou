@@ -270,7 +270,7 @@ onMounted(loadInvitations)
         <span class="badge bg-festou-magenta/12 text-festou-primary">
           <span aria-hidden="true">💌</span> Convites Interativos
         </span>
-        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">
+        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-dark sm:text-4xl">
           Meus Convites Digitais
         </h1>
         <p class="mt-2 text-slate-600">
@@ -291,7 +291,7 @@ onMounted(loadInvitations)
           <template v-if="editingInvitation">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <h2 class="font-heading text-2xl font-bold text-festou-midnight">Editar Convite</h2>
+                <h2 class="font-heading text-2xl font-bold text-festou-dark">Editar Convite</h2>
                 <p class="mt-1 text-xs text-slate-500">Ajuste as informações e salve para atualizar o link compartilhado.</p>
               </div>
               <button
@@ -385,7 +385,7 @@ onMounted(loadInvitations)
           </template>
 
           <template v-else>
-            <h2 class="font-heading text-2xl font-bold text-festou-midnight">Criar Novo Convite</h2>
+            <h2 class="font-heading text-2xl font-bold text-festou-dark">Criar Novo Convite</h2>
             <p class="mt-1 text-xs text-slate-500">Preencha as informações da celebração para gerar a página pública.</p>
 
             <form class="mt-6 space-y-5" @submit.prevent="createInvitation">
@@ -520,7 +520,7 @@ onMounted(loadInvitations)
         <!-- Lista de Convites e Respostas -->
         <section>
           <div class="flex items-center justify-between">
-            <h2 class="font-heading text-2xl font-bold text-festou-midnight">Meus Convites Gerados</h2>
+            <h2 class="font-heading text-2xl font-bold text-festou-dark">Meus Convites Gerados</h2>
             <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-bold text-slate-700">
               {{ invitations.length }}
             </span>

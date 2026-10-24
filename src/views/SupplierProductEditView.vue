@@ -66,7 +66,7 @@ onMounted(loadProduct)
         <span class="badge bg-festou-secondary/12 text-festou-secondary">
           <span aria-hidden="true">✏️</span> Editar anúncio
         </span>
-        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight">
+        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-dark">
           Editar produto
         </h1>
         <p class="mt-1 text-sm text-slate-600">

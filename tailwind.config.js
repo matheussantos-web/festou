@@ -6,18 +6,21 @@ export default {
       colors: {
         festou: {
           // Papéis da marca: ação, destaque, noite e apoio
-          magenta: '#FF2D98', // Magenta puro: gradientes, brilhos e decoração
+          dark: '#1A1A3D',
+          pink: '#FF2D9B',
+          magenta: '#FF2D9B', // Magenta puro: gradientes, brilhos e decoração
           primary: '#C4126F', // Magenta AA: fundo de botão e texto sobre superfície clara
           'primary-strong': '#A00D5B', // Hover do magenta AA
-          secondary: '#4F46E5', // Roxo profundo: texto e detalhes sobre fundo claro
-          purple: '#7B12A2', // Roxo de apoio: camadas de gradiente
-          midnight: '#1A134D', // Noite: texto de marca e sombreamento
-          background: '#0F0A2C', // Fundo escuro mais profundo
-          yellow: '#FFD938', // Amarelo da marca: CTA principal, selos e confetes
-          lemon: '#FFD938',
+          secondary: '#7B1FA2', // Roxo profundo: texto e detalhes sobre fundo claro
+          purple: '#7B1FA2', // Roxo de apoio: camadas de gradiente
+          midnight: '#1A1A3D',
+          night: '#1A1A3D', // Noite: texto de marca e sombreamento
+          background: '#1A1A3D', // Fundo escuro mais profundo
+          yellow: '#FFD93B', // Amarelo da marca: CTA principal, selos e confetes
+          lemon: '#FFD93B',
           accent: '#8A5B00', // Dourado AA: texto sobre superfície clara
           orange: '#FF6B00',
-          cyan: '#06B6D4', // Turquesa puro: acentos e foco
+          cyan: '#00C2D1', // Turquesa puro: acentos e foco
           turquoise: '#0E7490', // Turquesa AA: texto sobre superfície clara
           // Papéis neutros
           surface: '#FFFFFF',
@@ -43,11 +46,11 @@ export default {
         85: '0.85',
       },
       backgroundImage: {
-        'festou-night': 'linear-gradient(135deg, #4F46E5 0%, #8B5CF6 45%, #FF2D98 100%)',
-        'festou-dusk': 'linear-gradient(135deg, #1A134D 0%, #4F46E5 55%, #FF2D98 100%)',
-        'festou-aurora': 'linear-gradient(135deg, #06B6D4 0%, #4F46E5 50%, #7B12A2 100%)',
-        'festou-candy': 'linear-gradient(135deg, #FFD938 0%, #FF2D98 50%, #8B5CF6 100%)',
-        'festou-ring': 'linear-gradient(135deg, #FF2D98 0%, #8B5CF6 50%, #06B6D4 100%)',
+        'festou-night': 'linear-gradient(135deg, #1A1A3D 0%, #7B1FA2 58%, #FF2D9B 100%)',
+        'festou-dusk': 'linear-gradient(135deg, #1A1A3D 0%, #7B1FA2 68%, #FF2D9B 100%)',
+        'festou-aurora': 'linear-gradient(135deg, #00C2D1 0%, #7B1FA2 55%, #1A1A3D 100%)',
+        'festou-candy': 'linear-gradient(135deg, #FFD93B 0%, #FF2D9B 52%, #7B1FA2 100%)',
+        'festou-ring': 'linear-gradient(135deg, #FF2D9B 0%, #7B1FA2 55%, #00C2D1 100%)',
         'festou-sheen':
           'linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%)',
       },

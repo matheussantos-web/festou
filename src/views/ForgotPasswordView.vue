@@ -28,8 +28,8 @@ async function requestReset() {
 </script>
 
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-festou-night px-5 py-12 text-slate-900">
-    <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-midnight/70 via-festou-midnight/25 to-festou-midnight/35"></div>
+  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-festou-dark px-5 py-12 text-slate-900">
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-dark/70 via-festou-dark/25 to-festou-dark/35"></div>
     <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
     <div class="pointer-events-none absolute -left-20 top-10 h-72 w-72 animate-festou-float rounded-full bg-festou-magenta/30 blur-3xl"></div>
     <div class="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 animate-festou-float rounded-full bg-festou-cyan/25 blur-3xl [animation-delay:1.5s]"></div>
@@ -39,7 +39,7 @@ async function requestReset() {
         <RouterLink to="/" class="festou-wordmark inline-flex items-center gap-0.5 text-3xl">
           <span>Festou<span>!</span></span>
         </RouterLink>
-        <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">
+        <h1 class="mt-4 font-heading text-2xl font-bold text-festou-dark">
           Recuperar senha
         </h1>
         <p class="mt-1 text-sm text-slate-600">

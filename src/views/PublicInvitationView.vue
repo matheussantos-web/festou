@@ -25,7 +25,7 @@ const form = reactive({
 
 const rsvpOptions = [
   { value: 'confirmado', label: '✓ Vou com certeza', color: 'peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600' },
-  { value: 'talvez', label: '? Talvez', color: 'peer-checked:bg-festou-yellow peer-checked:text-festou-midnight peer-checked:border-festou-yellow' },
+  { value: 'talvez', label: '? Talvez', color: 'peer-checked:bg-festou-yellow peer-checked:text-festou-dark peer-checked:border-festou-yellow' },
   { value: 'recusado', label: '✕ Não poderei ir', color: 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600' },
 ]
 
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
     <!-- Convite Não Encontrado -->
     <section v-else-if="errorMessage && !invitation" class="card-gradient relative z-10 mx-auto max-w-md p-8 text-center text-slate-800 shadow-xl">
       <span class="text-4xl">🔍</span>
-      <h1 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Convite não encontrado</h1>
+      <h1 class="mt-4 font-heading text-2xl font-bold text-festou-dark">Convite não encontrado</h1>
       <p class="mt-2 text-sm text-slate-600">{{ errorMessage }}</p>
       <RouterLink to="/" class="btn btn-primary mt-6 text-xs font-bold">
         Ir para página inicial
@@ -200,7 +200,7 @@ onBeforeUnmount(() => {
       <!-- Seção do Formulário RSVP -->
       <section class="card-gradient mt-8 p-6 text-slate-900 shadow-xl sm:p-8">
         <div class="text-center">
-          <h2 class="font-heading text-2xl font-bold text-festou-midnight">Confirmação de Presença</h2>
+          <h2 class="font-heading text-2xl font-bold text-festou-dark">Confirmação de Presença</h2>
           <p class="mt-1 text-xs text-slate-500">
             Responda para ajudar os anfitriões no planejamento da festa.
           </p>

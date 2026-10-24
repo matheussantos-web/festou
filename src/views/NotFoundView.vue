@@ -2,8 +2,8 @@
 </script>
 
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-festou-night text-slate-900">
-    <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-midnight/70 via-festou-midnight/25 to-festou-midnight/35"></div>
+  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-festou-dark text-slate-900">
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-dark/70 via-festou-dark/25 to-festou-dark/35"></div>
     <div class="festou-confetti-field pointer-events-none absolute inset-0 opacity-20"></div>
     <div class="pointer-events-none absolute -left-16 top-1/4 h-64 w-64 animate-festou-float rounded-full bg-festou-magenta/30 blur-3xl"></div>
     <div class="pointer-events-none absolute -right-16 bottom-1/4 h-64 w-64 animate-festou-float rounded-full bg-festou-cyan/25 blur-3xl [animation-delay:1.5s]"></div>

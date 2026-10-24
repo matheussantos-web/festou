@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <header class="fixed inset-x-0 top-0 z-50 bg-festou-midnight/95 text-white shadow-[0_18px_40px_-24px_rgba(15,10,44,0.9)] backdrop-blur-xl">
+  <header class="fixed inset-x-0 top-0 z-50 bg-festou-dark/95 text-white shadow-[0_18px_40px_-24px_rgba(15,10,44,0.9)] backdrop-blur-xl">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8 lg:px-12">
       <!-- Marca -->
       <RouterLink
@@ -92,7 +92,7 @@ onBeforeUnmount(() => {
           </RouterLink>
           <RouterLink
             to="/carrinho"
-            class="ml-1 inline-flex min-h-11 items-center gap-2 rounded-full bg-festou-yellow px-4 text-sm font-extrabold text-festou-midnight shadow-festive transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#FFE463]"
+            class="ml-1 inline-flex min-h-11 items-center gap-2 rounded-full bg-festou-pink px-4 text-sm font-extrabold text-festou-dark shadow-festive transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#FF5EAF]"
             active-class="ring-2 ring-white/70"
           >
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
@@ -135,7 +135,7 @@ onBeforeUnmount(() => {
             @click="isUserMenuOpen = !isUserMenuOpen"
           >
             <img v-if="currentUser.avatar_url" :src="currentUser.avatar_url" alt="" class="h-9 w-9 rounded-full object-cover" />
-            <span v-else class="grid h-9 w-9 place-items-center rounded-full bg-festou-yellow font-heading text-base font-extrabold text-festou-midnight">
+            <span v-else class="grid h-9 w-9 place-items-center rounded-full bg-festou-yellow font-heading text-base font-extrabold text-festou-dark">
               {{ userInitial }}
             </span>
             <span class="max-w-[7rem] truncate">{{ firstName }}</span>
@@ -239,7 +239,7 @@ onBeforeUnmount(() => {
     <div
       v-if="isMobileMenuOpen"
       id="menu-mobile"
-      class="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-white/10 bg-festou-midnight px-5 pb-6 pt-3 md:hidden"
+      class="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-white/10 bg-festou-dark px-5 pb-6 pt-3 md:hidden"
     >
       <nav class="flex flex-col gap-1 text-sm font-semibold" aria-label="Navegação mobile">
         <RouterLink to="/vitrine" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
         <template v-if="currentUser">
           <p class="mb-3 flex items-center gap-2 text-xs text-white/70">
             <img v-if="currentUser.avatar_url" :src="currentUser.avatar_url" alt="" class="h-8 w-8 rounded-full object-cover" />
-            <span v-else class="grid h-8 w-8 place-items-center rounded-full bg-festou-yellow font-heading text-sm font-extrabold text-festou-midnight">
+            <span v-else class="grid h-8 w-8 place-items-center rounded-full bg-festou-yellow font-heading text-sm font-extrabold text-festou-dark">
               {{ userInitial }}
             </span>
             {{ currentUser.nome }}

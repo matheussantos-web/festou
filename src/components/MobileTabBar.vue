@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
           </span>
           <span
             v-if="isSupplier && notificationCount > 0"
-            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#FF2D9B] px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-white"
             aria-hidden="true"
           >
             {{ notificationCount > 99 ? '99+' : notificationCount }}
@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
           </svg>
           <span
             v-if="notificationCount > 0"
-            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#FF2D9B] px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-white"
             aria-hidden="true"
           >
             {{ notificationCount > 99 ? '99+' : notificationCount }}

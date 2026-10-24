@@ -48,7 +48,7 @@ async function createProduct(payload) {
         <span class="badge bg-festou-secondary/12 text-festou-secondary">
           <span aria-hidden="true">💼</span> Catálogo do Fornecedor
         </span>
-        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight">
+        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-dark">
           Anunciar Produto ou Serviço
         </h1>
         <p class="mt-1 text-sm text-slate-600">

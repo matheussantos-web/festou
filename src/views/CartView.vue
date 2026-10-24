@@ -66,7 +66,7 @@ onMounted(syncCartWithCatalog)
       <header class="flex flex-wrap items-end justify-between gap-5 border-b border-slate-200/80 pb-6">
         <div>
           <span class="badge bg-festou-secondary/12 text-festou-secondary">Sua seleção</span>
-          <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight sm:text-4xl">Carrinho</h1>
+          <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-dark sm:text-4xl">Carrinho</h1>
           <p class="mt-2 text-slate-600">Revise os itens antes de enviar pedidos de orçamento aos fornecedores.</p>
         </div>
         <RouterLink to="/orcamentos" class="btn btn-outline-dark text-sm">Meus Orçamentos</RouterLink>
@@ -100,14 +100,14 @@ onMounted(syncCartWithCatalog)
             </article>
 
             <div class="card mt-6 p-6">
-              <label for="order-note" class="mb-2 block text-sm font-bold text-festou-midnight">Observações para os fornecedores (opcional)</label>
+              <label for="order-note" class="mb-2 block text-sm font-bold text-festou-dark">Observações para os fornecedores (opcional)</label>
               <textarea id="order-note" v-model="note" maxlength="500" rows="3" placeholder="Data do evento, horário, tema da festa ou detalhes importantes..." class="w-full text-sm"></textarea>
             </div>
           </div>
 
           <div v-else class="card-gradient p-12 text-center">
             <span class="text-4xl" aria-hidden="true">🛒</span>
-            <h2 class="mt-4 font-heading text-2xl font-bold text-festou-midnight">Seu carrinho está vazio</h2>
+            <h2 class="mt-4 font-heading text-2xl font-bold text-festou-dark">Seu carrinho está vazio</h2>
             <p class="mt-2 text-sm text-slate-600">Explore a vitrine para encontrar produtos e serviços para sua festa.</p>
             <RouterLink to="/vitrine" class="btn btn-primary mt-6 text-sm">Explorar a vitrine</RouterLink>
           </div>
@@ -115,13 +115,13 @@ onMounted(syncCartWithCatalog)
 
         <aside v-if="cartItems.length" class="h-fit">
           <div class="card-gradient sticky top-28 p-6">
-            <h2 class="font-heading text-xl font-bold text-festou-midnight">Resumo</h2>
+            <h2 class="font-heading text-xl font-bold text-festou-dark">Resumo</h2>
             <div class="mt-4 space-y-2.5 border-b border-slate-100 pb-4 text-sm text-slate-600">
               <div class="flex justify-between"><span>Total de itens</span><span class="font-bold text-slate-900">{{ cartCount }} {{ cartCount === 1 ? 'item' : 'itens' }}</span></div>
               <div class="flex justify-between"><span>Subtotal estimado</span><span class="font-bold text-slate-900">{{ formatPrice(cartTotalCents / 100) }}</span></div>
             </div>
             <div class="mt-4 flex items-baseline justify-between">
-              <span class="font-bold text-festou-midnight">Total estimado</span>
+              <span class="font-bold text-festou-dark">Total estimado</span>
               <span class="font-heading text-2xl font-extrabold text-festou-primary">{{ formatPrice(cartTotalCents / 100) }}</span>
             </div>
             <p class="mt-3 text-xs leading-relaxed text-slate-500">O fornecedor confirmará o valor final. Não há cobrança ao enviar a solicitação.</p>

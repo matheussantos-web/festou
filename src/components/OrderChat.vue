@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
   <section class="mt-5 border-t border-slate-100 pt-4">
     <button
       type="button"
-      class="flex w-full items-center justify-between rounded-xl bg-festou-soft px-4 py-3 text-left font-bold text-festou-midnight transition hover:bg-festou-magenta/10"
+      class="flex w-full items-center justify-between rounded-xl bg-festou-soft px-4 py-3 text-left font-bold text-festou-dark transition hover:bg-festou-magenta/10"
       :aria-expanded="isOpen"
       @click="openChat"
     >

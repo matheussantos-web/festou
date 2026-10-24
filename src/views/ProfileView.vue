@@ -35,7 +35,7 @@ async function handleFileChange(event) {
       <RouterLink to="/" class="text-sm font-bold text-festou-primary hover:underline">← Voltar ao Festou</RouterLink>
       <section class="card-gradient mt-6 p-6 sm:p-10">
         <span class="badge bg-festou-secondary/12 text-festou-secondary">Minha conta</span>
-        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-midnight">Foto de perfil</h1>
+        <h1 class="mt-3 font-heading text-3xl font-extrabold text-festou-dark">Foto de perfil</h1>
         <p class="mt-2 text-sm text-slate-600">Adicione uma foto para personalizar sua conta no Festou.</p>
 
         <div class="mt-8 flex flex-col items-center gap-5 sm:flex-row">
@@ -45,7 +45,7 @@ async function handleFileChange(event) {
             alt="Foto de perfil"
             class="h-28 w-28 rounded-full border-4 border-white object-cover shadow-lg"
           />
-          <div v-else class="grid h-28 w-28 place-items-center rounded-full bg-festou-yellow font-heading text-4xl font-extrabold text-festou-midnight shadow-lg">
+          <div v-else class="grid h-28 w-28 place-items-center rounded-full bg-festou-yellow font-heading text-4xl font-extrabold text-festou-dark shadow-lg">
             {{ String(user?.nome || '?').trim().charAt(0).toUpperCase() }}
           </div>
           <div class="w-full flex-1">
