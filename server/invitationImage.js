@@ -14,7 +14,7 @@ const brand = {
   cyan: [0, 194, 209],
 }
 
-const brandArtwork = decodeBrandPng(readFileSync(new URL('../public/festou-marca.png', import.meta.url)))
+const brandLogo = decodeBrandPng(readFileSync(new URL('../public/03_logo_horizontal.png', import.meta.url)))
 
 const glyphRows = {
   A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
@@ -195,28 +195,40 @@ function drawInvitationText(pixels, value, x, y, scale, color) {
   }
 }
 
-function drawBrandArtwork(pixels) {
-  // Mantem a proporcao do arquivo oficial e reserva essa faixa para logo,
-  // baloes, castelo e confetes, deixando o texto em uma area limpa ao lado.
-  const targetWidth = Math.round(HEIGHT * brandArtwork.width / brandArtwork.height)
-  const targetX = 12
+function drawBrandLogo(pixels) {
+  // Mantem a proporcao do arquivo horizontal enviado para o brand kit.
+  const targetWidth = 520
+  const targetHeight = Math.round(targetWidth * brandLogo.height / brandLogo.width)
+  const targetX = Math.round((WIDTH - targetWidth) / 2)
+  const targetY = 16
 
-  for (let y = 0; y < HEIGHT; y += 1) {
-    const sourceY = Math.min(brandArtwork.height - 1, Math.floor(y * brandArtwork.height / HEIGHT))
+  for (let y = 0; y < targetHeight; y += 1) {
+    const sourceY = (y + 0.5) * brandLogo.height / targetHeight - 0.5
+    const sourceY0 = Math.max(0, Math.floor(sourceY))
+    const sourceY1 = Math.min(brandLogo.height - 1, sourceY0 + 1)
+    const weightY = Math.max(0, sourceY - sourceY0)
     for (let x = 0; x < targetWidth; x += 1) {
-      const sourceX = Math.min(brandArtwork.width - 1, Math.floor(x * brandArtwork.width / targetWidth))
-      const sourceOffset = (sourceY * brandArtwork.width + sourceX) * 3
-      const targetOffset = (y * WIDTH + targetX + x) * CHANNELS
-      pixels[targetOffset] = brandArtwork.pixels[sourceOffset]
-      pixels[targetOffset + 1] = brandArtwork.pixels[sourceOffset + 1]
-      pixels[targetOffset + 2] = brandArtwork.pixels[sourceOffset + 2]
+      const sourceX = (x + 0.5) * brandLogo.width / targetWidth - 0.5
+      const sourceX0 = Math.max(0, Math.floor(sourceX))
+      const sourceX1 = Math.min(brandLogo.width - 1, sourceX0 + 1)
+      const weightX = Math.max(0, sourceX - sourceX0)
+      const sourceOffset00 = (sourceY0 * brandLogo.width + sourceX0) * 3
+      const sourceOffset01 = (sourceY0 * brandLogo.width + sourceX1) * 3
+      const sourceOffset10 = (sourceY1 * brandLogo.width + sourceX0) * 3
+      const sourceOffset11 = (sourceY1 * brandLogo.width + sourceX1) * 3
+      const targetOffset = ((targetY + y) * WIDTH + targetX + x) * CHANNELS
+      for (let channel = 0; channel < 3; channel += 1) {
+        const top = brandLogo.pixels[sourceOffset00 + channel] * (1 - weightX) + brandLogo.pixels[sourceOffset01 + channel] * weightX
+        const bottom = brandLogo.pixels[sourceOffset10 + channel] * (1 - weightX) + brandLogo.pixels[sourceOffset11 + channel] * weightX
+        pixels[targetOffset + channel] = Math.round(top * (1 - weightY) + bottom * weightY)
+      }
       pixels[targetOffset + 3] = 255
     }
   }
 }
 
 function drawBrandEdgeDetails(pixels) {
-  const stars = [[390, 74], [1180, 88], [1180, 520], [390, 560]]
+  const stars = [[68, 70], [1135, 76], [63, 415], [1136, 410], [240, 183], [962, 190]]
   for (const [centerX, centerY] of stars) {
     for (let offset = -8; offset <= 8; offset += 1) {
       setPixel(pixels, centerX + offset, centerY, brand.yellow)
@@ -224,11 +236,17 @@ function drawBrandEdgeDetails(pixels) {
     }
   }
 
-  // Confetes discretos nas bordas do campo de texto.
-  roundedRect(pixels, 382, 126, 8, 20, 2, brand.cyan)
-  roundedRect(pixels, 1177, 182, 8, 20, 2, brand.pink)
-  roundedRect(pixels, 385, 472, 8, 18, 2, brand.pink)
-  roundedRect(pixels, 1174, 424, 8, 18, 2, brand.yellow)
+  // Confetes e baloes nas laterais, preservando o centro para os dados.
+  fillRect(pixels, 110, 125, 9, 22, brand.cyan)
+  fillRect(pixels, 1081, 140, 9, 22, brand.pink)
+  fillRect(pixels, 132, 365, 9, 20, brand.yellow)
+  fillRect(pixels, 1060, 360, 9, 20, brand.cyan)
+  drawBalloon(pixels, 78, 246, 19, 25, brand.pink)
+  drawBalloon(pixels, 1120, 264, 19, 25, brand.cyan)
+  drawBalloon(pixels, 110, 315, 15, 21, brand.yellow)
+  drawBalloon(pixels, 1090, 326, 15, 21, brand.pink)
+  drawCastle(pixels, 22, 540, 1)
+  drawCastle(pixels, 1024, 540, 1)
 }
 
 function setPixel(pixels, x, y, color) {
@@ -238,6 +256,57 @@ function setPixel(pixels, x, y, color) {
   pixels[offset + 1] = color[1]
   pixels[offset + 2] = color[2]
   pixels[offset + 3] = 255
+}
+
+function fillRect(pixels, x, y, width, height, color) {
+  for (let py = y; py < y + height; py += 1) {
+    for (let px = x; px < x + width; px += 1) setPixel(pixels, px, py, color)
+  }
+}
+
+function fillEllipse(pixels, centerX, centerY, radiusX, radiusY, color) {
+  for (let y = -radiusY; y <= radiusY; y += 1) {
+    for (let x = -radiusX; x <= radiusX; x += 1) {
+      if ((x * x) / (radiusX * radiusX) + (y * y) / (radiusY * radiusY) <= 1) {
+        setPixel(pixels, centerX + x, centerY + y, color)
+      }
+    }
+  }
+}
+
+function drawBalloon(pixels, centerX, centerY, radiusX, radiusY, color) {
+  fillEllipse(pixels, centerX, centerY, radiusX, radiusY, color)
+  fillRect(pixels, centerX - 2, centerY + radiusY - 1, 5, 5, color)
+  for (let step = 0; step < 28; step += 1) {
+    const x = centerX - 1 + Math.round(step / 28 * 5)
+    setPixel(pixels, x, centerY + radiusY + 4 + step, [255, 255, 255])
+  }
+}
+
+function drawCastle(pixels, x, baseY, scale) {
+  const body = [255, 45, 152]
+  const tower = [0, 194, 209]
+  const roof = [255, 217, 56]
+  const width = 142 * scale
+  const bodyY = baseY - 48 * scale
+
+  fillRect(pixels, x + 28 * scale, bodyY, 86 * scale, 48 * scale, body)
+  fillRect(pixels, x + 8 * scale, baseY - 72 * scale, 30 * scale, 72 * scale, roof)
+  fillRect(pixels, x + 104 * scale, baseY - 72 * scale, 30 * scale, 72 * scale, roof)
+  fillRect(pixels, x + 62 * scale, baseY - 72 * scale, 30 * scale, 72 * scale, tower)
+
+  for (const towerX of [x + 8 * scale, x + 62 * scale, x + 104 * scale]) {
+    const roofX = towerX + 15 * scale
+    for (let row = 0; row < 22 * scale; row += 1) {
+      const halfWidth = Math.round(row * 15 / 22)
+      fillRect(pixels, roofX - halfWidth, baseY - 94 * scale + row, halfWidth * 2 + 1, 1, tower)
+    }
+  }
+
+  fillRect(pixels, x + 62 * scale, baseY - 34 * scale, 30 * scale, 34 * scale, [26, 26, 61])
+  fillRect(pixels, x + 18 * scale, baseY - 52 * scale, 9 * scale, 12 * scale, [26, 26, 61])
+  fillRect(pixels, x + 115 * scale, baseY - 52 * scale, 9 * scale, 12 * scale, [26, 26, 61])
+  fillRect(pixels, x, baseY, width, 3 * scale, brand.yellow)
 }
 
 function wrapText(value, maxLength, maxLines = 2) {
@@ -318,25 +387,24 @@ export function renderInvitationPng(invitation) {
     }
   }
 
-  // O artwork oficial contem o logotipo Festou!, baloes, castelo e confetes.
-  drawBrandArtwork(pixels)
+  // Compoe decoracoes vetoriais nas bordas e o logo horizontal enviado.
   drawBrandEdgeDetails(pixels)
-  roundedRect(pixels, 376, 40, 3, 550, 1, [255, 255, 255])
+  drawBrandLogo(pixels)
 
-  const textCenter = 800
-  const textWidth = 680
+  const textCenter = WIDTH / 2
+  const textWidth = 830
 
   const title = normalizeText(invitation.titulo || 'SUA FESTA COM A GENTE')
   const titleScale = titleScaleFor(title.length)
   const titleMaxLength = Math.floor(textWidth / (6 * titleScale))
   const titleLines = wrapText(title, titleMaxLength, 3)
   const titleLineHeight = titleScale * 9
-  const titleY = 155
+  const titleY = 224
   titleLines.forEach((line, index) => centeredText(pixels, line, textCenter, titleY + index * titleLineHeight, titleScale, brand.white))
 
   const date = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(invitation.data_evento))
   const dateLines = wrapText(date, 36, 2)
-  const detailsY = Math.max(270, titleY + titleLines.length * titleLineHeight + 28)
+  const detailsY = Math.max(360, titleY + titleLines.length * titleLineHeight + 28)
   centeredText(pixels, 'DATA E HORARIO', textCenter, detailsY, 3, brand.yellow)
   const dateY = detailsY + 38
   dateLines.forEach((line, index) => centeredText(pixels, line, textCenter, dateY + index * 27, 3, brand.white))
