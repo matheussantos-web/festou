@@ -93,7 +93,8 @@ export function createApp() {
           'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
           'X-Content-Type-Options': 'nosniff',
         })
-        return response.type('png').send(renderInvitationPng(invitation))
+        const image = await renderInvitationPng(invitation)
+        return response.type('png').send(image)
       } catch (error) {
         return next(error)
       }
