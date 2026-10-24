@@ -1,14 +1,20 @@
-import { deflateSync } from 'node:zlib'
+import { readFileSync } from 'node:fs'
+import { deflateSync, inflateSync } from 'node:zlib'
 
 const WIDTH = 1200
 const HEIGHT = 630
 const CHANNELS = 4
 
-const palettes = {
-  jardim: { top: [232, 248, 235], bottom: [255, 248, 230], ink: [31, 74, 59], accent: [39, 132, 91], detail: [218, 163, 76] },
-  colorido: { top: [50, 24, 100], bottom: [125, 28, 91], ink: [255, 255, 255], accent: [255, 224, 105], detail: [255, 184, 72] },
-  'ceu-estrelado': { top: [17, 24, 63], bottom: [3, 6, 23], ink: [248, 250, 252], accent: [191, 219, 254], detail: [255, 230, 138] },
+const brand = {
+  top: [26, 26, 61], // #1A1A3D
+  bottom: [123, 31, 162], // #7B1FA2
+  white: [255, 255, 255],
+  yellow: [255, 217, 56],
+  pink: [255, 45, 152],
+  cyan: [0, 194, 209],
 }
+
+const brandArtwork = decodeBrandPng(readFileSync(new URL('../public/festou-marca.png', import.meta.url)))
 
 const glyphRows = {
   A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
@@ -53,6 +59,79 @@ function pngChunk(type, data) {
   const checksum = Buffer.alloc(4)
   checksum.writeUInt32BE(crc32(Buffer.concat([name, data])))
   return Buffer.concat([length, name, data, checksum])
+}
+
+// O brand kit e uma PNG RGB simples. Decodificamos uma vez no carregamento do
+// modulo para compor o logotipo e as ilustracoes oficiais em cada preview.
+function decodeBrandPng(buffer) {
+  let width = 0
+  let height = 0
+  let bitDepth = 0
+  let colorType = 0
+  const imageData = []
+
+  for (let offset = 8; offset < buffer.length;) {
+    const length = buffer.readUInt32BE(offset)
+    const type = buffer.toString('ascii', offset + 4, offset + 8)
+    const data = buffer.subarray(offset + 8, offset + 8 + length)
+    if (type === 'IHDR') {
+      width = data.readUInt32BE(0)
+      height = data.readUInt32BE(4)
+      bitDepth = data[8]
+      colorType = data[9]
+    } else if (type === 'IDAT') {
+      imageData.push(data)
+    } else if (type === 'IEND') {
+      break
+    }
+    offset += length + 12
+  }
+
+  if (bitDepth !== 8 || colorType !== 2 || !width || !height) {
+    throw new Error('O arquivo festou-marca.png precisa ser uma PNG RGB de 8 bits.')
+  }
+
+  const bytesPerPixel = 3
+  const rowLength = width * bytesPerPixel
+  const compressedPixels = inflateSync(Buffer.concat(imageData))
+  const pixels = Buffer.alloc(rowLength * height)
+  let sourceOffset = 0
+
+  for (let y = 0; y < height; y += 1) {
+    const filter = compressedPixels[sourceOffset]
+    sourceOffset += 1
+    const rowOffset = y * rowLength
+    const previousRowOffset = rowOffset - rowLength
+
+    for (let x = 0; x < rowLength; x += 1) {
+      const raw = compressedPixels[sourceOffset + x]
+      const left = x >= bytesPerPixel ? pixels[rowOffset + x - bytesPerPixel] : 0
+      const above = y ? pixels[previousRowOffset + x] : 0
+      const upperLeft = y && x >= bytesPerPixel ? pixels[previousRowOffset + x - bytesPerPixel] : 0
+      let predictor = 0
+
+      if (filter === 1) predictor = left
+      else if (filter === 2) predictor = above
+      else if (filter === 3) predictor = Math.floor((left + above) / 2)
+      else if (filter === 4) {
+        const estimate = left + above - upperLeft
+        const leftDistance = Math.abs(estimate - left)
+        const aboveDistance = Math.abs(estimate - above)
+        const upperLeftDistance = Math.abs(estimate - upperLeft)
+        predictor = leftDistance <= aboveDistance && leftDistance <= upperLeftDistance
+          ? left
+          : aboveDistance <= upperLeftDistance ? above : upperLeft
+      } else if (filter !== 0) {
+        throw new Error(`Filtro PNG nao suportado no brand kit: ${filter}`)
+      }
+
+      pixels[rowOffset + x] = (raw + predictor) & 0xff
+    }
+
+    sourceOffset += rowLength
+  }
+
+  return { width, height, pixels }
 }
 
 function normalizeText(value) {
@@ -116,30 +195,49 @@ function drawInvitationText(pixels, value, x, y, scale, color) {
   }
 }
 
-function drawSkyDecoration(pixels) {
-  const stars = [
-    [92, 88, 3], [238, 148, 2], [391, 72, 2], [548, 131, 2],
-    [728, 83, 2], [877, 151, 3], [1032, 116, 2], [1110, 214, 2],
-    [128, 510, 2], [1061, 502, 3], [925, 553, 2], [294, 553, 2],
-  ]
-  const starColor = [219, 234, 254]
+function drawBrandArtwork(pixels) {
+  // Mantem a proporcao do arquivo oficial e reserva essa faixa para logo,
+  // baloes, castelo e confetes, deixando o texto em uma area limpa ao lado.
+  const targetWidth = Math.round(HEIGHT * brandArtwork.width / brandArtwork.height)
+  const targetX = 12
 
-  for (const [centerX, centerY, radius] of stars) {
-    for (let y = centerY - radius; y <= centerY + radius; y += 1) {
-      for (let x = centerX - radius; x <= centerX + radius; x += 1) {
-        if ((x - centerX) ** 2 + (y - centerY) ** 2 > radius ** 2) continue
-        const offset = (y * WIDTH + x) * CHANNELS
-        pixels[offset] = starColor[0]
-        pixels[offset + 1] = starColor[1]
-        pixels[offset + 2] = starColor[2]
-        pixels[offset + 3] = 255
-      }
+  for (let y = 0; y < HEIGHT; y += 1) {
+    const sourceY = Math.min(brandArtwork.height - 1, Math.floor(y * brandArtwork.height / HEIGHT))
+    for (let x = 0; x < targetWidth; x += 1) {
+      const sourceX = Math.min(brandArtwork.width - 1, Math.floor(x * brandArtwork.width / targetWidth))
+      const sourceOffset = (sourceY * brandArtwork.width + sourceX) * 3
+      const targetOffset = (y * WIDTH + targetX + x) * CHANNELS
+      pixels[targetOffset] = brandArtwork.pixels[sourceOffset]
+      pixels[targetOffset + 1] = brandArtwork.pixels[sourceOffset + 1]
+      pixels[targetOffset + 2] = brandArtwork.pixels[sourceOffset + 2]
+      pixels[targetOffset + 3] = 255
+    }
+  }
+}
+
+function drawBrandEdgeDetails(pixels) {
+  const stars = [[390, 74], [1180, 88], [1180, 520], [390, 560]]
+  for (const [centerX, centerY] of stars) {
+    for (let offset = -8; offset <= 8; offset += 1) {
+      setPixel(pixels, centerX + offset, centerY, brand.yellow)
+      setPixel(pixels, centerX, centerY + offset, brand.yellow)
     }
   }
 
-  // Lua crescente no canto superior direito, como no tema CÃ©u Estrelado.
-  roundedRect(pixels, 1030, 62, 52, 52, 26, [255, 230, 138])
-  roundedRect(pixels, 1046, 52, 52, 52, 26, [29, 38, 83])
+  // Confetes discretos nas bordas do campo de texto.
+  roundedRect(pixels, 382, 126, 8, 20, 2, brand.cyan)
+  roundedRect(pixels, 1177, 182, 8, 20, 2, brand.pink)
+  roundedRect(pixels, 385, 472, 8, 18, 2, brand.pink)
+  roundedRect(pixels, 1174, 424, 8, 18, 2, brand.yellow)
+}
+
+function setPixel(pixels, x, y, color) {
+  if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return
+  const offset = (y * WIDTH + x) * CHANNELS
+  pixels[offset] = color[0]
+  pixels[offset + 1] = color[1]
+  pixels[offset + 2] = color[2]
+  pixels[offset + 3] = 255
 }
 
 function wrapText(value, maxLength, maxLines = 2) {
@@ -206,47 +304,47 @@ function titleScaleFor(length) {
 }
 
 export function renderInvitationPng(invitation) {
-  const palette = palettes[invitation.tema] || palettes.jardim
   const pixels = Buffer.alloc(WIDTH * HEIGHT * CHANNELS)
 
+  // Fundo horizontal do brand kit: roxo profundo para violeta.
   for (let y = 0; y < HEIGHT; y += 1) {
-    const ratio = y / (HEIGHT - 1)
     for (let x = 0; x < WIDTH; x += 1) {
+      const ratio = x / (WIDTH - 1)
       const offset = (y * WIDTH + x) * CHANNELS
-      pixels[offset] = Math.round(palette.top[0] * (1 - ratio) + palette.bottom[0] * ratio)
-      pixels[offset + 1] = Math.round(palette.top[1] * (1 - ratio) + palette.bottom[1] * ratio)
-      pixels[offset + 2] = Math.round(palette.top[2] * (1 - ratio) + palette.bottom[2] * ratio)
+      pixels[offset] = Math.round(brand.top[0] * (1 - ratio) + brand.bottom[0] * ratio)
+      pixels[offset + 1] = Math.round(brand.top[1] * (1 - ratio) + brand.bottom[1] * ratio)
+      pixels[offset + 2] = Math.round(brand.top[2] * (1 - ratio) + brand.bottom[2] * ratio)
       pixels[offset + 3] = 255
     }
   }
 
-  // A imagem OG representa somente o cartao: sem moldura externa, cabecalho,
-  // acoes de pagina ou rodape. O fundo do cartao ocupa os 1200x630 pixels.
-  if (invitation.tema === 'ceu-estrelado') drawSkyDecoration(pixels)
+  // O artwork oficial contem o logotipo Festou!, baloes, castelo e confetes.
+  drawBrandArtwork(pixels)
+  drawBrandEdgeDetails(pixels)
+  roundedRect(pixels, 376, 40, 3, 550, 1, [255, 255, 255])
 
-  centeredText(pixels, 'CONVITE DIGITAL', WIDTH / 2, 66, 4, palette.accent)
-  centeredText(pixels, 'VOCE ESTA CONVIDADO PARA', WIDTH / 2, 124, 3, palette.ink)
+  const textCenter = 800
+  const textWidth = 680
 
-  const title = normalizeText(invitation.titulo)
+  const title = normalizeText(invitation.titulo || 'SUA FESTA COM A GENTE')
   const titleScale = titleScaleFor(title.length)
-  const titleMaxLength = Math.floor(940 / (6 * titleScale))
+  const titleMaxLength = Math.floor(textWidth / (6 * titleScale))
   const titleLines = wrapText(title, titleMaxLength, 3)
   const titleLineHeight = titleScale * 9
-  const titleY = 165
-  titleLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, titleY + index * titleLineHeight, titleScale, palette.ink))
-
-  const host = wrapText(`COM CARINHO, ${invitation.anfitriao}`, 39, 2)
-  const hostY = titleY + titleLines.length * titleLineHeight + 12
-  host.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, hostY + index * 30, 4, palette.accent))
+  const titleY = 155
+  titleLines.forEach((line, index) => centeredText(pixels, line, textCenter, titleY + index * titleLineHeight, titleScale, brand.white))
 
   const date = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(invitation.data_evento))
-  const dateLines = wrapText(date, 48, 2)
-  const dateY = hostY + host.length * 30 + 22
-  dateLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, dateY + index * 27, 3, palette.ink))
+  const dateLines = wrapText(date, 36, 2)
+  const detailsY = Math.max(270, titleY + titleLines.length * titleLineHeight + 28)
+  centeredText(pixels, 'DATA E HORARIO', textCenter, detailsY, 3, brand.yellow)
+  const dateY = detailsY + 38
+  dateLines.forEach((line, index) => centeredText(pixels, line, textCenter, dateY + index * 27, 3, brand.white))
 
-  const locationLines = wrapText(`LOCAL: ${invitation.local_evento}`, 48, 2)
-  const locationY = dateY + dateLines.length * 27 + 18
-  locationLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, locationY + index * 27, 3, palette.ink))
+  const locationLines = wrapText(invitation.local_evento, 36, 2)
+  const locationLabelY = dateY + dateLines.length * 27 + 24
+  centeredText(pixels, 'LOCAL', textCenter, locationLabelY, 3, brand.yellow)
+  locationLines.forEach((line, index) => centeredText(pixels, line, textCenter, locationLabelY + 30 + index * 27, 3, brand.white))
 
   const scanlines = Buffer.alloc((WIDTH * CHANNELS + 1) * HEIGHT)
   for (let y = 0; y < HEIGHT; y += 1) {
