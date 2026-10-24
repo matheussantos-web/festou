@@ -1,6 +1,7 @@
 import { z } from 'zod'
+import { PRODUCT_CATEGORY_VALUES } from '../../shared/productCategories.js'
 
-export const categorySchema = z.enum(['bolos', 'doces', 'brinquedos', 'convites'])
+export const categorySchema = z.enum(PRODUCT_CATEGORY_VALUES)
 
 // Imagens de produto ficam em servidores externos: só https é aceito, para
 // não misturar http com https na página e não vazar tráfego em claro.

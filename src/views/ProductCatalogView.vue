@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, asArray } from '../lib/api'
 import { addToCart } from '../lib/cart'
 import { formatPrice } from '../lib/format'
+import { PRODUCT_CATEGORIES } from '../../shared/productCategories.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,10 +22,7 @@ const pageSize = 12
 
 const categories = [
   { value: '', label: 'Todos os produtos', icon: '✨' },
-  { value: 'bolos', label: 'Bolos', icon: '🎂' },
-  { value: 'doces', label: 'Doces', icon: '🍬' },
-  { value: 'brinquedos', label: 'Brinquedos', icon: '🎈' },
-  { value: 'convites', label: 'Convites digitais', icon: '💌' },
+  ...PRODUCT_CATEGORIES,
 ]
 
 async function loadProducts({ append = false } = {}) {

@@ -1,6 +1,7 @@
 <script setup>
 import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { uploadImage } from '../lib/uploads'
+import { PRODUCT_CATEGORIES } from '../../shared/productCategories.js'
 
 const props = defineProps({
   product: {
@@ -21,7 +22,7 @@ const emit = defineEmits(['submit', 'cancel'])
 
 const emptyForm = () => ({
   nome: '',
-  categoria: 'bolos',
+  categoria: '',
   descricao: '',
   preco: null,
   cidade: '',
@@ -44,7 +45,7 @@ function fill(product) {
   clearTemporaryPreview()
   Object.assign(form, {
     nome: product?.nome ?? '',
-    categoria: product?.categoria ?? 'bolos',
+    categoria: product?.categoria ?? '',
     descricao: product?.descricao ?? '',
     preco: product?.preco ?? null,
     cidade: product?.cidade ?? '',
@@ -143,10 +144,10 @@ onBeforeUnmount(clearTemporaryPreview)
           required
           class="form-control"
         >
-          <option value="bolos">🎂 Bolos</option>
-          <option value="doces">🍬 Doces</option>
-          <option value="brinquedos">🎈 Brinquedos</option>
-          <option value="convites">💌 Convites digitais</option>
+          <option value="" disabled>Selecione uma categoria</option>
+          <option v-for="category in PRODUCT_CATEGORIES" :key="category.value" :value="category.value">
+            {{ category.icon }} {{ category.label }}
+          </option>
         </select>
       </div>
 
