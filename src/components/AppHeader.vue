@@ -65,10 +65,16 @@ onBeforeUnmount(() => {
       <!-- Marca -->
       <RouterLink
         to="/"
-        class="festou-wordmark shrink-0 transition-transform duration-300 hover:scale-105"
+        class="shrink-0 transition-transform duration-300 hover:scale-105"
         aria-label="Festou! — página inicial"
       >
-        <span>Festou<span>!</span></span>
+        <img
+          src="/03_logo_horizontal.png"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          class="h-9 w-auto max-w-[7.5rem] rounded-md object-contain sm:h-10 sm:max-w-[8.5rem]"
+        />
       </RouterLink>
 
       <!-- Navegação desktop -->
