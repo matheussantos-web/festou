@@ -65,10 +65,10 @@ function normalizeText(value) {
     .trim()
 }
 
-function centeredText(value, centerX, y, scale, color, drawText) {
+function centeredText(pixels, value, centerX, y, scale, color) {
   const text = normalizeText(value)
   const width = Math.max(0, text.length * 6 * scale - scale)
-  drawText(text, Math.round(centerX - width / 2), y, scale, color)
+  drawInvitationText(pixels, text, Math.round(centerX - width / 2), y, scale, color)
 }
 
 function roundedRect(pixels, x, y, width, height, radius, color) {
@@ -120,18 +120,63 @@ function wrapText(value, maxLength, maxLines = 2) {
   const words = normalizeText(value).split(' ').filter(Boolean)
   const lines = []
   let line = ''
+  let truncated = false
+
   for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word
-    if (candidate.length <= maxLength || !line) {
-      line = candidate.slice(0, maxLength)
-    } else {
-      lines.push(line)
-      line = word.slice(0, maxLength)
-      if (lines.length === maxLines - 1) break
+    let remainingWord = word
+    while (remainingWord) {
+      const available = maxLength - line.length - (line ? 1 : 0)
+      if (remainingWord.length <= available) {
+        line = line ? `${line} ${remainingWord}` : remainingWord
+        remainingWord = ''
+      } else if (line && remainingWord.length <= maxLength) {
+        lines.push(line)
+        line = ''
+        if (lines.length >= maxLines) {
+          truncated = true
+          break
+        }
+      } else if (available > 0 && line) {
+        line += ` ${remainingWord.slice(0, available)}`
+        remainingWord = remainingWord.slice(available)
+      } else {
+        if (line) lines.push(line)
+        line = ''
+        if (lines.length >= maxLines) {
+          truncated = true
+          break
+        }
+        if (remainingWord.length > maxLength) {
+          lines.push(remainingWord.slice(0, maxLength))
+          remainingWord = remainingWord.slice(maxLength)
+          if (lines.length >= maxLines) truncated = Boolean(remainingWord)
+        }
+      }
+
+      if (lines.length >= maxLines && remainingWord) {
+        truncated = true
+        break
+      }
     }
+    if (truncated) break
   }
+
   if (line && lines.length < maxLines) lines.push(line)
+  if (truncated && lines.length) {
+    const last = lines[lines.length - 1]
+    lines[lines.length - 1] = `${last.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`
+  }
+
   return lines
+}
+
+function titleScaleFor(length) {
+  if (length <= 17) return 9
+  if (length <= 19) return 8
+  if (length <= 22) return 7
+  if (length <= 26) return 6
+  if (length <= 31) return 5
+  return 4
 }
 
 export function renderInvitationPng(invitation) {
@@ -150,27 +195,36 @@ export function renderInvitationPng(invitation) {
   }
 
   // Cartao central e detalhes simples criam um visual coerente com cada tema.
-  roundedRect(pixels, 93, 55, 1014, 520, 34, palette.card)
-  roundedRect(pixels, 118, 80, 964, 8, 4, palette.accent)
-  roundedRect(pixels, 490, 146, 220, 4, 2, palette.detail)
+  roundedRect(pixels, 54, 32, 1092, 566, 34, palette.card)
+  roundedRect(pixels, 80, 58, 1040, 10, 5, palette.accent)
+  roundedRect(pixels, 492, 112, 216, 6, 3, palette.detail)
 
-  centeredText('CONVITE DIGITAL', WIDTH / 2, 105, 3, palette.accent, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color))
-  centeredText('VOCE ESTA CONVIDADO PARA', WIDTH / 2, 174, 2, palette.ink, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color))
+  centeredText(pixels, 'CONVITE DIGITAL', WIDTH / 2, 78, 4, palette.accent)
+  centeredText(pixels, 'VOCE ESTA CONVIDADO PARA', WIDTH / 2, 137, 3, palette.ink)
 
-  const titleLines = wrapText(invitation.titulo, 35, 2)
-  const titleScale = titleLines.some((line) => line.length > 27) ? 4 : 5
-  titleLines.forEach((line, index) => centeredText(line, WIDTH / 2, 208 + index * 48, titleScale, palette.ink, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color)))
+  const title = normalizeText(invitation.titulo)
+  const titleScale = titleScaleFor(title.length)
+  const titleMaxLength = Math.floor(940 / (6 * titleScale))
+  const titleLines = wrapText(title, titleMaxLength, 3)
+  const titleLineHeight = titleScale * 9
+  const titleY = 180
+  titleLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, titleY + index * titleLineHeight, titleScale, palette.ink))
 
-  const host = normalizeText(invitation.anfitriao)
-  centeredText(`COM CARINHO, ${host}`.slice(0, 48), WIDTH / 2, 322, 3, palette.accent, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color))
+  const host = wrapText(`COM CARINHO, ${invitation.anfitriao}`, 39, 2)
+  const hostY = titleY + titleLines.length * titleLineHeight + 14
+  host.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, hostY + index * 30, 4, palette.accent))
 
   const date = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(invitation.data_evento))
-  centeredText(normalizeText(date), WIDTH / 2, 394, 2, palette.ink, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color))
-  const locationLines = wrapText(invitation.local_evento, 42, 2)
-  locationLines.forEach((line, index) => centeredText(`LOCAL: ${line}`.slice(0, 48), WIDTH / 2, 434 + index * 22, 2, palette.ink, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color)))
+  const dateLines = wrapText(date, 48, 2)
+  const dateY = hostY + host.length * 30 + 16
+  dateLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, dateY + index * 27, 3, palette.ink))
 
-  roundedRect(pixels, 500, 520, 200, 3, 1, palette.detail)
-  centeredText('FESTOU!', WIDTH / 2, 540, 3, palette.accent, (text, x, y, scale, color) => drawInvitationText(pixels, text, x, y, scale, color))
+  const locationLines = wrapText(`LOCAL: ${invitation.local_evento}`, 48, 2)
+  const locationY = dateY + dateLines.length * 27 + 14
+  locationLines.forEach((line, index) => centeredText(pixels, line, WIDTH / 2, locationY + index * 27, 3, palette.ink))
+
+  roundedRect(pixels, 510, 548, 180, 4, 2, palette.detail)
+  centeredText(pixels, 'FESTOU!', WIDTH / 2, 563, 3, palette.accent)
 
   const scanlines = Buffer.alloc((WIDTH * CHANNELS + 1) * HEIGHT)
   for (let y = 0; y < HEIGHT; y += 1) {
@@ -191,7 +245,7 @@ export function renderInvitationPng(invitation) {
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     pngChunk('IHDR', header),
-    pngChunk('IDAT', deflateSync(scanlines)),
+    pngChunk('IDAT', deflateSync(scanlines, { level: 9 })),
     pngChunk('IEND', Buffer.alloc(0)),
   ])
 }
