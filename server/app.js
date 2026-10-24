@@ -16,6 +16,7 @@ import { authRouter } from './routes/auth.js'
 import { healthRouter } from './routes/health.js'
 import { invitationsRouter } from './routes/invitations.js'
 import { ordersRouter } from './routes/orders.js'
+import { profileRouter } from './routes/profile.js'
 import { passwordResetRouter } from './routes/passwordReset.js'
 import { productsRouter, supplierProductsRouter } from './routes/products.js'
 import { uploadsRouter } from './routes/uploads.js'
@@ -57,6 +58,7 @@ export function createApp() {
   app.use('/api/health', healthRouter)
   app.use('/api/auth', passwordResetRouter)
   app.use('/api/auth', authRouter)
+  app.use('/api/profile', profileRouter)
   app.use('/api/invitations', invitationsRouter)
   app.use('/api/products', productsRouter)
   app.use('/api/supplier/products', supplierProductsRouter)

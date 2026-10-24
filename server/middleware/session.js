@@ -15,7 +15,12 @@ export function sendProfile(profile) {
     email: profile.email,
     tipo_perfil: profile.tipo_perfil,
     avatar_url: profile.avatar_url ?? null,
+    cover_url: profile.cover_url ?? null,
     whatsapp: profile.whatsapp ?? null,
+    biografia: profile.biografia ?? null,
+    instagram_url: profile.instagram_url ?? null,
+    facebook_url: profile.facebook_url ?? null,
+    site_url: profile.site_url ?? null,
   }
 }
 
@@ -42,7 +47,8 @@ export async function findSession(request) {
   const tokenHash = hashSessionToken(token)
   const sql = getDatabase()
   const [profile] = await sql`
-    select p.id, p.nome, p.email, p.tipo_perfil, p.avatar_url, p.whatsapp
+    select p.id, p.nome, p.email, p.tipo_perfil, p.avatar_url, p.cover_url,
+           p.whatsapp, p.biografia, p.instagram_url, p.facebook_url, p.site_url
     from public.sessoes s
     join public.perfis p on p.id = s.perfil_id
     where s.token_hash = ${tokenHash}

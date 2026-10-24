@@ -12,7 +12,7 @@ const imageTypes = new Map([
   ['image/webp', { extension: 'webp', matches: (file) => file.toString('ascii', 0, 4) === 'RIFF' && file.toString('ascii', 8, 12) === 'WEBP' }],
 ])
 const imageBody = raw({ type: [...imageTypes.keys()], limit: '5mb' })
-const bucketByKind = { product: 'produtos', profile: 'perfil' }
+const bucketByKind = { product: 'produtos', profile: 'perfil', 'profile-cover': 'perfil' }
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 12,
@@ -159,15 +159,17 @@ async function uploadImage(request, response, next, kind) {
     const path = `${request.user.id}/${randomUUID()}.${extension}`
     const imageUrl = await uploadToSupabase(bucket, path, file, contentType, config)
 
-    if (kind === 'profile') {
+    if (kind === 'profile' || kind === 'profile-cover') {
       const sql = getDatabase()
+      const column = kind === 'profile-cover' ? 'cover_url' : 'avatar_url'
       const [profile] = await sql`
         update public.perfis
-        set avatar_url = ${imageUrl}
+        set ${sql(column)} = ${imageUrl}
         where id = ${request.user.id}
-        returning avatar_url
+        returning id, nome, email, tipo_perfil, avatar_url, cover_url, whatsapp,
+                  biografia, instagram_url, facebook_url, site_url
       `
-      return response.json({ image_url: profile.avatar_url, user: { ...request.user, avatar_url: profile.avatar_url } })
+      return response.json({ image_url: imageUrl, user: { ...request.user, ...profile } })
     }
 
     return response.status(201).json({ image_url: imageUrl })
@@ -191,4 +193,8 @@ uploadsRouter.post('/product', requireUser, uploadLimiter, imageBody, async (req
 
 uploadsRouter.post('/profile', requireUser, uploadLimiter, imageBody, async (request, response, next) => {
   return uploadImage(request, response, next, 'profile')
+})
+
+uploadsRouter.post('/profile-cover', requireUser, uploadLimiter, imageBody, async (request, response, next) => {
+  return uploadImage(request, response, next, 'profile-cover')
 })
