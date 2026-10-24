@@ -256,7 +256,9 @@ describe.skipIf(!existsSync(distIndex))('prÃ©via do link pÃºblico', () => {
     const created = await createInvitation(customer, { titulo: 'Festa da Marina' })
     const { slug } = created.body.invitation
 
-    const response = await request(app).get(`/convite/${slug}`)
+    const response = await request(app)
+      .get(`/convite/${slug}`)
+      .set('User-Agent', 'WhatsApp/2.24.1')
 
     expect(response.status).toBe(200)
     expect(response.headers['content-type']).toContain('text/html')

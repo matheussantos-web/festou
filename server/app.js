@@ -8,7 +8,7 @@ import express from 'express'
 import helmet from 'helmet'
 import { appOrigin, jsonBodyLimit, trustProxy } from './config.js'
 import { getDatabase } from './db.js'
-import { buildInvitationMeta, injectMeta } from './meta.js'
+import { buildInvitationMeta, isSocialCrawler, renderInvitationCrawlerHtml } from './meta.js'
 import { renderInvitationPng } from './invitationImage.js'
 import { createErrorHandler, createNotFoundHandler } from './middleware/errors.js'
 import { createOriginGuard } from './middleware/origin.js'
@@ -102,6 +102,9 @@ export function createApp() {
     // Link público do convite: injeta as tags de prévia no HTML, porque os
     // robôs do WhatsApp e das redes sociais não executam o SPA.
     app.get('/convite/:slug', async (request, response, next) => {
+      const userAgent = request.get('user-agent') || ''
+      if (request.query.app === '1' || !isSocialCrawler(userAgent)) return next()
+
       try {
         const sql = getDatabase()
         const [invitation] = await sql`
@@ -111,18 +114,16 @@ export function createApp() {
           limit 1
         `
 
-        const html = await readIndexHtml()
-
         if (!invitation) {
-          response.set('Cache-Control', 'no-cache')
-          return response.type('html').send(html)
+          response.set({ 'Cache-Control': 'no-cache', Vary: 'User-Agent' })
+          return response.status(404).type('html').send('<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Convite não encontrado</title></head><body><h1>Convite não encontrado</h1></body></html>')
         }
 
         const meta = buildInvitationMeta(invitation, requestOrigin(request))
-        response.set('Cache-Control', 'no-cache')
-        return response.type('html').send(injectMeta(html, meta))
+        response.set({ 'Cache-Control': 'no-cache', Vary: 'User-Agent' })
+        return response.type('html').send(renderInvitationCrawlerHtml(meta))
       } catch (error) {
-        // Banco fora do ar: entrega o SPA normal em vez de quebrar o link.
+        // Se o banco estiver indisponivel, entrega a SPA para mostrar o erro.
         try {
           const html = await readIndexHtml()
           response.set('Cache-Control', 'no-cache')

@@ -18,6 +18,12 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo',
 })
 
+const socialCrawlerPattern = /whatsapp|facebot|facebookexternalhit|twitterbot|telegrambot|linkedinbot|skypeuripreter/i
+
+export function isSocialCrawler(userAgent = '') {
+  return socialCrawlerPattern.test(userAgent)
+}
+
 export function buildInvitationMeta(invitation, origin) {
   const when = dateFormatter.format(new Date(invitation.data_evento))
   const title = `${invitation.titulo} — convite de ${invitation.anfitriao}`
@@ -34,11 +40,8 @@ export function buildInvitationMeta(invitation, origin) {
   }
 }
 
-// O SPA é servido pelo próprio Express, mas os robôs de prévia (WhatsApp,
-// Telegram, redes sociais) não executam JavaScript. As tags por convite são
-// injetadas no HTML antes de enviar.
-export function injectMeta(html, meta) {
-  const tags = [
+function invitationMetaTags(meta) {
+  return [
     `<meta name="description" content="${escapeHtml(meta.description)}" />`,
     '<meta property="og:type" content="website" />',
     '<meta property="og:site_name" content="Festou!" />',
@@ -55,7 +58,36 @@ export function injectMeta(html, meta) {
     `<meta name="twitter:title" content="${escapeHtml(meta.title)}" />`,
     `<meta name="twitter:description" content="${escapeHtml(meta.description)}" />`,
     `<meta name="twitter:image" content="${escapeHtml(meta.image)}" />`,
-  ].join('\n    ')
+  ]
+}
+
+export function renderInvitationCrawlerHtml(meta) {
+  const browserUrl = `${meta.url}?app=1`
+  const safeUrl = escapeHtml(browserUrl)
+  const scriptUrl = JSON.stringify(browserUrl).replace(/</g, '\\u003c')
+  const tags = invitationMetaTags(meta).join('\n    ')
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(meta.title)}</title>
+    ${tags}
+    <meta http-equiv="refresh" content="0;url=${safeUrl}" />
+  </head>
+  <body>
+    <p>Redirecionando para o convite. <a href="${safeUrl}">Abrir convite</a>.</p>
+    <script>window.location.replace(${scriptUrl})</script>
+  </body>
+</html>`
+}
+
+// O SPA é servido pelo próprio Express, mas os robôs de prévia (WhatsApp,
+// Telegram, redes sociais) não executam JavaScript. As tags por convite são
+// injetadas no HTML antes de enviar.
+export function injectMeta(html, meta) {
+  const tags = invitationMetaTags(meta).join('\n    ')
 
   const withTitle = html.replace(
     /<title>[\s\S]*?<\/title>/i,
