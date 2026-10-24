@@ -33,8 +33,12 @@ export const rsvpStatusSchema = z.object({
 
 export const rsvpSchema = z.object({
   nome: z.string().trim().min(2).max(100),
-  email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
+  email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()).optional(),
+  response_token: z.string().uuid().optional(),
   resposta: z.enum(['confirmado', 'recusado', 'talvez']),
-  quantidade_pessoas: z.number().int().min(1).max(10),
+  quantidade_pessoas: z.number().int().min(0).max(10),
   mensagem: z.string().trim().max(300).optional().transform((value) => value || null),
+}).refine((value) => value.email || value.response_token, {
+  message: 'Nao foi possivel identificar esta resposta. Atualize a pagina e tente novamente.',
+  path: ['response_token'],
 })

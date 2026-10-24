@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FestouDecor from '../components/FestouDecor.vue'
 import InvitationThemeCard from '../components/InvitationThemeCard.vue'
@@ -14,18 +14,17 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+let summaryRefreshTimer = null
 
 const form = reactive({
   nome: '',
-  email: '',
   resposta: 'confirmado',
   quantidade_pessoas: 1,
-  mensagem: '',
 })
+const responseToken = ref('')
 
 const rsvpOptions = [
-  { value: 'confirmado', label: '✓ Vou com certeza', color: 'peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600' },
-  { value: 'talvez', label: '? Talvez', color: 'peer-checked:bg-festou-yellow peer-checked:text-festou-dark peer-checked:border-festou-yellow' },
+  { value: 'confirmado', label: '✓ Vou participar', color: 'peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600' },
   { value: 'recusado', label: '✕ Não poderei ir', color: 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600' },
 ]
 
@@ -106,6 +105,13 @@ async function loadInvitation() {
   errorMessage.value = ''
   invitation.value = null
   summary.value = null
+  try {
+    const storageKey = `festou-rsvp:${route.params.slug}`
+    responseToken.value = localStorage.getItem(storageKey) || crypto.randomUUID()
+    localStorage.setItem(storageKey, responseToken.value)
+  } catch {
+    responseToken.value = crypto.randomUUID()
+  }
 
   try {
     const result = await api(`/invitations/${encodeURIComponent(route.params.slug)}`)
@@ -126,10 +132,17 @@ async function submitRsvp() {
   try {
     const result = await api(`/invitations/${encodeURIComponent(route.params.slug)}/rsvp`, {
       method: 'POST',
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        nome: form.nome,
+        resposta: form.resposta,
+        quantidade_pessoas: form.resposta === 'confirmado' ? form.quantidade_pessoas : 0,
+        response_token: responseToken.value,
+      }),
     })
     summary.value = result.summary
-    successMessage.value = 'Resposta confirmada com sucesso! Você pode usar o mesmo e-mail caso precise alterar depois.'
+    successMessage.value = form.resposta === 'confirmado'
+      ? 'Presença registrada! Você pode atualizar sua resposta neste dispositivo.'
+      : 'Sua resposta foi registrada. Você pode atualizá-la neste dispositivo.'
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível registrar sua resposta.'
   } finally {
@@ -137,10 +150,27 @@ async function submitRsvp() {
   }
 }
 
+async function refreshInvitationSummary() {
+  if (!invitation.value || document.visibilityState !== 'visible') return
+  try {
+    const result = await api(`/invitations/${encodeURIComponent(route.params.slug)}`)
+    summary.value = result.summary
+  } catch {
+    // Mantem o resumo atual se uma atualizacao temporaria falhar.
+  }
+}
+
 watch(() => route.params.slug, loadInvitation, { immediate: true })
 watch(invitation, syncInvitationMeta)
 
+onMounted(() => {
+  summaryRefreshTimer = window.setInterval(refreshInvitationSummary, 20_000)
+  document.addEventListener('visibilitychange', refreshInvitationSummary)
+})
+
 onBeforeUnmount(() => {
+  window.clearInterval(summaryRefreshTimer)
+  document.removeEventListener('visibilitychange', refreshInvitationSummary)
   resetPageMeta()
 })
 </script>
@@ -229,24 +259,10 @@ onBeforeUnmount(() => {
             />
           </div>
 
-          <div>
-            <label for="guest-email" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Seu e-mail</label>
-            <input
-              id="guest-email"
-              v-model.trim="form.email"
-              type="email"
-              autocomplete="email"
-              required
-              placeholder="seuemail@exemplo.com"
-              class="w-full text-sm"
-            />
-            <p class="mt-1 text-[11px] text-slate-400">Usado caso você precise atualizar sua resposta depois.</p>
-          </div>
-
           <!-- Opções de Confirmação -->
           <fieldset>
             <legend class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">Você vai?</legend>
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label v-for="option in rsvpOptions" :key="option.value" class="cursor-pointer">
                 <input
                   v-model="form.resposta"
@@ -266,7 +282,7 @@ onBeforeUnmount(() => {
           </fieldset>
 
           <div v-if="form.resposta === 'confirmado'">
-            <label for="guest-count" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Quantas pessoas com você?</label>
+            <label for="guest-count" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Total de pessoas, incluindo você</label>
             <input
               id="guest-count"
               v-model.number="form.quantidade_pessoas"
@@ -276,18 +292,6 @@ onBeforeUnmount(() => {
               required
               class="w-28 text-sm"
             />
-          </div>
-
-          <div>
-            <label for="guest-note" class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600">Deixe um recado para o anfitrião (opcional)</label>
-            <textarea
-              id="guest-note"
-              v-model.trim="form.mensagem"
-              rows="2"
-              maxlength="300"
-              placeholder="Mal posso esperar pela festa! Parabéns!"
-              class="w-full text-sm"
-            ></textarea>
           </div>
 
           <button

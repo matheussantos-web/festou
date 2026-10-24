@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { api, asArray } from '../lib/api'
 import { formatDate } from '../lib/format'
 import InvitationThemeCard from '../components/InvitationThemeCard.vue'
@@ -20,6 +20,8 @@ const isUpdating = ref(false)
 const formErrors = reactive({ titulo: '', anfitriao: '', data_evento: '', local_evento: '', mensagem: '' })
 const editFormErrors = reactive({ titulo: '', anfitriao: '', data_evento: '', local_evento: '', mensagem: '' })
 const deletingInvitationId = ref(null)
+let invitationsRefreshTimer = null
+let invitationsRequestPending = false
 
 const form = reactive({
   titulo: '',
@@ -92,28 +94,43 @@ function toLocalDateTimeInput(value) {
 function getConfirmationSummary(confirmations = []) {
   const confirmed = confirmations.filter(({ resposta }) => resposta === 'confirmado')
   const maybe = confirmations.filter(({ resposta }) => resposta === 'talvez')
+  const refused = confirmations.filter(({ resposta }) => resposta === 'recusado')
   const confirmedGuests = confirmed.reduce(
     (total, confirmation) => total + Number(confirmation.quantidade_pessoas),
     0,
   )
-
-  const responsesLabel = confirmations.length === 1 ? 'resposta' : 'respostas'
-  const guestsLabel = confirmedGuests === 1 ? 'pessoa confirmada' : 'pessoas confirmadas'
-
-  return `${confirmations.length} ${responsesLabel} · ${confirmedGuests} ${guestsLabel} · ${maybe.length} talvez`
+  return {
+    responses: confirmations.length,
+    confirmed: confirmed.length,
+    people: confirmedGuests,
+    refused: refused.length,
+    maybe: maybe.length,
+  }
 }
 
-async function loadInvitations() {
-  isLoading.value = true
+async function loadInvitations({ silent = false } = {}) {
+  if (invitationsRequestPending) return
+  invitationsRequestPending = true
+  if (!silent) {
+    isLoading.value = true
+    errorMessage.value = ''
+  }
 
   try {
     const result = await api('/invitations/mine')
     invitations.value = asArray(result.invitations)
   } catch (error) {
-    errorMessage.value = error.message || 'Não foi possível carregar seus convites.'
+    if (!silent || invitations.value.length === 0) {
+      errorMessage.value = error.message || 'Não foi possível carregar seus convites.'
+    }
   } finally {
-    isLoading.value = false
+    if (!silent) isLoading.value = false
+    invitationsRequestPending = false
   }
+}
+
+function refreshInvitationsWhenVisible() {
+  if (document.visibilityState === 'visible') loadInvitations({ silent: true })
 }
 
 async function createInvitation() {
@@ -258,7 +275,16 @@ async function toggleRsvp(invitation) {
   }
 }
 
-onMounted(loadInvitations)
+onMounted(() => {
+  loadInvitations()
+  invitationsRefreshTimer = window.setInterval(refreshInvitationsWhenVisible, 20_000)
+  document.addEventListener('visibilitychange', refreshInvitationsWhenVisible)
+})
+
+onBeforeUnmount(() => {
+  window.clearInterval(invitationsRefreshTimer)
+  document.removeEventListener('visibilitychange', refreshInvitationsWhenVisible)
+})
 </script>
 
 <template>
@@ -562,9 +588,24 @@ onMounted(loadInvitations)
                     </span>
                   </div>
                   <p class="mt-1 text-xs text-slate-500">{{ formatInvitationDate(invitation.data_evento) }}</p>
-                  <p class="mt-1.5 text-xs font-bold text-festou-primary">
-                    {{ getConfirmationSummary(invitation.confirmacoes) }}
-                  </p>
+                  <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div class="rounded-lg bg-emerald-50 px-3 py-2">
+                      <p class="text-lg font-extrabold leading-none text-emerald-800">{{ getConfirmationSummary(invitation.confirmacoes).people }}</p>
+                      <p class="mt-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Pessoas confirmadas</p>
+                    </div>
+                    <div class="rounded-lg bg-slate-100 px-3 py-2">
+                      <p class="text-lg font-extrabold leading-none text-slate-800">{{ getConfirmationSummary(invitation.confirmacoes).confirmed }}</p>
+                      <p class="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">Respostas sim</p>
+                    </div>
+                    <div class="rounded-lg bg-rose-50 px-3 py-2">
+                      <p class="text-lg font-extrabold leading-none text-rose-800">{{ getConfirmationSummary(invitation.confirmacoes).refused }}</p>
+                      <p class="mt-1 text-[10px] font-bold uppercase tracking-wide text-rose-700">Não poderão ir</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50 px-3 py-2">
+                      <p class="text-lg font-extrabold leading-none text-amber-800">{{ getConfirmationSummary(invitation.confirmacoes).maybe }}</p>
+                      <p class="mt-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">Talvez</p>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Ações do Convite -->
@@ -613,11 +654,15 @@ onMounted(loadInvitations)
               <div v-if="invitation.confirmacoes?.length" class="mt-3 divide-y divide-slate-100 text-xs">
                 <div
                   v-for="conf in invitation.confirmacoes"
-                  :key="conf.email"
-                  class="flex items-center justify-between py-1.5"
+                  :key="conf.id"
+                  class="flex flex-wrap items-center justify-between gap-2 py-2"
                 >
                   <span class="text-slate-800">
-                    <strong class="font-semibold">{{ conf.nome }}</strong> ({{ conf.quantidade_pessoas }} {{ conf.quantidade_pessoas === 1 ? 'pessoa' : 'pessoas' }})
+                    <strong class="font-semibold">{{ conf.nome }}</strong>
+                    <span v-if="conf.resposta === 'confirmado'" class="text-slate-500">
+                      · {{ conf.quantidade_pessoas }} {{ conf.quantidade_pessoas === 1 ? 'pessoa' : 'pessoas' }}
+                    </span>
+                    <span v-if="conf.mensagem" class="block pt-1 text-slate-500">{{ conf.mensagem }}</span>
                   </span>
                   <span
                     class="rounded-full px-2 py-0.5 font-bold"

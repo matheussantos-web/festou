@@ -71,8 +71,8 @@ invitationsRouter.get('/mine', requireUser, async (request, response, next) => {
         c.created_at,
         coalesce(
           json_agg(json_build_object(
+            'id', r.id,
             'nome', r.nome,
-            'email', r.email,
             'resposta', r.resposta,
             'quantidade_pessoas', r.quantidade_pessoas,
             'mensagem', r.mensagem,
@@ -217,21 +217,40 @@ invitationsRouter.post('/:slug/rsvp', rsvpLimiter, async (request, response, nex
     if (new Date(invitation.data_evento).getTime() < Date.now()) {
       return response.status(409).json({ message: 'O evento ja aconteceu; as confirmacoes estao encerradas.' })
     }
+    const partySize = input.resposta === 'confirmado' ? input.quantidade_pessoas : 0
 
-    await sql`
-      insert into public.confirmacoes_presenca (
-        convite_id, nome, email, resposta, quantidade_pessoas, mensagem
-      ) values (
-        ${invitation.id}, ${input.nome}, ${input.email}, ${input.resposta},
-        ${input.quantidade_pessoas}, ${input.mensagem}
-      )
-      on conflict (convite_id, email) do update set
-        nome = excluded.nome,
-        resposta = excluded.resposta,
-        quantidade_pessoas = excluded.quantidade_pessoas,
-        mensagem = excluded.mensagem,
-        updated_at = now()
-    `
+    if (input.email) {
+      await sql`
+        insert into public.confirmacoes_presenca (
+          convite_id, nome, email, resposta_token, resposta, quantidade_pessoas, mensagem
+        ) values (
+          ${invitation.id}, ${input.nome}, ${input.email}, ${input.response_token ?? null},
+          ${input.resposta}, ${partySize}, ${input.mensagem}
+        )
+        on conflict (convite_id, email) do update set
+          nome = excluded.nome,
+          resposta_token = coalesce(excluded.resposta_token, public.confirmacoes_presenca.resposta_token),
+          resposta = excluded.resposta,
+          quantidade_pessoas = excluded.quantidade_pessoas,
+          mensagem = excluded.mensagem,
+          updated_at = now()
+      `
+    } else {
+      await sql`
+        insert into public.confirmacoes_presenca (
+          convite_id, nome, email, resposta_token, resposta, quantidade_pessoas, mensagem
+        ) values (
+          ${invitation.id}, ${input.nome}, null, ${input.response_token},
+          ${input.resposta}, ${partySize}, ${input.mensagem}
+        )
+        on conflict (convite_id, resposta_token) where resposta_token is not null do update set
+          nome = excluded.nome,
+          resposta = excluded.resposta,
+          quantidade_pessoas = excluded.quantidade_pessoas,
+          mensagem = excluded.mensagem,
+          updated_at = now()
+      `
+    }
 
     const summary = await fetchRsvpSummary(invitation.id)
 
