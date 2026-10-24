@@ -69,11 +69,11 @@ onBeforeUnmount(() => {
         aria-label="Festou! — página inicial"
       >
         <img
-          src="/03_logo_horizontal.png"
+          src="/festou-logo-horizontal.png"
           alt=""
           aria-hidden="true"
           decoding="async"
-          class="h-9 w-auto max-w-[7.5rem] rounded-md object-contain sm:h-10 sm:max-w-[8.5rem]"
+          class="h-10 w-auto max-w-[8rem] bg-transparent object-contain sm:h-11 sm:max-w-[8.5rem]"
         />
       </RouterLink>
 
