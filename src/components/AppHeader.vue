@@ -3,10 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { cartCount } from '../lib/cart'
+import { useNotifications } from '../lib/notifications'
 import { clearSession, useSession } from '../lib/session'
 
 const router = useRouter()
 const { user: currentUser } = useSession()
+const { pendingOrderCount, unreadMessageCount } = useNotifications()
 const isMobileMenuOpen = ref(false)
 const isUserMenuOpen = ref(false)
 const userMenuRef = ref(null)
@@ -19,6 +21,16 @@ const userInitial = computed(() => (
 const menuButtonLabel = computed(() => (
   isMobileMenuOpen.value ? 'Fechar menu' : 'Abrir menu'
 ))
+const orderNavigationLabel = computed(() => {
+  const destination = currentUser.value?.tipo_perfil === 'fornecedor'
+    ? 'Painel de pedidos'
+    : 'Meus Orçamentos'
+  return `${destination}: ${pendingOrderCount.value} pendentes e ${unreadMessageCount.value} mensagens não lidas`
+})
+
+function displayCount(count) {
+  return count > 99 ? '99+' : count
+}
 
 async function handleLogout() {
   try {
@@ -86,8 +98,24 @@ onBeforeUnmount(() => {
           <RouterLink to="/convites" class="nav-link" active-class="nav-link-active">
             Meus convites
           </RouterLink>
-          <RouterLink v-if="currentUser" to="/orcamentos" class="nav-link" active-class="nav-link-active">
+          <RouterLink
+            v-if="currentUser"
+            to="/orcamentos"
+            class="nav-link gap-1.5"
+            active-class="nav-link-active"
+            :aria-label="orderNavigationLabel"
+          >
             Meus Orçamentos
+            <span
+              v-if="pendingOrderCount > 0"
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold leading-none text-festou-dark"
+              aria-hidden="true"
+            >{{ displayCount(pendingOrderCount) }}</span>
+            <span
+              v-if="unreadMessageCount > 0"
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold leading-none text-festou-dark"
+              aria-hidden="true"
+            >{{ displayCount(unreadMessageCount) }}</span>
           </RouterLink>
           <RouterLink
             to="/carrinho"
@@ -110,8 +138,23 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-if="currentUser && currentUser.tipo_perfil === 'fornecedor'">
-          <RouterLink to="/fornecedor/painel" class="nav-link" active-class="nav-link-active">
+          <RouterLink
+            to="/fornecedor/painel"
+            class="nav-link gap-1.5"
+            active-class="nav-link-active"
+            :aria-label="orderNavigationLabel"
+          >
             Painel de pedidos
+            <span
+              v-if="pendingOrderCount > 0"
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold leading-none text-festou-dark"
+              aria-hidden="true"
+            >{{ displayCount(pendingOrderCount) }}</span>
+            <span
+              v-if="unreadMessageCount > 0"
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold leading-none text-festou-dark"
+              aria-hidden="true"
+            >{{ displayCount(unreadMessageCount) }}</span>
           </RouterLink>
           <RouterLink
             to="/fornecedor/produtos/novo"
@@ -179,10 +222,15 @@ onBeforeUnmount(() => {
             <RouterLink
               v-if="currentUser.tipo_perfil === 'cliente'"
               to="/orcamentos"
-              class="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
+              class="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
               role="menuitem"
+              :aria-label="orderNavigationLabel"
             >
-              Meus Orçamentos
+              <span>Meus Orçamentos</span>
+              <span class="inline-flex items-center gap-1.5" aria-hidden="true">
+                <span v-if="pendingOrderCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(pendingOrderCount) }}</span>
+                <span v-if="unreadMessageCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(unreadMessageCount) }}</span>
+              </span>
             </RouterLink>
             <RouterLink
               v-if="currentUser.tipo_perfil === 'cliente'"
@@ -195,10 +243,15 @@ onBeforeUnmount(() => {
             <RouterLink
               v-if="currentUser.tipo_perfil === 'fornecedor'"
               to="/fornecedor/painel"
-              class="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
+              class="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-festou-soft hover:text-festou-primary"
               role="menuitem"
+              :aria-label="orderNavigationLabel"
             >
-              Painel de pedidos
+              <span>Painel de pedidos</span>
+              <span class="inline-flex items-center gap-1.5" aria-hidden="true">
+                <span v-if="pendingOrderCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(pendingOrderCount) }}</span>
+                <span v-if="unreadMessageCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(unreadMessageCount) }}</span>
+              </span>
             </RouterLink>
             <button
               type="button"
@@ -248,16 +301,24 @@ onBeforeUnmount(() => {
           <RouterLink to="/convites" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
             Meus convites
           </RouterLink>
-          <RouterLink v-if="currentUser" to="/orcamentos" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
+          <RouterLink v-if="currentUser" to="/orcamentos" class="nav-link w-full justify-between" active-class="nav-link-active" @click="closeMobileMenu" :aria-label="orderNavigationLabel">
             Meus Orçamentos
+            <span class="inline-flex items-center gap-1.5" aria-hidden="true">
+              <span v-if="pendingOrderCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(pendingOrderCount) }}</span>
+              <span v-if="unreadMessageCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(unreadMessageCount) }}</span>
+            </span>
           </RouterLink>
           <RouterLink to="/carrinho" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
             Carrinho ({{ cartCount }})
           </RouterLink>
         </template>
         <template v-if="currentUser && currentUser.tipo_perfil === 'fornecedor'">
-          <RouterLink to="/fornecedor/painel" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
+          <RouterLink to="/fornecedor/painel" class="nav-link w-full justify-between" active-class="nav-link-active" @click="closeMobileMenu" :aria-label="orderNavigationLabel">
             Painel de pedidos
+            <span class="inline-flex items-center gap-1.5" aria-hidden="true">
+              <span v-if="pendingOrderCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(pendingOrderCount) }}</span>
+              <span v-if="unreadMessageCount > 0" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold text-festou-dark">{{ displayCount(unreadMessageCount) }}</span>
+            </span>
           </RouterLink>
           <RouterLink to="/fornecedor/produtos/novo" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
             Anunciar produto
