@@ -1,11 +1,41 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { cartCount } from '../lib/cart'
 import { useSession } from '../lib/session'
+import { clearNotificationCounts, refreshNotificationCounts, setNotificationUser, useNotifications } from '../lib/notifications'
 
 const { user: currentUser } = useSession()
+const { pendingOrderCount, unreadMessageCount, notificationCount } = useNotifications()
 
 const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor')
+const orderNavigationLabel = computed(() => {
+  const destination = isSupplier.value ? 'Painel de pedidos' : 'Meus Orçamentos'
+  return `${destination}: ${pendingOrderCount.value} pendentes e ${unreadMessageCount.value} mensagens não lidas`
+})
+
+let refreshTimer
+
+function refreshIfVisible() {
+  if (currentUser.value && document.visibilityState === 'visible') refreshNotificationCounts()
+}
+
+watch(currentUser, (user) => {
+  if (user?.id) {
+    setNotificationUser(user.id)
+    refreshNotificationCounts()
+  }
+  else clearNotificationCounts()
+}, { immediate: true })
+
+onMounted(() => {
+  document.addEventListener('visibilitychange', refreshIfVisible)
+  refreshTimer = window.setInterval(refreshIfVisible, 30_000)
+})
+
+onBeforeUnmount(() => {
+  window.clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', refreshIfVisible)
+})
 </script>
 
 <template>
@@ -42,7 +72,7 @@ const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor
         :to="isSupplier ? '/fornecedor/painel' : '/carrinho'"
         class="relative flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
         active-class="text-festou-primary"
-        :aria-label="isSupplier ? 'Painel de pedidos' : 'Carrinho'"
+        :aria-label="isSupplier ? orderNavigationLabel : 'Carrinho'"
       >
         <span class="relative">
           <svg v-if="isSupplier" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -58,6 +88,13 @@ const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor
             class="absolute -right-2.5 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-primary px-1 text-[10px] font-extrabold text-white"
           >
             {{ cartCount }}
+          </span>
+          <span
+            v-if="isSupplier && notificationCount > 0"
+            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#FF2D9B] px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+            aria-hidden="true"
+          >
+            {{ notificationCount > 99 ? '99+' : notificationCount }}
           </span>
         </span>
         {{ isSupplier ? 'Painel' : 'Carrinho' }}
@@ -84,11 +121,20 @@ const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor
         to="/orcamentos"
         class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
         active-class="text-festou-primary"
-        aria-label="Meus Orçamentos"
+        :aria-label="orderNavigationLabel"
       >
-        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-        </svg>
+        <span class="relative">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+          <span
+            v-if="notificationCount > 0"
+            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#FF2D9B] px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+            aria-hidden="true"
+          >
+            {{ notificationCount > 99 ? '99+' : notificationCount }}
+          </span>
+        </span>
         Orçamentos
       </RouterLink>
     </div>

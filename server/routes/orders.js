@@ -120,6 +120,48 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
   }
 })
 
+ordersRouter.get('/notifications', requireUser, async (request, response, next) => {
+  try {
+    if (!['cliente', 'fornecedor'].includes(request.user.tipo_perfil)) {
+      return response.status(403).json({ message: 'Este perfil nao pode consultar notificacoes.' })
+    }
+
+    const sql = getDatabase()
+    const [counts] = await sql`
+      with pedidos_do_usuario as (
+        select o.id, o.status
+        from public.pedidos o
+        where o.cliente_id = ${request.user.id}
+
+        union
+
+        select o.id, o.status
+        from public.pedidos o
+        join public.itens_pedido i on i.pedido_id = o.id
+        where i.fornecedor_id = ${request.user.id}
+      )
+      select
+        (select count(*)::int
+         from pedidos_do_usuario
+         where status in ('solicitado', 'em_negociacao')) as pedidos_pendentes,
+        (select count(*)::int
+         from public.mensagens_pedido m
+         join pedidos_do_usuario o on o.id = m.pedido_id
+         left join public.leituras_conversa l
+           on l.pedido_id = m.pedido_id and l.usuario_id = ${request.user.id}
+         where m.autor_id <> ${request.user.id}
+           and m.created_at > coalesce(l.lida_ate, '-infinity'::timestamptz)) as mensagens_nao_lidas
+    `
+
+    return response.json({
+      pending_orders: counts?.pedidos_pendentes ?? 0,
+      unread_messages: counts?.mensagens_nao_lidas ?? 0,
+    })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 ordersRouter.post('/', requireUser, async (request, response, next) => {
   try {
     if (request.user.tipo_perfil !== 'cliente') {
@@ -220,12 +262,28 @@ ordersRouter.get('/:id/messages', requireUser, async (request, response, next) =
     const messages = await sql`
       select m.id, m.texto, m.created_at, m.autor_id,
         p.nome as autor_nome, p.tipo_perfil as autor_tipo
-      from public.mensagens_pedido m
+      from (
+        select id, texto, created_at, autor_id
+        from public.mensagens_pedido
+        where pedido_id = ${orderId}
+        order by created_at desc, id desc
+        limit 200
+      ) m
       join public.perfis p on p.id = m.autor_id
-      where m.pedido_id = ${orderId}
       order by m.created_at asc, m.id asc
-      limit 200
     `
+
+    const lastMessageAt = messages.at(-1)?.created_at
+    if (lastMessageAt) {
+      await sql`
+        insert into public.leituras_conversa (pedido_id, usuario_id, lida_ate)
+        values (${orderId}, ${request.user.id}, ${lastMessageAt})
+        on conflict (pedido_id, usuario_id) do update
+        set lida_ate = greatest(leituras_conversa.lida_ate, excluded.lida_ate),
+            updated_at = now()
+      `
+    }
+
     return response.json({ messages })
   } catch (error) {
     return next(error)
