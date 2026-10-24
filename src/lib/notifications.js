@@ -1,24 +1,24 @@
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { api } from './api'
 
 const pendingOrderCount = ref(0)
 const unreadMessageCount = ref(0)
 const isLoadingNotifications = ref(false)
-const notificationCount = computed(() => pendingOrderCount.value + unreadMessageCount.value)
 let pendingRequest = null
 let notificationUserId = null
 let refreshVersion = 0
+let requestSequence = 0
 
-export async function refreshNotificationCounts() {
+export async function refreshNotificationCounts({ force = false } = {}) {
   if (!notificationUserId) return null
-  if (pendingRequest?.version === refreshVersion) return pendingRequest.promise
+  if (!force && pendingRequest?.version === refreshVersion) return pendingRequest.promise
 
   isLoadingNotifications.value = true
-  const request = { version: refreshVersion, promise: null }
+  const request = { version: refreshVersion, sequence: ++requestSequence, promise: null }
   pendingRequest = request
   request.promise = api('/orders/notifications')
     .then((result) => {
-      if (request.version === refreshVersion) {
+      if (request.version === refreshVersion && request.sequence === requestSequence) {
         pendingOrderCount.value = Math.max(0, Number(result.pending_orders) || 0)
         unreadMessageCount.value = Math.max(0, Number(result.unread_messages) || 0)
       }
@@ -26,7 +26,9 @@ export async function refreshNotificationCounts() {
     })
     .catch((error) => {
       // Uma sessao encerrada nao deve deixar badges de outra conta na tela.
-      if (request.version === refreshVersion && [401, 403].includes(error.status)) clearNotificationCounts()
+      if (request.version === refreshVersion && request.sequence === requestSequence && [401, 403].includes(error.status)) {
+        clearNotificationCounts()
+      }
       return null
     })
     .finally(() => {
@@ -60,7 +62,6 @@ export function useNotifications() {
   return {
     pendingOrderCount,
     unreadMessageCount,
-    notificationCount,
     isLoadingNotifications,
     refreshNotificationCounts,
     clearNotificationCounts,

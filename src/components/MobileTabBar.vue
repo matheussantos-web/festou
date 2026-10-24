@@ -1,11 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { cartCount } from '../lib/cart'
 import { useSession } from '../lib/session'
 import { clearNotificationCounts, refreshNotificationCounts, setNotificationUser, useNotifications } from '../lib/notifications'
 
 const { user: currentUser } = useSession()
-const { pendingOrderCount, unreadMessageCount, notificationCount } = useNotifications()
+const route = useRoute()
+const { pendingOrderCount, unreadMessageCount } = useNotifications()
 
 const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor')
 const orderNavigationLabel = computed(() => {
@@ -27,6 +29,13 @@ watch(currentUser, (user) => {
   else clearNotificationCounts()
 }, { immediate: true })
 
+// Revalida ao entrar nas telas que contêm os pedidos e suas conversas.
+watch(() => route.path, (path) => {
+  if (currentUser.value?.id && ['/orcamentos', '/fornecedor/painel'].includes(path)) {
+    refreshNotificationCounts()
+  }
+}, { immediate: true })
+
 onMounted(() => {
   document.addEventListener('visibilitychange', refreshIfVisible)
   refreshTimer = window.setInterval(refreshIfVisible, 30_000)
@@ -40,14 +49,14 @@ onBeforeUnmount(() => {
 
 <template>
   <nav
-    class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+    class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-festou-dark/95 pb-[env(safe-area-inset-bottom)] text-white backdrop-blur-xl md:hidden"
     aria-label="Atalhos do aplicativo"
   >
     <div class="mx-auto grid max-w-md px-2" :class="isSupplier ? 'grid-cols-4' : 'grid-cols-5'">
       <RouterLink
         to="/"
-        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
-        active-class="text-festou-primary"
+        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
+        active-class="text-festou-pink"
         aria-label="Início"
       >
         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -58,8 +67,8 @@ onBeforeUnmount(() => {
 
       <RouterLink
         to="/vitrine"
-        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
-        active-class="text-festou-primary"
+        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
+        active-class="text-festou-pink"
         aria-label="Vitrine"
       >
         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -70,8 +79,8 @@ onBeforeUnmount(() => {
 
       <RouterLink
         :to="isSupplier ? '/fornecedor/painel' : '/carrinho'"
-        class="relative flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
-        active-class="text-festou-primary"
+        class="relative flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
+        active-class="text-festou-pink"
         :aria-label="isSupplier ? orderNavigationLabel : 'Carrinho'"
       >
         <span class="relative">
@@ -90,11 +99,18 @@ onBeforeUnmount(() => {
             {{ cartCount }}
           </span>
           <span
-            v-if="isSupplier && notificationCount > 0"
-            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-white"
+            v-if="isSupplier && pendingOrderCount > 0"
+            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-festou-dark"
             aria-hidden="true"
           >
-            {{ notificationCount > 99 ? '99+' : notificationCount }}
+            {{ pendingOrderCount > 99 ? '99+' : pendingOrderCount }}
+          </span>
+          <span
+            v-if="isSupplier && unreadMessageCount > 0"
+            class="absolute -left-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-festou-dark"
+            aria-hidden="true"
+          >
+            {{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}
           </span>
         </span>
         {{ isSupplier ? 'Painel' : 'Carrinho' }}
@@ -102,8 +118,8 @@ onBeforeUnmount(() => {
 
       <RouterLink
         :to="isSupplier ? '/fornecedor/produtos/novo' : '/convites'"
-        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
-        active-class="text-festou-primary"
+        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
+        active-class="text-festou-pink"
         :aria-label="isSupplier ? 'Anunciar produto' : 'Meus convites'"
       >
         <svg v-if="isSupplier" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -119,8 +135,8 @@ onBeforeUnmount(() => {
       <RouterLink
         v-if="!isSupplier"
         to="/orcamentos"
-        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors duration-200"
-        active-class="text-festou-primary"
+        class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
+        active-class="text-festou-pink"
         :aria-label="orderNavigationLabel"
       >
         <span class="relative">
@@ -128,11 +144,18 @@ onBeforeUnmount(() => {
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
           </svg>
           <span
-            v-if="notificationCount > 0"
-            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-white"
+            v-if="pendingOrderCount > 0"
+            class="absolute -right-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-pink px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-festou-dark"
             aria-hidden="true"
           >
-            {{ notificationCount > 99 ? '99+' : notificationCount }}
+            {{ pendingOrderCount > 99 ? '99+' : pendingOrderCount }}
+          </span>
+          <span
+            v-if="unreadMessageCount > 0"
+            class="absolute -left-3 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-cyan px-1 text-[10px] font-extrabold text-festou-dark ring-2 ring-festou-dark"
+            aria-hidden="true"
+          >
+            {{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}
           </span>
         </span>
         Orçamentos

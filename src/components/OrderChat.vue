@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api, asArray } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { refreshNotificationCounts } from '../lib/notifications'
 
 const props = defineProps({
   orderId: { type: String, required: true },
@@ -18,11 +19,13 @@ const isSending = ref(false)
 let refreshTimer
 const canSend = computed(() => !props.disabled && text.value.trim().length > 0 && !isSending.value)
 
-async function loadMessages() {
+async function loadMessages({ refreshCounts = false } = {}) {
   try {
     const result = await api(`/orders/${props.orderId}/messages`)
     messages.value = asArray(result.messages)
     error.value = ''
+    // A rota marca as mensagens como lidas antes de responder.
+    if (refreshCounts) await refreshNotificationCounts({ force: true })
   } catch (loadError) {
     error.value = loadError.message || 'Nao foi possivel carregar a conversa.'
   } finally {
@@ -37,7 +40,7 @@ function openChat() {
 watch(isOpen, (open) => {
   if (open) {
     isLoading.value = true
-    loadMessages()
+    loadMessages({ refreshCounts: true })
     refreshTimer = window.setInterval(loadMessages, 5000)
   } else if (refreshTimer) {
     window.clearInterval(refreshTimer)
