@@ -1,10 +1,11 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FestouDecor from '../components/FestouDecor.vue'
 import InvitationThemeCard from '../components/InvitationThemeCard.vue'
 import { api } from '../lib/api'
 import { getInvitationTheme } from '../lib/invitationThemes'
+import { invitationImageVersion } from '../../shared/invitationImageVersion.js'
 
 const route = useRoute()
 const invitation = ref(null)
@@ -30,6 +31,65 @@ const rsvpOptions = [
 
 const currentTheme = computed(() => getInvitationTheme(invitation.value?.tema))
 
+function setMeta(selector, attribute, key, content) {
+  let tag = document.head.querySelector(selector)
+  if (!tag) {
+    tag = document.createElement('meta')
+    tag.setAttribute(attribute, key)
+    document.head.append(tag)
+  }
+  tag.setAttribute('content', content)
+}
+
+function resetPageMeta() {
+  if (typeof document === 'undefined') return
+  const title = 'Festou! | Festas do seu jeito'
+  const description = 'Descubra fornecedores, monte seu orçamento e envie convites digitais com RSVP em poucos cliques.'
+  const image = `${window.location.origin}/festou-marca.png`
+
+  document.title = title
+  setMeta('meta[name="description"]', 'name', 'description', description)
+  setMeta('meta[property="og:title"]', 'property', 'og:title', title)
+  setMeta('meta[property="og:description"]', 'property', 'og:description', description)
+  setMeta('meta[property="og:url"]', 'property', 'og:url', window.location.origin)
+  setMeta('meta[property="og:image"]', 'property', 'og:image', image)
+  setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title)
+  setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description)
+  setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', image)
+}
+
+function syncInvitationMeta(value) {
+  if (typeof document === 'undefined') return
+  if (!value) {
+    resetPageMeta()
+    return
+  }
+
+  const title = `${value.titulo} — convite de ${value.anfitriao}`
+  const when = new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value.data_evento))
+  const description = `${when} · ${value.local_evento}. Confirme sua presença.`
+  const url = `${window.location.origin}/convite/${encodeURIComponent(value.slug)}`
+  const image = `${url}/imagem.png?v=${invitationImageVersion(value)}`
+
+  document.title = title
+  setMeta('meta[name="description"]', 'name', 'description', description)
+  setMeta('meta[property="og:title"]', 'property', 'og:title', title)
+  setMeta('meta[property="og:description"]', 'property', 'og:description', description)
+  setMeta('meta[property="og:url"]', 'property', 'og:url', url)
+  setMeta('meta[property="og:image"]', 'property', 'og:image', image)
+  setMeta('meta[property="og:image:type"]', 'property', 'og:image:type', 'image/png')
+  setMeta('meta[property="og:image:width"]', 'property', 'og:image:width', '1200')
+  setMeta('meta[property="og:image:height"]', 'property', 'og:image:height', '630')
+  setMeta('meta[property="og:image:alt"]', 'property', 'og:image:alt', `Convite de ${value.titulo} para ${value.anfitriao}`)
+  setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title)
+  setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description)
+  setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', image)
+}
+
 function getGoogleCalendarUrl(inv) {
   if (!inv) return '#'
   const startDate = new Date(inv.data_evento)
@@ -44,10 +104,12 @@ function getGoogleCalendarUrl(inv) {
 async function loadInvitation() {
   isLoading.value = true
   errorMessage.value = ''
+  invitation.value = null
+  summary.value = null
 
   try {
     const result = await api(`/invitations/${encodeURIComponent(route.params.slug)}`)
-    invitation.value = result.invitation
+    invitation.value = { ...result.invitation, slug: route.params.slug }
     summary.value = result.summary
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível carregar este convite.'
@@ -76,6 +138,11 @@ async function submitRsvp() {
 }
 
 watch(() => route.params.slug, loadInvitation, { immediate: true })
+watch(invitation, syncInvitationMeta)
+
+onBeforeUnmount(() => {
+  resetPageMeta()
+})
 </script>
 
 <template>

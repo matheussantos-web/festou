@@ -9,6 +9,7 @@ import helmet from 'helmet'
 import { appOrigin, jsonBodyLimit, trustProxy } from './config.js'
 import { getDatabase } from './db.js'
 import { buildInvitationMeta, injectMeta } from './meta.js'
+import { renderInvitationPng } from './invitationImage.js'
 import { createErrorHandler, createNotFoundHandler } from './middleware/errors.js'
 import { createOriginGuard } from './middleware/origin.js'
 import { authRouter } from './routes/auth.js'
@@ -74,13 +75,37 @@ export function createApp() {
       return indexHtmlPromise
     }
 
+    // Imagem PNG publica renderizada no servidor a partir dos dados do convite.
+    // O formato raster funciona com crawlers que nao executam o Vue nem aceitam SVG.
+    app.get('/convite/:slug/imagem.png', async (request, response, next) => {
+      try {
+        const sql = getDatabase()
+        const [invitation] = await sql`
+          select slug, titulo, anfitriao, data_evento, local_evento, tema
+          from public.convites
+          where slug = ${request.params.slug}
+          limit 1
+        `
+
+        if (!invitation) return response.status(404).type('text').send('Convite nao encontrado.')
+
+        response.set({
+          'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
+          'X-Content-Type-Options': 'nosniff',
+        })
+        return response.type('png').send(renderInvitationPng(invitation))
+      } catch (error) {
+        return next(error)
+      }
+    })
+
     // Link público do convite: injeta as tags de prévia no HTML, porque os
     // robôs do WhatsApp e das redes sociais não executam o SPA.
     app.get('/convite/:slug', async (request, response, next) => {
       try {
         const sql = getDatabase()
         const [invitation] = await sql`
-          select slug, titulo, anfitriao, data_evento, local_evento
+          select slug, titulo, anfitriao, data_evento, local_evento, mensagem, tema
           from public.convites
           where slug = ${request.params.slug}
           limit 1

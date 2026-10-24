@@ -17,7 +17,7 @@ describe('metadados do convite', () => {
     expect(meta.description).toContain('Buffet Estrela')
     expect(meta.description).toContain('Confirme sua presença')
     expect(meta.url).toBe('https://festou.app/convite/festa-da-marina')
-    expect(meta.image).toBe('https://festou.app/festou-marca.png')
+    expect(meta.image).toMatch(/^https:\/\/festou\.app\/convite\/festa-da-marina\/imagem\.png\?v=/)
   })
 
   it('escapa os caracteres perigosos', () => {
@@ -32,6 +32,8 @@ describe('metadados do convite', () => {
     expect(result).not.toContain('<title>Festou!</title>')
     expect(result).toContain('property="og:title"')
     expect(result).toContain('property="og:url" content="https://festou.app/convite/festa-da-marina"')
+    expect(result.match(/property="og:image"/g)).toHaveLength(1)
+    expect(result).toContain('property="og:image:type" content="image/png"')
     expect(result).toContain('name="twitter:card" content="summary_large_image"')
     expect(result.indexOf('og:title')).toBeLessThan(result.indexOf('</head>'))
   })

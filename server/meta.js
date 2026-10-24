@@ -1,3 +1,5 @@
+import { invitationImageVersion } from '../shared/invitationImageVersion.js'
+
 const htmlEscapes = {
   '&': '&amp;',
   '<': '&lt;',
@@ -21,12 +23,14 @@ export function buildInvitationMeta(invitation, origin) {
   const title = `${invitation.titulo} — convite de ${invitation.anfitriao}`
   const description = `${when} · ${invitation.local_evento}. Confirme sua presença.`
   const url = `${origin}/convite/${invitation.slug}`
+  const image = `${url}/imagem.png?v=${invitationImageVersion(invitation)}`
 
   return {
     title,
     description,
     url,
-    image: `${origin}/festou-marca.png`,
+    image,
+    imageAlt: `Convite de ${invitation.titulo} para ${invitation.anfitriao}`,
   }
 }
 
@@ -42,6 +46,10 @@ export function injectMeta(html, meta) {
     `<meta property="og:description" content="${escapeHtml(meta.description)}" />`,
     `<meta property="og:url" content="${escapeHtml(meta.url)}" />`,
     `<meta property="og:image" content="${escapeHtml(meta.image)}" />`,
+    '<meta property="og:image:type" content="image/png" />',
+    '<meta property="og:image:width" content="1200" />',
+    '<meta property="og:image:height" content="630" />',
+    `<meta property="og:image:alt" content="${escapeHtml(meta.imageAlt || meta.title)}" />`,
     '<meta property="og:locale" content="pt_BR" />',
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escapeHtml(meta.title)}" />`,
@@ -56,5 +64,25 @@ export function injectMeta(html, meta) {
 
   if (!withTitle.includes('</head>')) return withTitle
 
-  return withTitle.replace('</head>', `  ${tags}\n  </head>`)
+  const tagsToInsert = tags.split('\n    ')
+  let result = withTitle
+  const missingTags = []
+
+  for (const tag of tagsToInsert) {
+    const identity = tag.match(/^<meta\s+(name|property)="([^"]+)"/i)
+    if (!identity) {
+      missingTags.push(tag)
+      continue
+    }
+
+    const [, attribute, value] = identity
+    const escapedAttribute = attribute.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const existing = new RegExp(`<meta\\s+(?=[^>]*\\b${escapedAttribute}=["']${escapedValue}["'])[^>]*\\/?\\s*>`, 'i')
+
+    if (existing.test(result)) result = result.replace(existing, tag)
+    else missingTags.push(tag)
+  }
+
+  return result.replace('</head>', `${missingTags.join('\n    ')}\n  </head>`)
 }
