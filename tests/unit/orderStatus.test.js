@@ -17,7 +17,7 @@ describe('orderStatusLabel', () => {
 
 describe('orderStatusStyle', () => {
   it('devolve a classe visual de cada status', () => {
-    expect(orderStatusStyle('confirmado')).toContain('emerald')
+    expect(orderStatusStyle('negocio_fechado')).toContain('emerald')
     expect(orderStatusStyle('recusado')).toContain('rose')
     expect(orderStatusStyle('cancelado')).toContain('slate')
   })

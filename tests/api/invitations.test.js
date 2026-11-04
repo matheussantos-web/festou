@@ -272,6 +272,30 @@ describe.skipIf(!existsSync(distIndex))('prÃ©via do link pÃºblico', () => {
     const response = await request(app).get('/convite/slug-que-nao-existe')
 
     expect(response.status).toBe(200)
-    expect(response.text).not.toContain('property="og:title"')
+    expect(response.text).toContain('<div id="app">')
+    // O index.html tem metadados genericos da marca; o que nao pode aparecer e
+    // a previa especifica do convite que nao existe.
+    expect(response.text).not.toContain('slug-que-nao-existe')
+  })
+
+  it('gera o PNG de previa e reaproveita o cache', async () => {
+    const customer = await createAccount('cliente')
+    const created = await createInvitation(customer, { titulo: 'Festa com Imagem' })
+    const { slug } = created.body.invitation
+
+    const first = await request(app).get(`/convite/${slug}/imagem.png`)
+    expect(first.status).toBe(200)
+    expect(first.headers['content-type']).toContain('image/png')
+    expect(first.body.length).toBeGreaterThan(1000)
+
+    const second = await request(app).get(`/convite/${slug}/imagem.png`)
+    expect(second.status).toBe(200)
+    expect(second.body.length).toBe(first.body.length)
+  })
+
+  it('responde 404 para imagem de convite inexistente', async () => {
+    const response = await request(app).get('/convite/slug-que-nao-existe/imagem.png')
+
+    expect(response.status).toBe(404)
   })
 })

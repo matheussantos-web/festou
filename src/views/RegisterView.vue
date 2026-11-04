@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { setSession } from '../lib/session'
-import { consumeGoogleRedirect, googleLoginUrl, isGoogleConfigured } from '../lib/googleAuth'
+import { consumeGoogleRedirect, googleLoginUrl, isGoogleConfigured, readGoogleNonce } from '../lib/googleAuth'
 import GoogleAuthButton from '../components/GoogleAuthButton.vue'
 
 const router = useRouter()
@@ -33,7 +33,7 @@ async function handleGoogleLogin() {
     try {
       const { user } = await api('/auth/google', {
         method: 'POST',
-        body: JSON.stringify({ id_token: idToken, tipo_perfil: profileType.value }),
+        body: JSON.stringify({ id_token: idToken, nonce: readGoogleNonce(), tipo_perfil: profileType.value }),
       })
       setSession(user)
       await router.replace(consumeGoogleRedirect())

@@ -18,7 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo',
 })
 
-const socialCrawlerPattern = /whatsapp|facebot|facebookexternalhit|twitterbot|telegrambot|linkedinbot|skypeuripreter/i
+const socialCrawlerPattern = /whatsapp|facebot|facebookexternalhit|twitterbot|telegrambot|linkedinbot|skypeuripreter|slackbot|discordbot|pinterest|embedly|iframely|mastodon|bluesky|lemmy/i
 
 export function isSocialCrawler(userAgent = '') {
   return socialCrawlerPattern.test(userAgent)
@@ -64,9 +64,11 @@ function invitationMetaTags(meta) {
 export function renderInvitationCrawlerHtml(meta) {
   const browserUrl = `${meta.url}?app=1`
   const safeUrl = escapeHtml(browserUrl)
-  const scriptUrl = JSON.stringify(browserUrl).replace(/</g, '\\u003c')
   const tags = invitationMetaTags(meta).join('\n    ')
 
+  // Sem script inline: o CSP do Helmet (script-src 'self') bloquearia o codigo,
+  // e o meta refresh abaixo ja leva navegadores para o SPA. Robos de previa nao
+  // executam JavaScript de qualquer forma.
   return `<!doctype html>
 <html lang="pt-BR">
   <head>
@@ -78,7 +80,6 @@ export function renderInvitationCrawlerHtml(meta) {
   </head>
   <body>
     <p>Redirecionando para o convite. <a href="${safeUrl}">Abrir convite</a>.</p>
-    <script>window.location.replace(${scriptUrl})</script>
   </body>
 </html>`
 }

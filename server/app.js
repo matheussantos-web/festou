@@ -10,6 +10,7 @@ import { appOrigin, jsonBodyLimit, trustProxy } from './config.js'
 import { getDatabase } from './db.js'
 import { buildInvitationMeta, isSocialCrawler, renderInvitationCrawlerHtml } from './meta.js'
 import { renderInvitationPng } from './invitationImage.js'
+import { invitationImageVersion } from '../shared/invitationImageVersion.js'
 import { createErrorHandler, createNotFoundHandler } from './middleware/errors.js'
 import { createOriginGuard } from './middleware/origin.js'
 import { authRouter } from './routes/auth.js'
@@ -21,13 +22,14 @@ import { passwordResetRouter } from './routes/passwordReset.js'
 import { productsRouter, supplierProductsRouter } from './routes/products.js'
 import { uploadsRouter } from './routes/uploads.js'
 
-function requestOrigin(request) {
-  const host = request.get('host')
-  return host ? `${request.protocol}://${host}` : appOrigin
-}
-
 export function createApp() {
   const app = express()
+
+  // O PNG do convite e caro de gerar (SVG + rasterizacao em 2x). Sem cache, um
+  // robo que reabre o link derruba a CPU. Guardamos o buffer por convite/versao
+  // e limitamos o mapa para nao crescer sem controle.
+  const invitationPngCache = new Map()
+  const invitationPngCacheLimit = 64
 
   app.disable('x-powered-by')
   // Sem trust proxy, o rate limit enxerga o IP do proxy reverso e o limite vira
@@ -95,7 +97,21 @@ export function createApp() {
           'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
           'X-Content-Type-Options': 'nosniff',
         })
-        const image = await renderInvitationPng(invitation)
+
+        const cacheKey = `${invitation.slug}:v${invitationImageVersion(invitation)}`
+        let pending = invitationPngCache.get(cacheKey)
+        if (!pending) {
+          pending = renderInvitationPng(invitation)
+          invitationPngCache.set(cacheKey, pending)
+          // Limite simples (FIFO): o convite mais antigo sai primeiro.
+          if (invitationPngCache.size > invitationPngCacheLimit) {
+            invitationPngCache.delete(invitationPngCache.keys().next().value)
+          }
+          // Falha de renderizacao nao deve envenenar o cache para sempre.
+          pending.catch(() => invitationPngCache.delete(cacheKey))
+        }
+
+        const image = await pending
         return response.type('png').send(image)
       } catch (error) {
         return next(error)
@@ -122,7 +138,7 @@ export function createApp() {
           return response.status(404).type('html').send('<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Convite não encontrado</title></head><body><h1>Convite não encontrado</h1></body></html>')
         }
 
-        const meta = buildInvitationMeta(invitation, requestOrigin(request))
+        const meta = buildInvitationMeta(invitation, appOrigin)
         response.set({ 'Cache-Control': 'no-cache', Vary: 'User-Agent' })
         return response.type('html').send(renderInvitationCrawlerHtml(meta))
       } catch (error) {
@@ -143,7 +159,16 @@ export function createApp() {
       maxAge: '1y',
       immutable: true,
     }))
-    app.use(express.static(distDir, { maxAge: '1h' }))
+    app.use(express.static(distDir, {
+      maxAge: '1h',
+      // O index.html precisa ser revalidado: o fallback abaixo o entrega com
+      // no-cache. Sem `index: false`, a rota "/" sairia com cache de 1h e o
+      // usuario continuaria vendo o bundle antigo depois de um deploy.
+      index: false,
+      setHeaders: (response, filePath) => {
+        if (filePath.endsWith('index.html')) response.setHeader('Cache-Control', 'no-cache')
+      },
+    }))
 
     app.use(async (request, response, next) => {
       if (request.method !== 'GET' && request.method !== 'HEAD') return next()

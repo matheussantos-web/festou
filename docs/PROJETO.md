@@ -192,6 +192,7 @@ Comandos disponíveis:
 | `POST` | `/api/auth/forgot-password` | Enviar link de recuperação de senha; responde igual exista ou não o e-mail |
 | `POST` | `/api/auth/reset-password` | Trocar a senha com o token do link e encerrar as sessões da conta |
 | `GET` | `/api/products` | Consultar vitrine; aceita `categoria`, `pagina` e `limite` e devolve `pagination` com total e total de páginas |
+| `GET` | `/api/products/lookup` | Consultar produtos ativos por lista de `ids` (usado pelo carrinho para revalidar itens fora da primeira página) |
 | `POST` | `/api/products` | Publicar produto como fornecedor |
 | `POST` | `/api/uploads/product` | Enviar foto de produto ao bucket `produtos` como fornecedor |
 | `POST` | `/api/uploads/profile` | Enviar e salvar foto de perfil no bucket `perfil` |

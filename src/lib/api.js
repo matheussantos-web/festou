@@ -1,11 +1,12 @@
 const networkErrorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
 
 export class ApiError extends Error {
-  constructor(message, { status = 0, field = null } = {}) {
+  constructor(message, { status = 0, field = null, code = null } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.field = field
+    this.code = code
   }
 }
 
@@ -31,6 +32,7 @@ export async function api(path, options = {}) {
     throw new ApiError(result.message || 'O servidor não conseguiu concluir a solicitação.', {
       status: response.status,
       field: result.field ?? null,
+      code: result.code ?? null,
     })
   }
 

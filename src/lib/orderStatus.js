@@ -9,7 +9,7 @@ export const orderStatusStyles = {
 
 const orderStatusLabels = {
   customer: {
-    solicitado: 'Pendente',
+    solicitado: 'Aguardando fornecedor',
     em_negociacao: 'Em negociação',
     negocio_fechado: 'Negócio fechado',
     recusado: 'Recusado',
@@ -17,7 +17,7 @@ const orderStatusLabels = {
     servico_concluido: 'Serviço concluído',
   },
   supplier: {
-    solicitado: 'Pendente',
+    solicitado: 'Novo orçamento',
     em_negociacao: 'Em negociação',
     negocio_fechado: 'Negócio fechado',
     recusado: 'Recusado',

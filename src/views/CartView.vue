@@ -43,7 +43,8 @@ async function requestQuote() {
 async function syncCartWithCatalog() {
   if (!cartItems.value.length) return
   try {
-    const result = await api('/products')
+    const ids = cartItems.value.map((item) => item.id).join(',')
+    const result = await api(`/products/lookup?ids=${encodeURIComponent(ids)}`)
     const { changed, removed } = syncWithCatalog(asArray(result.products))
     const notices = []
     if (changed.length) {

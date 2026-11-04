@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit'
 import { authRateLimit, rsvpRateLimit } from '../config.js'
 
@@ -49,6 +50,22 @@ export const forgotPasswordLimiter = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { message: 'Muitos pedidos de recuperacao. Aguarde alguns minutos.' },
+})
+
+// Segundo contador por e-mail: sem ele, varias origens (ou varios IPs) podem
+// encher a caixa de uma mesma pessoa com links e gastar a cota do Resend.
+// O e-mail e guardado como hash para nao manter dado pessoal na memoria.
+export const forgotPasswordByEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (request) => {
+    const email = String(request.body?.email ?? '').trim().toLowerCase()
+    const key = email ? createHash('sha256').update(email).digest('hex') : ipKeyGenerator(request.ip)
+    return `recuperacao:${key}`
+  },
+  message: { message: 'Muitos pedidos para este e-mail. Aguarde antes de tentar novamente.' },
 })
 
 export const resetPasswordLimiter = rateLimit({

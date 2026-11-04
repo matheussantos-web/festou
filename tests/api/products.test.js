@@ -44,8 +44,14 @@ describe('vitrine de produtos', () => {
 
   it('pagina a vitrine e informa o total', async () => {
     const supplier = await createAccount('fornecedor')
-    const created = []
 
+    // A vitrine e publica e o banco de desenvolvimento pode ja ter produtos
+    // nessa categoria. A linha de base evita um teste que so passa em banco
+    // vazio (e quebrava depois de uma execucao interrompida).
+    const baseline = await supplier.client.get('/api/products?categoria=brinquedos&limite=60')
+    const baselineTotal = baseline.body.pagination.total
+
+    const created = []
     for (let index = 0; index < 3; index += 1) {
       created.push(await createProduct(supplier, { categoria: 'brinquedos' }))
     }
@@ -53,14 +59,26 @@ describe('vitrine de produtos', () => {
     const firstPage = await supplier.client.get('/api/products?categoria=brinquedos&pagina=1&limite=2')
     expect(firstPage.status).toBe(200)
     expect(firstPage.body.products).toHaveLength(2)
-    expect(firstPage.body.pagination).toMatchObject({ pagina: 1, limite: 2, total: 3, totalPaginas: 2, temMais: true })
+    expect(firstPage.body.pagination).toMatchObject({
+      pagina: 1,
+      limite: 2,
+      total: baselineTotal + 3,
+      totalPaginas: Math.ceil((baselineTotal + 3) / 2),
+      temMais: true,
+    })
 
-    const secondPage = await supplier.client.get('/api/products?categoria=brinquedos&pagina=2&limite=2')
-    expect(secondPage.body.products).toHaveLength(1)
-    expect(secondPage.body.pagination).toMatchObject({ pagina: 2, temMais: false })
+    const ids = []
+    let pagina = 1
+    let temMais = true
+    while (temMais) {
+      const page = await supplier.client.get(`/api/products?categoria=brinquedos&pagina=${pagina}&limite=2`)
+      ids.push(...page.body.products.map((item) => item.id))
+      temMais = page.body.pagination.temMais
+      pagina += 1
+    }
 
-    const ids = [...firstPage.body.products, ...secondPage.body.products].map((item) => item.id)
-    expect(new Set(ids).size).toBe(3)
+    expect(ids).toHaveLength(baselineTotal + 3)
+    expect(new Set(ids).size).toBe(ids.length)
     expect(created.every((product) => ids.includes(product.id))).toBe(true)
   })
 
@@ -85,6 +103,31 @@ describe('vitrine de produtos', () => {
 
     const text = await supplier.client.get('/api/products?pagina=abc')
     expect(text.status).toBe(400)
+  })
+
+  it('consulta apenas os produtos do carrinho, inclusive fora da primeira pagina', async () => {
+    const supplier = await createAccount('fornecedor')
+    const product = await createProduct(supplier)
+    const paused = await createProduct(supplier)
+    await supplier.client.patch(`/api/supplier/products/${paused.id}/toggle-active`)
+
+    const response = await supplier.client.get(
+      `/api/products/lookup?ids=${product.id},${paused.id}`,
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.body.products.map((item) => item.id)).toEqual([product.id])
+    expect(Number(response.body.products[0].preco)).toBe(99.9)
+  })
+
+  it('recusa ids invalidos na consulta do carrinho', async () => {
+    const supplier = await createAccount('fornecedor')
+
+    const invalido = await supplier.client.get('/api/products/lookup?ids=nao-e-uuid')
+    expect(invalido.status).toBe(400)
+
+    const vazio = await supplier.client.get('/api/products/lookup?ids=')
+    expect(vazio.status).toBe(400)
   })
 
   it('impede que clientes publiquem produtos', async () => {

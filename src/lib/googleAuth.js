@@ -6,7 +6,9 @@ export function isGoogleConfigured() {
 
 export function googleLoginUrl(redirect) {
   const origin = window.location.origin
-  const nonce = Math.random().toString(36).slice(2)
+  // UUID em vez de Math.random: o nonce precisa ser imprevisivel para servir
+  // como protecao contra reuso de id_token (login CSRF / replay).
+  const nonce = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
   const destination = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
     ? redirect
     : '/vitrine'
@@ -24,6 +26,12 @@ export function googleLoginUrl(redirect) {
   })
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+}
+
+// Le o nonce sem apagar: o backend precisa compara-lo com o claim do id_token.
+// A limpeza acontece em consumeGoogleRedirect(), depois do login concluido.
+export function readGoogleNonce() {
+  return sessionStorage.getItem('google_nonce') || ''
 }
 
 export function consumeGoogleRedirect() {

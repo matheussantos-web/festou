@@ -70,6 +70,35 @@ productsRouter.get('/', async (request, response, next) => {
   }
 })
 
+// Consulta pontual usada pelo carrinho: devolve apenas os produtos ativos que
+// ainda estao na sacola, mesmo que ja tenham saido da primeira pagina da
+// vitrine. Sem isso o carrinho removia itens antigos como se tivessem sido
+// pausados so porque nao apareciam na primeira pagina.
+const lookupIdsSchema = z.string().trim().min(1).max(2000)
+
+productsRouter.get('/lookup', async (request, response, next) => {
+  try {
+    const rawIds = lookupIdsSchema.parse(request.query.ids ?? '')
+    const ids = z.array(z.string().uuid())
+      .min(1, 'Informe ao menos um produto.')
+      .max(50, 'Consulte no maximo 50 produtos por vez.')
+      .parse([...new Set(rawIds.split(',').map((id) => id.trim()).filter(Boolean))])
+
+    const placeholders = ids.map((_, index) => `$${index + 1}::uuid`).join(', ')
+    const sql = getDatabase()
+    const products = await sql.query(
+      `select id, nome, descricao, categoria, preco, cidade, imagem_url, imagens_url, created_at
+       from public.produtos
+       where ativo = true and id in (${placeholders})`,
+      ids,
+    )
+
+    response.json({ products })
+  } catch (error) {
+    next(error)
+  }
+})
+
 productsRouter.get('/:id', async (request, response, next) => {
   try {
     const productId = productIdSchema.parse(request.params.id)

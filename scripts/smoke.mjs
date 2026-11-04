@@ -194,11 +194,23 @@ check('RSVP atualizado pelo mesmo e-mail', rsvp2.status === 200 && rsvp2.data?.s
 const publico = await call('GET', `/api/invitations/${slug}`)
 check('convite público acessível', publico.status === 200 && publico.data?.invitation?.titulo === 'Aniversário da Marina')
 
-const paginaConvite = await fetch(`${base}/convite/${slug}`)
+// Robôs de prévia (WhatsApp, Telegram, redes sociais) recebem HTML com as
+// tags do convite; navegadores recebem o SPA. Usamos o UA do WhatsApp aqui.
+const paginaConvite = await fetch(`${base}/convite/${slug}`, {
+  headers: { 'User-Agent': 'WhatsApp/2.23.20.0' },
+})
 const htmlConvite = await paginaConvite.text()
 check('link do convite tem prévia Open Graph', paginaConvite.status === 200
   && htmlConvite.includes('property="og:title"')
-  && htmlConvite.includes('Aniversário da Marina'), `status ${paginaConvite.status}`)
+  && htmlConvite.includes('Aniversário da Marina')
+  && htmlConvite.includes(`/convite/${slug}/imagem.png`), `status ${paginaConvite.status}`)
+
+const paginaNavegador = await fetch(`${base}/convite/${slug}`, {
+  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36' },
+})
+const htmlNavegador = await paginaNavegador.text()
+check('navegador recebe o SPA no link do convite', paginaNavegador.status === 200
+  && htmlNavegador.includes('<div id="app">'), `status ${paginaNavegador.status}`)
 
 console.log('\n== 7. Gestão do fornecedor ==')
 cookies.clear()
@@ -214,8 +226,8 @@ check('painel informa o total de pedidos e pendentes', pedidosFornecedor.data.pa
 const negociacao = await call('PATCH', `/api/orders/${pedidoId}/status`, { status: 'em_negociacao' })
 check('fornecedor negocia o pedido', negociacao.status === 200 && negociacao.data?.order?.status === 'em_negociacao', `status ${negociacao.status}`)
 
-const confirmado = await call('PATCH', `/api/orders/${pedidoId}/status`, { status: 'confirmado' })
-check('fornecedor confirma o pedido', confirmado.status === 200 && confirmado.data?.order?.status === 'confirmado', `status ${confirmado.status}`)
+const confirmado = await call('PATCH', `/api/orders/${pedidoId}/status`, { status: 'negocio_fechado' })
+check('fornecedor fecha o negocio', confirmado.status === 200 && confirmado.data?.order?.status === 'negocio_fechado', `status ${confirmado.status}`)
 
 const aposConfirmar = await call('GET', '/api/orders')
 const pedidoConfirmado = aposConfirmar.data?.orders?.find((o) => o.id === pedidoId)

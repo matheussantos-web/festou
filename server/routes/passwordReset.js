@@ -4,7 +4,7 @@ import { sendMail } from '../mailer.js'
 import { createSessionToken, hashPassword, hashSessionToken } from '../security.js'
 import { appOrigin, passwordResetTtlMs } from '../config.js'
 import { forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.js'
-import { forgotPasswordLimiter, resetPasswordLimiter } from '../middleware/rateLimits.js'
+import { forgotPasswordByEmailLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../middleware/rateLimits.js'
 
 export const passwordResetRouter = Router()
 
@@ -12,7 +12,7 @@ export const passwordResetRouter = Router()
 // privada e não deve vazar pelo formulário de recuperação.
 const genericMessage = 'Se este e-mail estiver cadastrado, enviaremos as instruções para redefinir a senha.'
 
-passwordResetRouter.post('/forgot-password', forgotPasswordLimiter, async (request, response, next) => {
+passwordResetRouter.post('/forgot-password', forgotPasswordLimiter, forgotPasswordByEmailLimiter, async (request, response, next) => {
   try {
     const input = forgotPasswordSchema.parse(request.body)
     const sql = getDatabase()

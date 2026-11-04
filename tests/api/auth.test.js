@@ -173,6 +173,19 @@ describe('autenticação', () => {
     expect(response.status).not.toBe(403)
   })
 
+  it('recusa login Google sem o nonce gerado pelo navegador', async () => {
+    const client = createClient()
+
+    const semNonce = await client.post('/api/auth/google').send({ id_token: 'token-qualquer' })
+    expect(semNonce.status).toBe(400)
+
+    const nonceCurto = await client.post('/api/auth/google').send({
+      id_token: 'token-qualquer',
+      nonce: 'curto',
+    })
+    expect(nonceCurto.status).toBe(400)
+  })
+
   it('devolve 404 em JSON para endpoints inexistentes', async () => {
     const response = await request(app).get('/api/rota-que-nao-existe')
 

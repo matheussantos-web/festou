@@ -92,8 +92,8 @@ describe('pedidos de orcamento', () => {
     expect(negotiating.body.order.status).toBe('em_negociacao')
 
     const confirmed = await supplier.client.patch(`/api/orders/${orderId}/status`)
-      .send({ status: 'confirmado' })
-    expect(confirmed.body.order.status).toBe('confirmado')
+      .send({ status: 'negocio_fechado' })
+    expect(confirmed.body.order.status).toBe('negocio_fechado')
 
     const refused = await supplier.client.patch(`/api/orders/${orderId}/status`)
       .send({ status: 'recusado' })
@@ -112,7 +112,7 @@ describe('pedidos de orcamento', () => {
     const orderId = created.body.order.id
 
     const forbidden = await customer.client.patch(`/api/orders/${orderId}/status`)
-      .send({ status: 'confirmado' })
+      .send({ status: 'em_negociacao' })
     expect(forbidden.status).toBe(403)
 
     const otherCustomer = await stranger.client.patch(`/api/orders/${orderId}/status`)
@@ -153,7 +153,7 @@ describe('pedidos de orcamento', () => {
     const pedidoPendente = pendente.body.orders.find((o) => o.id === orderId)
     expect(pedidoPendente.cliente_email).toBe(`t***${customer.email.slice(customer.email.indexOf('@'))}`)
 
-    await supplier.client.patch(`/api/orders/${orderId}/status`).send({ status: 'confirmado' })
+    await supplier.client.patch(`/api/orders/${orderId}/status`).send({ status: 'negocio_fechado' })
 
     const confirmado = await supplier.client.get('/api/orders')
     expect(confirmado.body.orders.find((o) => o.id === orderId).cliente_email).toBe(customer.email)
@@ -200,7 +200,7 @@ describe('pedidos de orcamento', () => {
       criados.push(created.body.order.id)
     }
 
-    await supplier.client.patch(`/api/orders/${criados[0]}/status`).send({ status: 'confirmado' })
+    await supplier.client.patch(`/api/orders/${criados[0]}/status`).send({ status: 'negocio_fechado' })
 
     const pagina = await supplier.client.get('/api/orders?pagina=1&limite=1')
     expect(pagina.body.orders).toHaveLength(1)

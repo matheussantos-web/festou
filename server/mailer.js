@@ -21,6 +21,8 @@ export async function sendMail({ to, subject, text }) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ from: mailFrom, to, subject, text }),
+    // Sem timeout, um Resend lento deixa o pedido de recuperacao pendurado.
+    signal: AbortSignal.timeout(10_000),
   })
 
   if (!response.ok) {
