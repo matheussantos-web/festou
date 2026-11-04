@@ -2,7 +2,11 @@ import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from 'node:util'
 
 const scrypt = promisify(scryptCallback)
-export const sessionCookieName = 'festou_session'
+// __Host- impede que subdominios definam ou sobrescrevam o cookie de sessao
+// de producao. O prefixo exige Secure, Path=/ e nenhum Domain.
+export const sessionCookieName = process.env.NODE_ENV === 'production'
+  ? '__Host-festou_session'
+  : 'festou_session'
 export const sessionDurationMs = 7 * 24 * 60 * 60 * 1000
 
 // Parametros do scrypt fixados no codigo: sem isso o custo depende do padrao do

@@ -13,4 +13,7 @@ export const profileUpdateSchema = z.object({
   instagram_url: optionalUrl('O link do Instagram'),
   facebook_url: optionalUrl('O link do Facebook'),
   site_url: optionalUrl('O site'),
+  telefone: z.string().trim().max(30).transform((value) => value || null),
+  cidade: z.string().trim().max(100).transform((value) => value || null),
+  segmento: z.string().trim().max(100).transform((value) => value || null),
 })

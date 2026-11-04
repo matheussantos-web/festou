@@ -14,6 +14,7 @@ import { invitationImageVersion } from '../shared/invitationImageVersion.js'
 import { createErrorHandler, createNotFoundHandler } from './middleware/errors.js'
 import { createOriginGuard } from './middleware/origin.js'
 import { authRouter } from './routes/auth.js'
+import { emailVerificationRouter } from './routes/emailVerification.js'
 import { healthRouter } from './routes/health.js'
 import { invitationsRouter } from './routes/invitations.js'
 import { ordersRouter } from './routes/orders.js'
@@ -46,8 +47,10 @@ export function createApp() {
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
           connectSrc: ["'self'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
           objectSrc: ["'none'"],
-          frameAncestors: ["'self'"],
+          frameAncestors: ["'none'"],
         },
       },
       crossOriginEmbedderPolicy: false,
@@ -60,6 +63,7 @@ export function createApp() {
   app.use('/api/health', healthRouter)
   app.use('/api/auth', passwordResetRouter)
   app.use('/api/auth', authRouter)
+  app.use('/api/auth', emailVerificationRouter)
   app.use('/api/profile', profileRouter)
   app.use('/api/invitations', invitationsRouter)
   app.use('/api/products', productsRouter)

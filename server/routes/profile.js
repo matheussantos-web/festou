@@ -10,7 +10,7 @@ profileRouter.get('/', requireUser, async (request, response, next) => {
     const sql = getDatabase()
     const [profile] = await sql`
       select id, nome, email, tipo_perfil, avatar_url, cover_url, whatsapp,
-             biografia, instagram_url, facebook_url, site_url
+             biografia, instagram_url, facebook_url, site_url, telefone, cidade, segmento
       from public.perfis
       where id = ${request.user.id}
       limit 1
@@ -33,10 +33,13 @@ profileRouter.patch('/', requireUser, async (request, response, next) => {
           biografia = ${input.biografia},
           instagram_url = ${input.instagram_url},
           facebook_url = ${input.facebook_url},
-          site_url = ${input.site_url}
+          site_url = ${input.site_url},
+          telefone = ${input.telefone},
+          cidade = ${input.cidade},
+          segmento = ${input.segmento}
       where id = ${request.user.id}
       returning id, nome, email, tipo_perfil, avatar_url, cover_url, whatsapp,
-                biografia, instagram_url, facebook_url, site_url
+                biografia, instagram_url, facebook_url, site_url, telefone, cidade, segmento
     `
     if (!profile) return response.status(404).json({ message: 'Perfil nao encontrado.' })
     response.json({ user: profile })

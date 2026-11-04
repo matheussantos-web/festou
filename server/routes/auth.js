@@ -6,7 +6,7 @@ import {
   verifyPassword,
   getDummyPasswordHash,
 } from '../security.js'
-import { clearSessionCookie, hashSessionToken, sessionCookieName } from '../security.js'
+import { clearSessionCookie, createSessionToken, hashSessionToken, sessionCookieName } from '../security.js'
 import { findSession, sendProfile, startSession } from '../middleware/session.js'
 import { OAuth2Client } from 'google-auth-library'
 import {
@@ -17,6 +17,8 @@ import {
 } from '../middleware/rateLimits.js'
 import { loginSchema, registerSchema } from '../schemas/auth.js'
 import { resolveGoogleLogin } from '../googleAccount.js'
+import { sendMail } from '../mailer.js'
+import { appOrigin, emailVerificationTtlMs } from '../config.js'
 
 export const authRouter = Router()
 
@@ -26,13 +28,41 @@ authRouter.post('/register', registerLimiter, async (request, response, next) =>
     const passwordHash = await hashPassword(input.senha)
     const sql = getDatabase()
     const [profile] = await sql`
-      insert into public.perfis (nome, email, senha_hash, tipo_perfil)
-      values (${input.nome}, ${input.email}, ${passwordHash}, ${input.tipo_perfil})
+      insert into public.perfis (nome, email, senha_hash, tipo_perfil, telefone, cidade, segmento, whatsapp, email_verified)
+      values (${input.nome}, ${input.email}, ${passwordHash}, ${input.tipo_perfil}, ${input.telefone}, ${input.cidade}, ${input.segmento}, ${input.tipo_perfil === 'fornecedor' ? input.telefone : null}, false)
       returning id, nome, email, tipo_perfil, avatar_url
     `
 
-    const user = await startSession(profile, response)
-    response.status(201).json({ user })
+    const token = createSessionToken()
+    const tokenHash = hashSessionToken(token)
+    const expiresAt = new Date(Date.now() + emailVerificationTtlMs)
+    await sql`
+      update public.perfis
+      set email_verification_token_hash = ${tokenHash},
+          email_verification_expires_at = ${expiresAt}
+      where id = ${profile.id}
+    `
+
+    const link = `${appOrigin}/confirmar-email?token=${encodeURIComponent(token)}`
+    let emailSent = false
+    try {
+      const delivery = await sendMail({
+        to: profile.email,
+        subject: 'Confirme seu e-mail no Festou!',
+        text: `Ola, ${profile.nome}!\n\nPara confirmar seu endereco de e-mail e ativar sua conta, acesse: ${link}\n\nO link vale por 24 horas e so pode ser usado uma vez. Se voce nao criou esta conta, ignore esta mensagem.`,
+      })
+      emailSent = delivery.delivered
+    } catch (error) {
+      console.error('[confirmacao-email] falha ao enviar o e-mail', error)
+    }
+
+    response.status(201).json({
+      email: profile.email,
+      emailSent,
+      message: emailSent
+        ? 'Conta criada. Confira seu e-mail para confirmar o cadastro.'
+        : 'Conta criada, mas nao foi possivel enviar o e-mail agora. Tente reenviar a confirmacao mais tarde.',
+    })
   } catch (error) {
     if (error?.code === '23505') {
       return response.status(409).json({ message: 'Este e-mail ja esta cadastrado.' })
@@ -46,7 +76,7 @@ authRouter.post('/login', loginLimiter, loginByEmailLimiter, async (request, res
     const input = loginSchema.parse(request.body)
     const sql = getDatabase()
     const [profile] = await sql`
-      select id, nome, email, tipo_perfil, avatar_url, whatsapp, senha_hash
+      select id, nome, email, tipo_perfil, avatar_url, whatsapp, senha_hash, email_verified
       from public.perfis
       where email = ${input.email}
       limit 1
@@ -61,6 +91,22 @@ authRouter.post('/login', loginLimiter, loginByEmailLimiter, async (request, res
 
     if (!(await verifyPassword(input.senha, profile.senha_hash))) {
       return response.status(401).json({ message: 'E-mail ou senha invalidos.' })
+    }
+
+    if (input.tipo_perfil && profile.tipo_perfil !== input.tipo_perfil) {
+      return response.status(403).json({
+        code: 'PERFIL_INCORRETO',
+        message: input.tipo_perfil === 'fornecedor'
+          ? 'Esta conta é de cliente. Use o painel de cliente para entrar.'
+          : 'Esta conta é de fornecedor. Use o painel de fornecedor para entrar.',
+      })
+    }
+
+    if (!profile.email_verified) {
+      return response.status(403).json({
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'Confirme seu e-mail antes de entrar. Confira sua caixa de entrada ou reenvie o link.',
+      })
     }
 
     // Hash antigo ou com parametros fora do padrao atual e refeito agora, sem
@@ -186,16 +232,29 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
       })
     }
 
+    if (input.tipo_perfil && profile.tipo_perfil !== input.tipo_perfil) {
+      return response.status(403).json({
+        code: 'PERFIL_INCORRETO',
+        message: input.tipo_perfil === 'fornecedor'
+          ? 'Esta conta é de cliente. Use o painel de cliente para entrar.'
+          : 'Esta conta é de fornecedor. Use o painel de fornecedor para entrar.',
+      })
+    }
+
+    // O perfil escolhido do login nao deve ser aplicado na criacao via Google.
     const [profile] = await sql`
-      insert into public.perfis (nome, email, senha_hash, tipo_perfil, google_sub)
-      values (${nome}, ${email}, ${await getDummyPasswordHash()}, ${tipoPerfil}, ${payload.sub})
+      insert into public.perfis (nome, email, senha_hash, tipo_perfil, google_sub, email_verified)
+      values (${nome}, ${email}, ${await getDummyPasswordHash()}, ${tipoPerfil}, ${payload.sub}, true)
       returning id, nome, email, tipo_perfil, avatar_url
     `
 
     const user = await startSession(profile, response)
     return response.status(201).json({ user })
   } catch (error) {
-    console.error('Erro ao autenticar com Google:', error?.message ?? error)
+    console.error('[auth/google] falha de autenticacao', {
+      name: error?.name || 'Error',
+      code: error?.code || null,
+    })
     return response.status(401).json({ message: 'Nao foi possivel entrar com o Google.' })
   }
 })

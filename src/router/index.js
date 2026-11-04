@@ -16,6 +16,7 @@ import CustomerOrdersView from '../views/CustomerOrdersView.vue'
 import InvitationsView from '../views/InvitationsView.vue'
 import PublicInvitationView from '../views/PublicInvitationView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import ConfirmEmailView from '../views/ConfirmEmailView.vue'
 import { loadSession } from '../lib/session'
 
 async function resolveSession() {
@@ -56,7 +57,9 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/login', name: 'login', component: LoginView, meta: { chrome: false } },
+    { path: '/login/:tipo_perfil(cliente|fornecedor)', component: LoginView, meta: { chrome: false } },
     { path: '/cadastro', name: 'cadastro', component: RegisterView, meta: { chrome: false } },
+    { path: '/cadastro/:tipo_perfil(cliente|fornecedor)', component: RegisterView, meta: { chrome: false } },
     {
       path: '/auth/google/callback',
       name: 'auth-google-callback',
@@ -65,6 +68,7 @@ const router = createRouter({
     },
     { path: '/recuperar-senha', name: 'recuperar-senha', component: ForgotPasswordView, meta: { chrome: false } },
     { path: '/redefinir-senha', name: 'redefinir-senha', component: ResetPasswordView, meta: { chrome: false } },
+    { path: '/confirmar-email', name: 'confirmar-email', component: ConfirmEmailView, meta: { chrome: false } },
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
     { path: '/produto/:id', name: 'produto-detalhe', component: ProductDetailView },
     { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },

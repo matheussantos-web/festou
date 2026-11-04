@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { clearSession } from '../lib/session'
@@ -7,12 +7,16 @@ import { clearSession } from '../lib/session'
 const route = useRoute()
 const router = useRouter()
 
-const token = computed(() => (typeof route.query.token === 'string' ? route.query.token.trim() : ''))
+const token = ref(typeof route.query.token === 'string' ? route.query.token.trim() : '')
 const password = ref('')
 const confirmation = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const isSubmitting = ref(false)
+
+onMounted(() => {
+  if (token.value) window.history.replaceState(window.history.state, '', route.path)
+})
 
 async function resetPassword() {
   errorMessage.value = ''
@@ -86,9 +90,9 @@ async function resetPassword() {
             v-model="password"
             type="password"
             autocomplete="new-password"
-            minlength="8"
+            minlength="12"
             required
-            placeholder="Pelo menos 8 caracteres"
+            placeholder="Mínimo de 12 caracteres"
             class="w-full px-4 py-3 text-sm"
           />
         </div>
@@ -102,9 +106,9 @@ async function resetPassword() {
             v-model="confirmation"
             type="password"
             autocomplete="new-password"
-            minlength="8"
+            minlength="12"
             required
-            placeholder="Repita a nova senha"
+            placeholder="Digite novamente sua senha"
             class="w-full px-4 py-3 text-sm"
           />
         </div>

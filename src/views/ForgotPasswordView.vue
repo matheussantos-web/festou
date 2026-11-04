@@ -66,7 +66,7 @@ async function requestReset() {
             type="email"
             autocomplete="email"
             required
-            placeholder="seuemail@exemplo.com"
+            placeholder="voce@exemplo.com.br"
             class="w-full px-4 py-3 text-sm"
           />
         </div>

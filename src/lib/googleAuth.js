@@ -6,9 +6,13 @@ export function isGoogleConfigured() {
 
 export function googleLoginUrl(redirect) {
   const origin = window.location.origin
-  // UUID em vez de Math.random: o nonce precisa ser imprevisivel para servir
-  // como protecao contra reuso de id_token (login CSRF / replay).
-  const nonce = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  // Sem gerador criptografico, falha fechado: esse nonce impede reuso de
+  // id_token e ataques de login CSRF.
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error('Este navegador não oferece segurança suficiente para entrar com Google.')
+  }
+  const nonceBytes = globalThis.crypto.getRandomValues(new Uint8Array(32))
+  const nonce = Array.from(nonceBytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
   const destination = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
     ? redirect
     : '/vitrine'
@@ -47,6 +51,13 @@ export function readIdTokenFromUrl() {
   // (#id_token=...). Erros podem vir na query string.
   const search = new URLSearchParams(window.location.search)
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+
+  const cleanUrl = new URL(window.location.href)
+  cleanUrl.hash = ''
+  cleanUrl.searchParams.delete('id_token')
+  cleanUrl.searchParams.delete('error')
+  cleanUrl.searchParams.delete('error_description')
+  window.history.replaceState(window.history.state, '', `${cleanUrl.pathname}${cleanUrl.search}`)
 
   const error = search.get('error') || hash.get('error')
   if (error) {

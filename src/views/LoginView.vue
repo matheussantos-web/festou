@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../lib/api'
 import { setSession } from '../lib/session'
@@ -8,39 +8,62 @@ import GoogleAuthButton from '../components/GoogleAuthButton.vue'
 
 const router = useRouter()
 const route = useRoute()
+const profileType = computed(() => route.params.tipo_perfil === 'fornecedor' || route.query.tipo === 'fornecedor' ? 'fornecedor' : 'cliente')
+const isSupplier = computed(() => profileType.value === 'fornecedor')
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const isSubmitting = ref(false)
+const resendMessage = ref('')
 
 function handleGoogleLogin() {
   if (!isGoogleConfigured()) {
     errorMessage.value = 'Login com Google ainda não configurado. Defina VITE_GOOGLE_CLIENT_ID no .env.'
     return
   }
-  window.location.href = googleLoginUrl(route.query.redirect)
+  try {
+    sessionStorage.setItem('google_profile_type', profileType.value)
+    window.location.href = googleLoginUrl(isSupplier.value ? '/fornecedor/painel' : '/vitrine')
+  } catch (error) {
+    errorMessage.value = error.message || 'Não foi possível iniciar o login seguro com Google.'
+  }
 }
 
 async function signIn() {
   errorMessage.value = ''
+  resendMessage.value = ''
   isSubmitting.value = true
 
   try {
     const { user } = await api('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: email.value, senha: password.value }),
+      body: JSON.stringify({ email: email.value, senha: password.value, tipo_perfil: profileType.value }),
     })
     setSession(user)
 
     const redirect = route.query.redirect
+    const fallback = isSupplier.value ? '/fornecedor/painel' : '/vitrine'
     const destination = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
       ? redirect
-      : '/vitrine'
+      : fallback
     await router.push(destination)
   } catch (error) {
     errorMessage.value = error.message || 'E-mail ou senha inválidos. Tente novamente.'
+    if (error.code === 'EMAIL_NOT_VERIFIED') resendMessage.value = 'Confirme seu e-mail para ativar a conta.'
   } finally {
     isSubmitting.value = false
+  }
+}
+
+async function resendVerification() {
+  try {
+    const result = await api('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.value }),
+    })
+    resendMessage.value = result.message
+  } catch (error) {
+    resendMessage.value = error.message || 'Não foi possível reenviar agora.'
   }
 }
 </script>
@@ -59,10 +82,10 @@ async function signIn() {
           <span>Festou<span>!</span></span>
         </RouterLink>
         <h1 class="mt-4 font-heading text-2xl font-bold text-festou-dark">
-          Que bom ter você de volta!
+          {{ isSupplier ? 'Área do fornecedor' : 'Área do cliente' }}
         </h1>
         <p class="mt-1 text-sm text-slate-600">
-          Entre para continuar organizando ou atendendo festas.
+          {{ isSupplier ? 'Acesse pedidos, produtos e conversas com seus clientes.' : 'Acesse convites, orçamentos, pedidos e sua agenda de festas.' }}
         </p>
       </div>
 
@@ -76,6 +99,12 @@ async function signIn() {
 
       <div v-if="errorMessage" role="alert" class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
         {{ errorMessage }}
+      </div>
+      <div v-if="resendMessage" class="mt-3 text-sm text-slate-600">
+        <button type="button" class="font-semibold text-festou-primary hover:underline" @click="resendVerification">
+          Reenviar confirmação de e-mail
+        </button>
+        <p role="status" class="mt-2">{{ resendMessage }}</p>
       </div>
 
       <div class="mt-6">
@@ -99,7 +128,7 @@ async function signIn() {
             type="email"
             autocomplete="email"
             required
-            placeholder="seuemail@exemplo.com"
+            placeholder="voce@exemplo.com.br"
             class="w-full px-4 py-3 text-sm"
           />
         </div>
@@ -114,7 +143,7 @@ async function signIn() {
             type="password"
             autocomplete="current-password"
             required
-            placeholder="Sua senha secreta"
+            placeholder="Digite sua senha"
             class="w-full px-4 py-3 text-sm"
           />
         </div>
@@ -136,9 +165,34 @@ async function signIn() {
 
       <div class="mt-8 border-t border-slate-200/80 pt-6 text-center text-xs text-slate-500">
         Ainda não tem uma conta no Festou!?
-        <RouterLink to="/cadastro" class="ml-1 font-bold text-festou-primary hover:underline">
+        <RouterLink :to="isSupplier ? '/cadastro/fornecedor' : '/cadastro/cliente'" class="ml-1 font-bold text-festou-primary hover:underline">
           Cadastre-se gratuitamente
         </RouterLink>
+      </div>
+
+      <div class="mt-5 grid grid-cols-2 rounded-2xl border border-slate-200 bg-white p-1">
+        <RouterLink
+          :to="{ path: '/login/cliente', query: route.query.redirect ? { redirect: route.query.redirect } : {} }"
+          class="rounded-xl px-3 py-2 text-center text-xs font-bold transition"
+          :class="!isSupplier ? 'bg-festou-pink text-festou-dark shadow-sm' : 'text-slate-500 hover:text-festou-dark'"
+        >
+          Sou cliente
+        </RouterLink>
+        <RouterLink
+          :to="{ path: '/login/fornecedor', query: route.query.redirect ? { redirect: route.query.redirect } : {} }"
+          class="rounded-xl px-3 py-2 text-center text-xs font-bold transition"
+          :class="isSupplier ? 'bg-festou-secondary/15 text-festou-secondary' : 'text-slate-500 hover:text-festou-dark'"
+        >
+          Sou fornecedor
+        </RouterLink>
+      </div>
+
+      <div v-if="route.query.configurarNeon" role="alert" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-900">
+        Configure a variável DATABASE_URL no arquivo .env antes de entrar.
+      </div>
+
+      <div v-if="route.query.erroConexao" role="alert" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-900">
+        Não foi possível falar com o servidor agora. Verifique se a API está rodando e tente novamente.
       </div>
     </section>
   </div>

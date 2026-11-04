@@ -12,16 +12,18 @@ export const loginLimiter = rateLimit({
   message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
 })
 
-// Limita por e-mail para impedir que varias senhas sejam testadas contra a
-// mesma conta, mesmo vindo de origens diferentes.
+// Limita globalmente por e-mail para que varias origens nao permitam tentativas
+// ilimitadas contra uma unica conta. O identificador fica hasheado.
 export const loginByEmailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: Number(process.env.LOGIN_EMAIL_RATE_LIMIT) || authRateLimit * 2,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (request) => {
-    const email = String(request.body?.email ?? '').toLowerCase()
-    return email ? `${ipKeyGenerator(request.ip)}:${email}` : ipKeyGenerator(request.ip)
+    const email = String(request.body?.email ?? '').trim().toLowerCase()
+    return email
+      ? `login:${createHash('sha256').update(email).digest('hex')}`
+      : ipKeyGenerator(request.ip)
   },
   message: { message: 'Muitas tentativas para este e-mail. Aguarde alguns minutos.' },
 })
@@ -74,6 +76,35 @@ export const resetPasswordLimiter = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { message: 'Muitas tentativas. Aguarde alguns minutos.' },
+})
+
+export const emailVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: authRateLimit,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+})
+
+export const resendVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: authRateLimit,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitos pedidos. Aguarde alguns minutos e tente novamente.' },
+})
+
+export const resendVerificationByEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (request) => {
+    const email = String(request.body?.email ?? '').trim().toLowerCase()
+    const key = email ? createHash('sha256').update(email).digest('hex') : ipKeyGenerator(request.ip)
+    return `confirmacao:${key}`
+  },
+  message: { message: 'Muitos pedidos para este e-mail. Aguarde antes de tentar novamente.' },
 })
 
 export const googleLimiter = rateLimit({

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Router, raw } from 'express'
 import { rateLimit } from 'express-rate-limit'
+import sharp from 'sharp'
 import { getDatabase } from '../db.js'
 import { requireUser } from '../middleware/session.js'
 
@@ -20,6 +21,13 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (request) => request.user.id,
   message: { message: 'Voce enviou muitas fotos. Aguarde alguns minutos e tente novamente.' },
+})
+const uploadIpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 36,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Muitos envios desta rede. Aguarde alguns minutos e tente novamente.' },
 })
 
 class StorageError extends Error {
@@ -155,9 +163,25 @@ async function uploadImage(request, response, next, kind) {
       return response.status(400).json({ message: 'O arquivo recebido nao e uma imagem JPG, PNG ou WebP valida.' })
     }
 
+    let safeImage
+    try {
+      // Decodifica e recodifica para remover metadados e conteudo anexado,
+      // normalizar o MIME e limitar imagens de dimensoes abusivas.
+      safeImage = await sharp(file, {
+        failOn: 'error',
+        limitInputPixels: 25_000_000,
+      })
+        .rotate()
+        .resize({ width: 2500, height: 2500, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 84 })
+        .toBuffer()
+    } catch {
+      return response.status(400).json({ message: 'A imagem está corrompida ou tem dimensões inválidas.' })
+    }
+
     await checkPublicBucket(config, bucket)
-    const path = `${request.user.id}/${randomUUID()}.${extension}`
-    const imageUrl = await uploadToSupabase(bucket, path, file, contentType, config)
+    const path = `${request.user.id}/${randomUUID()}.webp`
+    const imageUrl = await uploadToSupabase(bucket, path, safeImage, 'image/webp', config)
 
     if (kind === 'profile' || kind === 'profile-cover') {
       const sql = getDatabase()
@@ -184,17 +208,17 @@ async function uploadImage(request, response, next, kind) {
   }
 }
 
-uploadsRouter.post('/product', requireUser, uploadLimiter, imageBody, async (request, response, next) => {
+uploadsRouter.post('/product', requireUser, uploadLimiter, uploadIpLimiter, imageBody, async (request, response, next) => {
   if (request.user.tipo_perfil !== 'fornecedor') {
     return response.status(403).json({ message: 'Somente fornecedores podem enviar fotos de produtos.' })
   }
   return uploadImage(request, response, next, 'product')
 })
 
-uploadsRouter.post('/profile', requireUser, uploadLimiter, imageBody, async (request, response, next) => {
+uploadsRouter.post('/profile', requireUser, uploadLimiter, uploadIpLimiter, imageBody, async (request, response, next) => {
   return uploadImage(request, response, next, 'profile')
 })
 
-uploadsRouter.post('/profile-cover', requireUser, uploadLimiter, imageBody, async (request, response, next) => {
+uploadsRouter.post('/profile-cover', requireUser, uploadLimiter, uploadIpLimiter, imageBody, async (request, response, next) => {
   return uploadImage(request, response, next, 'profile-cover')
 })

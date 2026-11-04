@@ -16,6 +16,9 @@ const profile = reactive({
   instagram_url: '',
   facebook_url: '',
   site_url: '',
+  telefone: '',
+  cidade: '',
+  segmento: '',
 })
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -42,6 +45,9 @@ function applyProfile(source) {
     instagram_url: source.instagram_url ?? '',
     facebook_url: source.facebook_url ?? '',
     site_url: source.site_url ?? '',
+    telefone: source.telefone ?? '',
+    cidade: source.cidade ?? '',
+    segmento: source.segmento ?? '',
   })
 }
 
@@ -112,6 +118,9 @@ async function saveProfile() {
         instagram_url: profile.instagram_url.trim(),
         facebook_url: profile.facebook_url.trim(),
         site_url: profile.site_url.trim(),
+        telefone: profile.telefone.trim(),
+        cidade: profile.cidade.trim(),
+        segmento: profile.segmento.trim(),
       }),
     })
     applyProfile(result.user)
@@ -160,7 +169,7 @@ onBeforeUnmount(() => {
             <div class="grid gap-5 p-5 sm:grid-cols-2 sm:p-8">
               <label class="form-label sm:col-span-1">
                 {{ isSupplier ? 'Nome do negócio ou responsável' : 'Seu nome' }} <span class="text-festou-pink">*</span>
-                <input v-model="profile.nome" required minlength="3" maxlength="100" autocomplete="name" class="mt-2 min-h-12 w-full px-4" placeholder="Como as pessoas devem chamar você?" />
+                <input v-model="profile.nome" required minlength="3" maxlength="100" autocomplete="name" class="mt-2 min-h-12 w-full px-4" :placeholder="isSupplier ? 'Ex.: Delícias da Marina' : 'Ex.: Marina Silva'" />
               </label>
               <label class="form-label sm:col-span-1">
                 E-mail
@@ -169,7 +178,7 @@ onBeforeUnmount(() => {
               </label>
               <label class="form-label sm:col-span-2">
                 {{ isSupplier ? 'Sobre o negócio' : 'Sobre você (opcional)' }}
-                <textarea v-model="profile.biografia" rows="4" maxlength="500" class="mt-2 w-full px-4 py-3" placeholder="Conte um pouco sobre você ou seus serviços..." />
+                <textarea v-model="profile.biografia" rows="4" maxlength="500" class="mt-2 w-full px-4 py-3" :placeholder="isSupplier ? 'Conte sobre seu negócio, serviços, experiência e diferenciais...' : 'Conte um pouco sobre você e suas preferências para festas...'" />
                 <span class="mt-1 block text-right text-xs font-normal text-slate-500">{{ profile.biografia.length }}/500</span>
               </label>
             </div>
@@ -217,19 +226,40 @@ onBeforeUnmount(() => {
             <div class="grid gap-5 p-5 sm:grid-cols-2 sm:p-8">
               <label class="form-label">
                 WhatsApp
-                <input v-model="profile.whatsapp" type="tel" autocomplete="tel" maxlength="30" class="mt-2 min-h-12 w-full px-4" placeholder="(11) 99999-9999" />
+                <input v-model="profile.whatsapp" type="tel" autocomplete="tel" maxlength="30" class="mt-2 min-h-12 w-full px-4" placeholder="(11) 91234-5678" />
               </label>
               <label class="form-label">
                 Instagram
-                <input v-model="profile.instagram_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://instagram.com/seuperfil" />
+                <input v-model="profile.instagram_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://instagram.com/seu-perfil" />
               </label>
               <label class="form-label">
                 Facebook
-                <input v-model="profile.facebook_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://facebook.com/suapagina" />
+                <input v-model="profile.facebook_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://facebook.com/sua-pagina" />
               </label>
               <label class="form-label">
                 Site
-                <input v-model="profile.site_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://seusite.com.br" />
+                <input v-model="profile.site_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://www.seusite.com.br" />
+              </label>
+            </div>
+          </section>
+
+          <section class="overflow-hidden rounded-3xl bg-white shadow-xl shadow-black/10">
+            <div class="border-b border-slate-100 px-5 py-5 sm:px-8">
+              <h2 class="font-heading text-xl font-extrabold text-festou-dark">Informações complementares</h2>
+              <p class="mt-1 text-sm text-slate-500">{{ isSupplier ? 'Dados comerciais do seu negócio.' : 'Dados úteis para organizar suas festas.' }}</p>
+            </div>
+            <div class="grid gap-5 p-5 sm:grid-cols-2 sm:p-8">
+              <label class="form-label">
+                {{ isSupplier ? 'WhatsApp comercial' : 'Telefone ou WhatsApp' }}
+                <input v-model="profile.telefone" type="tel" maxlength="30" class="mt-2 min-h-12 w-full px-4" placeholder="(11) 91234-5678" />
+              </label>
+              <label class="form-label">
+                Cidade
+                <input v-model="profile.cidade" type="text" maxlength="100" class="mt-2 min-h-12 w-full px-4" placeholder="Ex.: São Paulo - SP" />
+              </label>
+              <label v-if="isSupplier" class="form-label sm:col-span-2">
+                Segmento do negócio
+                <input v-model="profile.segmento" type="text" maxlength="100" class="mt-2 min-h-12 w-full px-4" placeholder="Ex.: Buffet, decoração ou fotografia" />
               </label>
             </div>
           </section>

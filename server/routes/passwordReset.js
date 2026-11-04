@@ -62,34 +62,48 @@ passwordResetRouter.post('/reset-password', resetPasswordLimiter, async (request
     const tokenHash = hashSessionToken(input.token)
     const sql = getDatabase()
 
-    const [reset] = await sql`
-      select token_hash, perfil_id
+    const [validToken] = await sql`
+      select token_hash
       from public.recuperacao_senha
       where token_hash = ${tokenHash}
         and used_at is null
         and expires_at > now()
       limit 1
     `
-
-    if (!reset) {
+    if (!validToken) {
       return response.status(400).json({ message: 'Link de redefinição inválido ou expirado. Solicite um novo.' })
     }
 
     const passwordHash = await hashPassword(input.senha)
-
-    await sql.transaction([
-      sql`
-        update public.perfis
-        set senha_hash = ${passwordHash}
-        where id = ${reset.perfil_id}
-      `,
-      sql`
+    // Consome o token, troca a senha e encerra as sessoes numa unica consulta
+    // atomica. Duas requisicoes concorrentes nao podem reutilizar o mesmo link.
+    const [reset] = await sql`
+      with claimed as (
         update public.recuperacao_senha
         set used_at = now()
         where token_hash = ${tokenHash}
-      `,
-      sql`delete from public.sessoes where perfil_id = ${reset.perfil_id}`,
-    ])
+          and used_at is null
+          and expires_at > now()
+        returning perfil_id
+      ), password_updated as (
+        update public.perfis
+        set senha_hash = ${passwordHash},
+            email_verified = true,
+            email_verification_token_hash = null,
+            email_verification_expires_at = null
+        where id = (select perfil_id from claimed)
+        returning id
+      ), deleted_sessions as (
+        delete from public.sessoes
+        where perfil_id in (select id from password_updated)
+        returning perfil_id
+      )
+      select id from password_updated
+    `
+
+    if (!reset) {
+      return response.status(400).json({ message: 'Link de redefinição inválido ou expirado. Solicite um novo.' })
+    }
 
     response.json({ message: 'Senha redefinida com sucesso. Entre com a nova senha.' })
   } catch (error) {

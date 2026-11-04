@@ -45,6 +45,7 @@ export const resendApiKey = process.env.RESEND_API_KEY || ''
 export const defaultMailFrom = 'Festou! <nao-responda@festou.app>'
 export const mailFrom = process.env.MAIL_FROM || defaultMailFrom
 export const passwordResetTtlMs = readInteger(process.env.PASSWORD_RESET_TTL_MINUTES, 60) * 60 * 1000
+export const emailVerificationTtlMs = 24 * 60 * 60 * 1000
 
 // Confere o que costuma faltar no primeiro deploy. Nao derruba o processo:
 // imprime um bloco no log para o erro aparecer antes do primeiro usuario.
@@ -61,17 +62,18 @@ export function productionConfigWarnings(env = process.env) {
   } else if (!/^https:\/\//.test(env.APP_ORIGIN)) {
     warnings.push('APP_ORIGIN nao usa https: o cookie de sessao Secure nao sera enviado pelo navegador.')
   }
-  if (!env.TRUST_PROXY) {
-    warnings.push('TRUST_PROXY nao definida: atras de proxy/Cloudflare o rate limit conta o IP do proxy e vira um limite global.')
-  }
   if (env.TRUST_PROXY === 'true') {
     warnings.push('TRUST_PROXY=true confia em qualquer proxy (inclusive X-Forwarded-For forjado). Prefira o numero de saltos.')
+  } else if (parseTrustProxy(env.TRUST_PROXY) === false) {
+    warnings.push('TRUST_PROXY ausente ou invalida: configure os saltos do proxy para que os limites usem o IP real.')
+  } else if (parseTrustProxy(env.TRUST_PROXY) === 0) {
+    warnings.push('TRUST_PROXY=0: atras do proxy de producao, os limites podem tratar todos os visitantes como um unico IP.')
   }
   if (!env.DATABASE_URL || !/sslmode=require/.test(env.DATABASE_URL)) {
     warnings.push('DATABASE_URL sem sslmode=require: a conexao com o Neon pode ser recusada.')
   }
   if (!env.RESEND_API_KEY) {
-    warnings.push('RESEND_API_KEY ausente: nenhum e-mail de recuperacao de senha sera enviado.')
+    warnings.push('RESEND_API_KEY ausente: e-mails de confirmacao de conta e recuperacao de senha nao serao enviados.')
   }
   if (!env.MAIL_FROM) {
     warnings.push(`MAIL_FROM no padrao (${defaultMailFrom}): use um remetente de dominio verificado no Resend.`)

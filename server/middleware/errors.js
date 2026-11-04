@@ -42,7 +42,10 @@ export function createErrorHandler(bodyLimit) {
       return response.status(status).json({ message: 'Requisicao invalida.' })
     }
 
-    console.error(error)
+    console.error('[api] erro interno', {
+      name: error?.name || 'Error',
+      code: error?.code || null,
+    })
     return response.status(500).json({ message: 'Erro interno. Tente novamente.' })
   }
 }
