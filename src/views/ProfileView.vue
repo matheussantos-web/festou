@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { api } from '../lib/api'
 import { setSession, useSession } from '../lib/session'
 import { uploadImage } from '../lib/uploads'
+import { useRoute } from 'vue-router'
 
 const { user } = useSession()
 const profile = reactive({
@@ -19,6 +20,8 @@ const profile = reactive({
   telefone: '',
   cidade: '',
   segmento: '',
+  perfil_confirmado: false,
+  perfil_completo: false,
 })
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -48,6 +51,8 @@ function applyProfile(source) {
     telefone: source.telefone ?? '',
     cidade: source.cidade ?? '',
     segmento: source.segmento ?? '',
+    perfil_confirmado: source.perfil_confirmado ?? false,
+    perfil_completo: source.perfil_completo ?? false,
   })
 }
 
@@ -83,8 +88,12 @@ function selectImage(event, kind) {
 function validateProfile() {
   if (profile.nome.trim().length < 3) return 'Informe um nome com pelo menos 3 caracteres.'
   if (profile.whatsapp && !/^[+\d()\s.-]{8,30}$/.test(profile.whatsapp.trim())) return 'Confira o número de WhatsApp.'
-  for (const [label, value] of [['Instagram', profile.instagram_url], ['Facebook', profile.facebook_url], ['Site', profile.site_url]]) {
-    if (value && !/^https?:\/\//i.test(value.trim())) return `O link do ${label} deve começar com https://.`
+  if (profile.telefone && !/^[+\d()\s.-]{8,30}$/.test(profile.telefone.trim())) return 'Confira o número de telefone ou WhatsApp.'
+  if (!profile.telefone && !profile.whatsapp) return 'Informe o telefone ou WhatsApp da sua conta.'
+  if (!profile.cidade.trim()) return 'Informe sua cidade.'
+  if (profile.tipo_perfil === 'fornecedor') {
+    if (!profile.segmento.trim()) return 'Informe o segmento do seu negócio.'
+    if (profile.biografia.trim().length < 10) return 'Descreva seu negócio com pelo menos 10 caracteres.'
   }
   return ''
 }
@@ -178,7 +187,7 @@ onBeforeUnmount(() => {
               </label>
               <label class="form-label sm:col-span-2">
                 {{ isSupplier ? 'Sobre o negócio' : 'Sobre você (opcional)' }}
-                <textarea v-model="profile.biografia" rows="4" maxlength="500" class="mt-2 w-full px-4 py-3" :placeholder="isSupplier ? 'Conte sobre seu negócio, serviços, experiência e diferenciais...' : 'Conte um pouco sobre você e suas preferências para festas...'" />
+                <textarea v-model="profile.biografia" rows="4" maxlength="500" required :minlength="isSupplier ? 10 : undefined" class="mt-2 w-full px-4 py-3" :placeholder="isSupplier ? 'Conte sobre seu negócio, serviços, experiência e diferenciais...' : 'Conte um pouco sobre você e suas preferências para festas...'" />
                 <span class="mt-1 block text-right text-xs font-normal text-slate-500">{{ profile.biografia.length }}/500</span>
               </label>
             </div>
@@ -251,15 +260,15 @@ onBeforeUnmount(() => {
             <div class="grid gap-5 p-5 sm:grid-cols-2 sm:p-8">
               <label class="form-label">
                 {{ isSupplier ? 'WhatsApp comercial' : 'Telefone ou WhatsApp' }}
-                <input v-model="profile.telefone" type="tel" maxlength="30" class="mt-2 min-h-12 w-full px-4" placeholder="(11) 91234-5678" />
+                <input v-model="profile.telefone" type="tel" maxlength="30" required class="mt-2 min-h-12 w-full px-4" placeholder="(11) 91234-5678" />
               </label>
               <label class="form-label">
                 Cidade
-                <input v-model="profile.cidade" type="text" maxlength="100" class="mt-2 min-h-12 w-full px-4" placeholder="Ex.: São Paulo - SP" />
+                <input v-model="profile.cidade" type="text" maxlength="100" required class="mt-2 min-h-12 w-full px-4" placeholder="Ex.: São Paulo - SP" />
               </label>
               <label v-if="isSupplier" class="form-label sm:col-span-2">
                 Segmento do negócio
-                <input v-model="profile.segmento" type="text" maxlength="100" class="mt-2 min-h-12 w-full px-4" placeholder="Ex.: Buffet, decoração ou fotografia" />
+                <input v-model="profile.segmento" type="text" maxlength="100" required class="mt-2 min-h-12 w-full px-4" placeholder="Ex.: Buffet, decoração ou fotografia" />
               </label>
             </div>
           </section>
@@ -270,6 +279,19 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </form>
+      </div>
+
+      <div v-if="$route.query.completar === '1'" class="mb-5 rounded-2xl border border-festou-cyan/40 bg-festou-cyan/10 p-4 text-sm font-semibold text-festou-dark">
+        Complete os dados abaixo para finalizar seu cadastro com o Google.
+      </div>
+
+      <div v-if="route.query.completar === '1' || !profile.perfil_completo" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+        <template v-if="!profile.perfil_confirmado">
+          Confirme seu e-mail para liberar compras e anúncios. Depois, preencha todos os dados obrigatórios abaixo.
+        </template>
+        <template v-else>
+          Complete os dados obrigatórios abaixo para liberar compras ou a publicação de produtos.
+        </template>
       </div>
     </div>
   </main>

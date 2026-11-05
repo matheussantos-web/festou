@@ -191,7 +191,8 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
     const sql = getDatabase()
 
     const [existing] = await sql`
-      select id, nome, email, tipo_perfil, avatar_url, whatsapp, google_sub
+      select id, nome, email, tipo_perfil, avatar_url, whatsapp, telefone, cidade, segmento, biografia,
+             cover_url, instagram_url, facebook_url, site_url, google_sub, email_verified
       from public.perfis
       where lower(email) = ${email}
       limit 1
@@ -220,8 +221,16 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
     }
 
     if (action === 'login') {
+      if (tipoPerfil && existing.tipo_perfil !== tipoPerfil) {
+        return response.status(403).json({
+          code: 'PERFIL_INCORRETO',
+          message: tipoPerfil === 'fornecedor'
+            ? 'Esta conta é de cliente. Entre pelo painel de cliente.'
+            : 'Esta conta é de fornecedor. Entre pelo painel de fornecedor.',
+        })
+      }
       const user = await startSession(existing, response)
-      return response.json({ user })
+      return response.json({ user, cadastroCompleto: true })
     }
 
     if (tipoPerfil !== 'cliente' && tipoPerfil !== 'fornecedor') {
@@ -229,15 +238,6 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
         code: 'precisa_perfil',
         message: 'Escolha se a conta e de cliente ou fornecedor.',
         precisa_perfil: true,
-      })
-    }
-
-    if (input.tipo_perfil && profile.tipo_perfil !== input.tipo_perfil) {
-      return response.status(403).json({
-        code: 'PERFIL_INCORRETO',
-        message: input.tipo_perfil === 'fornecedor'
-          ? 'Esta conta é de cliente. Use o painel de cliente para entrar.'
-          : 'Esta conta é de fornecedor. Use o painel de fornecedor para entrar.',
       })
     }
 
@@ -249,7 +249,7 @@ authRouter.post('/google', googleLimiter, async (request, response, next) => {
     `
 
     const user = await startSession(profile, response)
-    return response.status(201).json({ user })
+    return response.status(201).json({ user, cadastroCompleto: false })
   } catch (error) {
     console.error('[auth/google] falha de autenticacao', {
       name: error?.name || 'Error',

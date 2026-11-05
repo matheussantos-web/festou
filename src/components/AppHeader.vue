@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
           Vitrine
         </RouterLink>
 
-        <template v-if="!currentUser || currentUser.tipo_perfil === 'cliente'">
+        <template v-if="currentUser && currentUser.tipo_perfil === 'cliente'">
           <RouterLink to="/convites" class="nav-link" active-class="nav-link-active">
             Meus convites
           </RouterLink>

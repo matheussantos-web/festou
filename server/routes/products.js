@@ -155,6 +155,10 @@ productsRouter.post('/', requireUser, async (request, response, next) => {
       return response.status(403).json({ message: 'Somente fornecedores podem anunciar produtos.' })
     }
 
+    if (!request.user.perfil_completo) {
+      return response.status(403).json({ code: 'PERFIL_INCOMPLETO', message: 'Complete seu perfil de fornecedor e confirme seu e-mail antes de anunciar produtos.' })
+    }
+
     const input = productSchema.parse(request.body)
     const sql = getDatabase()
     const [product] = await sql`

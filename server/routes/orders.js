@@ -167,6 +167,12 @@ ordersRouter.post('/', requireUser, async (request, response, next) => {
     if (request.user.tipo_perfil !== 'cliente') {
       return response.status(403).json({ message: 'Somente clientes podem solicitar orcamentos.' })
     }
+    if (!request.user.perfil_completo) {
+      return response.status(403).json({
+        code: 'PERFIL_INCOMPLETO',
+        message: 'Complete seu perfil, confirme seu e-mail e salve os dados antes de solicitar um orçamento.',
+      })
+    }
 
     const input = orderSchema.parse(request.body)
     const quantities = new Map()

@@ -21,6 +21,11 @@ export function sendProfile(profile) {
     instagram_url: profile.instagram_url ?? null,
     facebook_url: profile.facebook_url ?? null,
     site_url: profile.site_url ?? null,
+    telefone: profile.telefone ?? null,
+    cidade: profile.cidade ?? null,
+    segmento: profile.segmento ?? null,
+    perfil_confirmado: profile.email_verified === true,
+    perfil_completo: isProfileComplete(profile),
   }
 }
 
@@ -52,7 +57,8 @@ export async function findSession(request) {
   const sql = getDatabase()
   const [profile] = await sql`
     select p.id, p.nome, p.email, p.tipo_perfil, p.avatar_url, p.cover_url,
-           p.whatsapp, p.biografia, p.instagram_url, p.facebook_url, p.site_url
+           p.whatsapp, p.biografia, p.instagram_url, p.facebook_url, p.site_url,
+           p.telefone, p.cidade, p.segmento, p.email_verified
     from public.sessoes s
     join public.perfis p on p.id = s.perfil_id
     where s.token_hash = ${tokenHash}
@@ -77,4 +83,24 @@ export async function requireUser(request, response, next) {
   } catch (error) {
     return next(error)
   }
+}
+
+export function isProfileComplete(profile) {
+  const hasName = typeof profile.nome === 'string' && profile.nome.trim().length >= 3
+  const confirmed = profile.email_verified === true
+  if (!hasName || !confirmed) return false
+
+  if (profile.tipo_perfil === 'fornecedor') {
+    const phone = profile.telefone || profile.whatsapp
+    return Boolean(
+      phone && profile.cidade && profile.segmento &&
+      typeof profile.biografia === 'string' && profile.biografia.trim().length >= 10
+    )
+  }
+
+  if (profile.tipo_perfil === 'cliente') {
+    return Boolean((profile.telefone || profile.whatsapp) && profile.cidade)
+  }
+
+  return false
 }

@@ -52,6 +52,24 @@ const requireAuthenticated = async (to) => {
   return true
 }
 
+const requireCompleteCustomer = async (to) => {
+  const { user, error } = await resolveSession()
+  if (error) return { name: 'login', query: { erroConexao: '1', redirect: to.fullPath } }
+  if (!user) return { name: 'login', query: { redirect: to.fullPath } }
+  if (user.tipo_perfil !== 'cliente') return { name: 'vitrine', query: { aviso: 'carrinho' } }
+  if (!user.perfil_completo) return { name: 'perfil', query: { completar: '1', redirect: to.fullPath } }
+  return true
+}
+
+const requireCompleteSupplier = async (to) => {
+  const { user, error } = await resolveSession()
+  if (error) return { name: 'login', query: { erroConexao: '1', redirect: to.fullPath } }
+  if (!user) return { path: '/login/fornecedor', query: { redirect: to.fullPath } }
+  if (user.tipo_perfil !== 'fornecedor') return { name: 'vitrine', query: { aviso: 'fornecedor' } }
+  if (!user.perfil_completo) return { name: 'perfil', query: { completar: '1', redirect: to.fullPath } }
+  return true
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -72,7 +90,7 @@ const router = createRouter({
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
     { path: '/produto/:id', name: 'produto-detalhe', component: ProductDetailView },
     { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },
-    { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCustomer },
+    { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCompleteCustomer },
     { path: '/orcamentos', name: 'meus-orcamentos', component: CustomerOrdersView, beforeEnter: requireCustomer },
     { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
     {
@@ -91,13 +109,13 @@ const router = createRouter({
       path: '/fornecedor/produtos/novo',
       name: 'produto-novo',
       component: SupplierProductCreateView,
-      beforeEnter: requireSupplier,
+      beforeEnter: requireCompleteSupplier,
     },
     {
       path: '/fornecedor/produtos/:id/editar',
       name: 'produto-editar',
       component: SupplierProductEditView,
-      beforeEnter: requireSupplier,
+      beforeEnter: requireCompleteSupplier,
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],

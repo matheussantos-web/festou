@@ -8,6 +8,8 @@ const { user: currentUser } = useSession()
 const { pendingOrderCount, unreadMessageCount } = useNotifications()
 
 const isSupplier = computed(() => currentUser.value?.tipo_perfil === 'fornecedor')
+const isCustomer = computed(() => currentUser.value?.tipo_perfil === 'cliente')
+
 const orderNavigationLabel = computed(() => {
   const destination = isSupplier.value ? 'Painel de pedidos' : 'Meus Orçamentos'
   return `${destination}: ${pendingOrderCount.value} pendentes e ${unreadMessageCount.value} mensagens não lidas`
@@ -20,7 +22,7 @@ const orderNavigationLabel = computed(() => {
     class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-festou-dark/95 pb-[env(safe-area-inset-bottom)] text-white backdrop-blur-xl md:hidden"
     aria-label="Atalhos do aplicativo"
   >
-    <div class="mx-auto grid max-w-md px-2" :class="isSupplier ? 'grid-cols-4' : 'grid-cols-5'">
+    <div class="mx-auto grid max-w-md px-2" :class="isSupplier ? 'grid-cols-4' : !currentUser ? 'grid-cols-3' : 'grid-cols-5'">
       <RouterLink
         to="/"
         class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
@@ -46,13 +48,16 @@ const orderNavigationLabel = computed(() => {
       </RouterLink>
 
       <RouterLink
-        :to="isSupplier ? '/fornecedor/painel' : '/carrinho'"
+        :to="isSupplier ? '/fornecedor/painel' : !currentUser ? '/login' : '/carrinho'"
         class="relative flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
         active-class="text-festou-pink"
-        :aria-label="isSupplier ? orderNavigationLabel : 'Carrinho'"
+        :aria-label="isSupplier ? orderNavigationLabel : !currentUser ? 'Entrar na conta' : 'Carrinho'"
       >
         <span class="relative">
-          <svg v-if="isSupplier" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <svg v-if="!currentUser" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
+          </svg>
+          <svg v-else-if="isSupplier" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
           </svg>
           <svg v-else class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -61,7 +66,7 @@ const orderNavigationLabel = computed(() => {
             <circle cx="17" cy="20" r="1.4" fill="currentColor" stroke="none" />
           </svg>
           <span
-            v-if="!isSupplier && cartCount > 0"
+            v-if="isCustomer && cartCount > 0"
             class="absolute -right-2.5 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-festou-primary px-1 text-[10px] font-extrabold text-white"
           >
             {{ cartCount }}
@@ -81,10 +86,11 @@ const orderNavigationLabel = computed(() => {
             {{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}
           </span>
         </span>
-        {{ isSupplier ? 'Painel' : 'Carrinho' }}
+        {{ isSupplier ? 'Painel' : !currentUser ? 'Entrar' : 'Carrinho' }}
       </RouterLink>
 
       <RouterLink
+        v-if="isSupplier || isCustomer"
         :to="isSupplier ? '/fornecedor/produtos/novo' : '/convites'"
         class="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 text-[11px] font-bold text-white/70 transition-colors duration-200"
         active-class="text-festou-pink"

@@ -66,6 +66,7 @@ async function handleGoogleLogin() {
     return
   }
   try {
+    sessionStorage.setItem('google_profile_type', profileType.value)
     window.location.href = googleLoginUrl(profileType.value === 'fornecedor' ? '/fornecedor/painel' : '/vitrine')
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível iniciar o login seguro com Google.'

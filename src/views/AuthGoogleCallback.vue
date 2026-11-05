@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError, api } from '../lib/api'
 import { setSession } from '../lib/session'
-import { consumeGoogleRedirect, readGoogleNonce, readIdTokenFromUrl } from '../lib/googleAuth'
+import { consumeGoogleRedirect, readGoogleNonce, readGoogleProfileType, readIdTokenFromUrl } from '../lib/googleAuth'
 
 const router = useRouter()
 const errorMessage = ref('')
@@ -17,12 +17,16 @@ onMounted(async () => {
   }
 
   try {
-    const { user } = await api('/auth/google', {
+    const result = await api('/auth/google', {
       method: 'POST',
-      body: JSON.stringify({ id_token: idToken, nonce: readGoogleNonce() }),
+      body: JSON.stringify({ id_token: idToken, nonce: readGoogleNonce(), tipo_perfil: readGoogleProfileType() }),
     })
-    setSession(user)
-    await router.replace(consumeGoogleRedirect())
+    setSession(result.user)
+    if (result.cadastroCompleto === false) {
+      await router.replace('/perfil?completar=1')
+    } else {
+      await router.replace(consumeGoogleRedirect())
+    }
   } catch (err) {
     // 409 com conta_com_senha significa que o e-mail existe, mas foi cadastrado
     // com senha. Nao criamos sessao para evitar pre-hijack: a pessoa precisa
@@ -31,9 +35,14 @@ onMounted(async () => {
       errorMessage.value = err.message
       return
     }
+    if (err instanceof ApiError && err.status === 409 && err.code === 'google_vinculado') {
+      errorMessage.value = err.message
+      return
+    }
     if (err instanceof ApiError && err.status === 409) {
+      const tipo = readGoogleProfileType()
       sessionStorage.setItem('google_id_token', idToken)
-      await router.replace('/cadastro?google=1')
+      await router.replace(tipo ? `/cadastro/${tipo}?google=1` : '/cadastro?google=1')
       return
     }
     errorMessage.value = err.message || 'Não foi possível entrar com o Google.'

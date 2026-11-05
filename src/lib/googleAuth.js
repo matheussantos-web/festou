@@ -71,3 +71,9 @@ export function readIdTokenFromUrl() {
 
   return { idToken }
 }
+
+export function readGoogleProfileType() {
+  const tipo = sessionStorage.getItem('google_profile_type')
+  sessionStorage.removeItem('google_profile_type')
+  return tipo === 'cliente' || tipo === 'fornecedor' ? tipo : null
+}
