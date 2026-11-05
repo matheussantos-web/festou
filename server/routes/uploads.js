@@ -3,7 +3,7 @@ import { Router, raw } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import sharp from 'sharp'
 import { getDatabase } from '../db.js'
-import { requireUser } from '../middleware/session.js'
+import { requireUser, sendProfile } from '../middleware/session.js'
 
 export const uploadsRouter = Router()
 
@@ -185,15 +185,24 @@ async function uploadImage(request, response, next, kind) {
 
     if (kind === 'profile' || kind === 'profile-cover') {
       const sql = getDatabase()
-      const column = kind === 'profile-cover' ? 'cover_url' : 'avatar_url'
-      const [profile] = await sql`
-        update public.perfis
-        set ${sql(column)} = ${imageUrl}
-        where id = ${request.user.id}
-        returning id, nome, email, tipo_perfil, avatar_url, cover_url, whatsapp,
-                  biografia, instagram_url, facebook_url, site_url
-      `
-      return response.json({ image_url: imageUrl, user: { ...request.user, ...profile } })
+      const [profile] = kind === 'profile-cover'
+        ? await sql`
+            update public.perfis
+            set cover_url = ${imageUrl}
+            where id = ${request.user.id}
+            returning id, nome, email, tipo_perfil, avatar_url, cover_url, whatsapp,
+                      telefone, cidade, segmento, biografia, instagram_url, facebook_url,
+                      site_url, email_verified
+          `
+        : await sql`
+            update public.perfis
+            set avatar_url = ${imageUrl}
+            where id = ${request.user.id}
+            returning id, nome, email, tipo_perfil, avatar_url, cover_url, whatsapp,
+                      telefone, cidade, segmento, biografia, instagram_url, facebook_url,
+                      site_url, email_verified
+          `
+      return response.json({ image_url: imageUrl, user: sendProfile(profile) })
     }
 
     return response.status(201).json({ image_url: imageUrl })
