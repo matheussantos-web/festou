@@ -3,9 +3,11 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { api } from '../lib/api'
 import { setSession, useSession } from '../lib/session'
 import { uploadImage } from '../lib/uploads'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const { user } = useSession()
+const route = useRoute()
+const router = useRouter()
 const profile = reactive({
   nome: '',
   email: '',
@@ -279,10 +281,6 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </form>
-      </div>
-
-      <div v-if="$route.query.completar === '1'" class="mb-5 rounded-2xl border border-festou-cyan/40 bg-festou-cyan/10 p-4 text-sm font-semibold text-festou-dark">
-        Complete os dados abaixo para finalizar seu cadastro com o Google.
       </div>
 
       <div v-if="route.query.completar === '1' || !profile.perfil_completo" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">

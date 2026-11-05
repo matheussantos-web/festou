@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
         <RouterLink to="/vitrine" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
           Vitrine
         </RouterLink>
-        <template v-if="!currentUser || currentUser.tipo_perfil === 'cliente'">
+        <template v-if="currentUser && currentUser.tipo_perfil === 'cliente'">
           <RouterLink to="/convites" class="nav-link w-full" active-class="nav-link-active" @click="closeMobileMenu">
             Meus convites
           </RouterLink>
