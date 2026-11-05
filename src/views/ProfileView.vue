@@ -50,7 +50,7 @@ function applyProfile(source) {
     instagram_url: source.instagram_url ?? '',
     facebook_url: source.facebook_url ?? '',
     site_url: source.site_url ?? '',
-    telefone: source.telefone ?? '',
+    telefone: source.telefone ?? source.whatsapp ?? '',
     cidade: source.cidade ?? '',
     segmento: source.segmento ?? '',
     perfil_confirmado: source.perfil_confirmado ?? false,
@@ -89,9 +89,8 @@ function selectImage(event, kind) {
 
 function validateProfile() {
   if (profile.nome.trim().length < 3) return 'Informe um nome com pelo menos 3 caracteres.'
-  if (profile.whatsapp && !/^[+\d()\s.-]{8,30}$/.test(profile.whatsapp.trim())) return 'Confira o número de WhatsApp.'
   if (profile.telefone && !/^[+\d()\s.-]{8,30}$/.test(profile.telefone.trim())) return 'Confira o número de telefone ou WhatsApp.'
-  if (!profile.telefone && !profile.whatsapp) return 'Informe o telefone ou WhatsApp da sua conta.'
+  if (!profile.telefone.trim()) return 'Informe o telefone ou WhatsApp da sua conta.'
   if (!profile.cidade.trim()) return 'Informe sua cidade.'
   if (profile.tipo_perfil === 'fornecedor') {
     if (!profile.segmento.trim()) return 'Informe o segmento do seu negócio.'
@@ -124,7 +123,7 @@ async function saveProfile() {
       method: 'PATCH',
       body: JSON.stringify({
         nome: profile.nome.trim(),
-        whatsapp: profile.whatsapp.trim(),
+        whatsapp: profile.telefone.trim(),
         biografia: profile.biografia.trim(),
         instagram_url: profile.instagram_url.trim(),
         facebook_url: profile.facebook_url.trim(),
@@ -189,7 +188,7 @@ onBeforeUnmount(() => {
               </label>
               <label class="form-label sm:col-span-2">
                 {{ isSupplier ? 'Sobre o negócio' : 'Sobre você (opcional)' }}
-                <textarea v-model="profile.biografia" rows="4" maxlength="500" required :minlength="isSupplier ? 10 : undefined" class="mt-2 w-full px-4 py-3" :placeholder="isSupplier ? 'Conte sobre seu negócio, serviços, experiência e diferenciais...' : 'Conte um pouco sobre você e suas preferências para festas...'" />
+                <textarea v-model="profile.biografia" rows="4" maxlength="500" :required="isSupplier" :minlength="isSupplier ? 10 : undefined" class="mt-2 w-full px-4 py-3" :placeholder="isSupplier ? 'Conte sobre seu negócio, serviços, experiência e diferenciais...' : 'Conte um pouco sobre você e suas preferências para festas...'" />
                 <span class="mt-1 block text-right text-xs font-normal text-slate-500">{{ profile.biografia.length }}/500</span>
               </label>
             </div>
@@ -235,10 +234,6 @@ onBeforeUnmount(() => {
               <p class="mt-1 text-sm text-slate-500">Adicione canais para clientes e parceiros falarem com você.</p>
             </div>
             <div class="grid gap-5 p-5 sm:grid-cols-2 sm:p-8">
-              <label class="form-label">
-                WhatsApp
-                <input v-model="profile.whatsapp" type="tel" autocomplete="tel" maxlength="30" class="mt-2 min-h-12 w-full px-4" placeholder="(11) 91234-5678" />
-              </label>
               <label class="form-label">
                 Instagram
                 <input v-model="profile.instagram_url" type="url" maxlength="300" class="mt-2 min-h-12 w-full px-4" placeholder="https://instagram.com/seu-perfil" />
