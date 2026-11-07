@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 const route = useRoute()
 const state = ref('loading')
 const message = ref('Confirmando seu e-mail...')
+const loginDestination = ref('/login')
 
 onMounted(async () => {
   const token = typeof route.query.token === 'string' ? route.query.token : ''
@@ -28,6 +29,9 @@ onMounted(async () => {
     state.value = 'error'
     message.value = error.message || 'Não foi possível confirmar este e-mail.'
   }
+
+  const redirect = sessionStorage.getItem('auth_redirect') || sessionStorage.getItem('cart_checkout_redirect')
+  loginDestination.value = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'
 })
 </script>
 
@@ -44,7 +48,7 @@ onMounted(async () => {
         {{ state === 'success' ? 'E-mail confirmado!' : state === 'error' ? 'Não foi possível confirmar' : 'Só um instante...' }}
       </h1>
       <p :role="state === 'error' ? 'alert' : 'status'" class="mt-3 text-sm text-slate-600">{{ message }}</p>
-      <RouterLink v-if="state !== 'loading'" to="/login" class="btn btn-primary mt-6 w-full text-sm font-bold">
+      <RouterLink v-if="state !== 'loading'" :to="loginDestination" class="btn btn-primary mt-6 w-full text-sm font-bold">
         Ir para o login
       </RouterLink>
     </section>

@@ -66,14 +66,19 @@ async function handleGoogleLogin() {
     return
   }
   try {
-    sessionStorage.setItem('google_profile_type', profileType.value)
-    window.location.href = googleLoginUrl(profileType.value === 'fornecedor' ? '/fornecedor/painel' : '/vitrine')
+    const destination = typeof route.query.redirect === 'string' ? route.query.redirect : (profileType.value === 'fornecedor' ? '/fornecedor/painel' : '/vitrine')
+    sessionStorage.setItem('auth_redirect', destination)
+    window.location.href = googleLoginUrl(destination)
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível iniciar o login seguro com Google.'
   }
 }
 
 async function signUp() {
+  if (typeof route.query.redirect === 'string') {
+    sessionStorage.setItem('auth_redirect', route.query.redirect)
+    sessionStorage.setItem('cart_checkout_redirect', route.query.redirect)
+  }
   errorMessage.value = ''
   isSubmitting.value = true
 

@@ -168,9 +168,6 @@ watch(categoryFilter, (value) => {
       <div v-if="route.query.aviso === 'fornecedor'" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
         💡 O cadastro de produtos é exclusivo para contas de fornecedor. Crie uma conta de fornecedor ou faça login para anunciar.
       </div>
-      <div v-else-if="route.query.aviso === 'carrinho'" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-        💡 O carrinho e os orçamentos são exclusivos para clientes. Faça login com perfil de cliente para finalizar seu pedido.
-      </div>
 
       <!-- Estados de Carregamento e Erro -->
       <div v-if="isLoading" role="status" class="py-20 text-center text-slate-600">

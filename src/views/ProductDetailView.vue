@@ -43,17 +43,18 @@ async function loadProduct() {
 
 function addProductToCart() {
   if (!product.value) return
-  if (!canRequestQuote.value) {
-    noticeMessage.value = 'O carrinho e os orcamentos sao exclusivos para clientes.'
+  if (user.value?.tipo_perfil === 'fornecedor') {
+    noticeMessage.value = 'Contas de fornecedor não podem adicionar itens ao carrinho.'
     return
   }
-  noticeMessage.value = ''
+  noticeMessage.value = 'Produto adicionado ao carrinho.'
   addToCart(product.value)
 }
 
 async function requestQuote() {
-  if (!product.value || !canRequestQuote.value) {
-    noticeMessage.value = 'Entre com uma conta de cliente para solicitar um orcamento.'
+  if (!product.value) return
+  if (user.value?.tipo_perfil === 'fornecedor') {
+    noticeMessage.value = 'Use uma conta de cliente para solicitar um orçamento.'
     return
   }
   addToCart(product.value)
@@ -113,8 +114,8 @@ watch(() => route.params.id, loadProduct)
 
             <p v-if="noticeMessage" role="status" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">{{ noticeMessage }}</p>
             <div class="mt-6 grid gap-3 sm:grid-cols-2">
-              <button type="button" :disabled="!canRequestQuote" class="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-festou-pink px-5 font-extrabold text-festou-dark transition hover:bg-festou-pink disabled:cursor-not-allowed disabled:opacity-50" @click="addProductToCart">Adicionar ao carrinho</button>
-              <button type="button" :disabled="!canRequestQuote" class="inline-flex min-h-12 items-center justify-center rounded-full bg-festou-pink px-5 font-extrabold text-festou-dark shadow-festive transition hover:-translate-y-0.5 hover:bg-[#ff5eaf] disabled:cursor-not-allowed disabled:opacity-50" @click="requestQuote">Solicitar orçamento</button>
+              <button type="button" :disabled="user?.tipo_perfil === 'fornecedor'" class="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-festou-pink px-5 font-extrabold text-festou-dark transition hover:bg-festou-pink disabled:cursor-not-allowed disabled:opacity-50" @click="addProductToCart">Adicionar ao carrinho</button>
+              <button type="button" :disabled="user?.tipo_perfil === 'fornecedor'" class="inline-flex min-h-12 items-center justify-center rounded-full bg-festou-pink px-5 font-extrabold text-festou-dark shadow-festive transition hover:-translate-y-0.5 hover:bg-[#ff5eaf] disabled:cursor-not-allowed disabled:opacity-50" @click="requestQuote">Solicitar orçamento</button>
             </div>
             <p class="mt-3 text-center text-xs text-slate-500">Após enviar o orçamento, você poderá conversar com o fornecedor no painel.</p>
 

@@ -32,9 +32,12 @@ const orderNavigationLabel = computed(() => {
         <span class="relative"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6" /><circle cx="10" cy="20" r="1.4" fill="currentColor" stroke="none" /><circle cx="17" cy="20" r="1.4" fill="currentColor" stroke="none" /></svg><span v-if="cartCount > 0" class="absolute -right-3 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-festou-primary px-1 text-[9px] text-white">{{ cartCount }}</span></span>
         <span>Carrinho</span>
       </RouterLink>
-      <RouterLink to="/chat" class="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-white/70" active-class="text-festou-pink">
-        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /><path stroke-linecap="round" d="M8 10h8M8 14h5" /></svg>
-        <span>Chat</span>
+      <RouterLink to="/convites" class="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-white/70" active-class="text-festou-pink">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="m4 7 8 6 8-6" />
+        </svg>
+        <span>Convites</span>
       </RouterLink>
       <RouterLink :to="currentUser ? '/perfil' : '/login'" class="flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-white/70" active-class="text-festou-pink">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" /></svg>

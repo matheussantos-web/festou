@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { getDatabase } from '../db.js'
-import { findSession } from '../middleware/session.js'
+import { findSession, requireUser } from '../middleware/session.js'
 import { clientOrderSelect, findClientOrderById } from '../queries/orders.js'
 import { orderReviewSchema, orderSchema, updateOrderStatusSchema } from '../schemas/orders.js'
 import { buildPagination, readPagination } from '../schemas/pagination.js'
@@ -12,7 +12,7 @@ export const ordersRouter = Router()
 const orderIdSchema = z.string().uuid('Identificador do pedido inválido.')
 const defaultPageSize = 20
 
-ordersRouter.get('/', findSession, async (request, response, next) => {
+ordersRouter.get('/', requireUser, async (request, response, next) => {
   try {
     const sql = getDatabase()
     const { pagina, limite, offset } = readPagination(request.query, { defaultLimit: defaultPageSize })
@@ -119,7 +119,7 @@ ordersRouter.get('/', findSession, async (request, response, next) => {
   }
 })
 
-ordersRouter.get('/notifications', findSession, async (request, response, next) => {
+ordersRouter.get('/notifications', requireUser, async (request, response, next) => {
   try {
     if (!['cliente', 'fornecedor'].includes(request.user?.tipo_perfil)) {
       return response.status(403).json({ message: 'Este perfil nao pode consultar notificacoes.' })
@@ -161,31 +161,18 @@ ordersRouter.get('/notifications', findSession, async (request, response, next) 
   }
 })
 
-ordersRouter.post('/', async (request, response, next) => {
+ordersRouter.post('/', requireUser, async (request, response, next) => {
   try {
-    const profile = await findSession(request)
-    const input = orderSchema.parse(request.body)
-
-    let clienteId = null
-    let clienteNome = input.cliente_nome?.trim() || null
-    let clienteEmail = input.cliente_email?.trim().toLowerCase() || null
-
-    if (profile) {
-      if (profile.tipo_perfil !== 'cliente') {
-        return response.status(403).json({ message: 'Somente clientes podem solicitar orcamentos.' })
-      }
-      if (!profile.email_verified) {
-        return response.status(403).json({
-          code: 'PERFIL_INCOMPLETO',
-          message: 'Confirme seu e-mail antes de solicitar um orçamento.',
-        })
-      }
-      clienteId = profile.id
-      clienteNome = profile.nome
-      clienteEmail = profile.email
-    } else if (!clienteNome || !clienteEmail) {
-      return response.status(400).json({ message: 'Informe nome e e-mail para solicitar o orçamento como visitante.' })
+    if (request.user.tipo_perfil !== 'cliente') {
+      return response.status(403).json({ message: 'Somente clientes podem solicitar orcamentos.' })
     }
+    if (!request.user.perfil_completo) {
+      return response.status(403).json({ code: 'PERFIL_INCOMPLETO', message: 'Complete seu perfil antes de solicitar um orçamento.' })
+    }
+    const input = orderSchema.parse(request.body)
+    const clienteId = request.user.id
+    const clienteNome = request.user.nome
+    const clienteEmail = request.user.email
 
     const quantities = new Map()
     for (const item of input.items) {
@@ -262,7 +249,7 @@ ordersRouter.post('/', async (request, response, next) => {
   }
 })
 
-ordersRouter.get('/:id/messages', findSession, async (request, response, next) => {
+ordersRouter.get('/:id/messages', requireUser, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const sql = getDatabase()
@@ -308,7 +295,7 @@ ordersRouter.get('/:id/messages', findSession, async (request, response, next) =
   }
 })
 
-ordersRouter.post('/:id/messages', findSession, async (request, response, next) => {
+ordersRouter.post('/:id/messages', requireUser, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const texto = z.string().trim().min(1, 'Digite uma mensagem.').max(2000, 'A mensagem deve ter no maximo 2.000 caracteres.').parse(request.body?.texto)
@@ -338,7 +325,7 @@ ordersRouter.post('/:id/messages', findSession, async (request, response, next) 
   }
 })
 
-ordersRouter.get('/:id/review', findSession, async (request, response, next) => {
+ordersRouter.get('/:id/review', requireUser, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const sql = getDatabase()
@@ -379,7 +366,7 @@ ordersRouter.get('/:id/review', findSession, async (request, response, next) => 
   }
 })
 
-ordersRouter.post('/:id/review', findSession, async (request, response, next) => {
+ordersRouter.post('/:id/review', requireUser, async (request, response, next) => {
   try {
     if (request.user.tipo_perfil !== 'cliente') {
       return response.status(403).json({ message: 'Somente clientes podem avaliar o servico.' })
@@ -426,7 +413,7 @@ ordersRouter.post('/:id/review', findSession, async (request, response, next) =>
   }
 })
 
-ordersRouter.patch('/:id/status', findSession, async (request, response, next) => {
+ordersRouter.patch('/:id/status', requireUser, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const input = updateOrderStatusSchema.parse(request.body)

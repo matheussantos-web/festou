@@ -93,6 +93,14 @@ onBeforeUnmount(() => {
         <RouterLink to="/vitrine" class="nav-link" active-class="nav-link-active">
           Vitrine
         </RouterLink>
+        <RouterLink
+          to="/convites"
+          class="nav-link mx-0.5 rounded-full border border-festou-pink/20 bg-festou-pink/10 px-3 text-festou-pink transition hover:border-festou-pink/45 hover:bg-festou-pink/15"
+          active-class="!border-festou-pink/60 !bg-festou-pink/20 !text-white"
+        >
+          <span aria-hidden="true">✨</span>
+          Criar Convite
+        </RouterLink>
 
         <template v-if="currentUser && currentUser.tipo_perfil === 'cliente'">
           <RouterLink to="/convites" class="nav-link" active-class="nav-link-active">
@@ -275,7 +283,7 @@ onBeforeUnmount(() => {
         </div>
 
         <template v-else>
-          <RouterLink to="/login" class="nav-link">Login/Cadastro</RouterLink>
+          <RouterLink to="/login" class="nav-link">Entrar</RouterLink>
           <RouterLink to="/cadastro" class="btn btn-primary btn-sm shadow-festive">
             Criar conta
           </RouterLink>
@@ -368,7 +376,7 @@ onBeforeUnmount(() => {
         </template>
         <div v-else class="flex flex-col gap-2">
           <RouterLink to="/login" class="btn btn-outline" @click="closeMobileMenu">
-            Login/Cadastro
+            Entrar
           </RouterLink>
           <RouterLink to="/cadastro" class="btn btn-primary" @click="closeMobileMenu">
             Criar conta

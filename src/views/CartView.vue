@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api, asArray } from '../lib/api'
 import {
   cartCount,
@@ -15,22 +15,24 @@ import { formatPrice } from '../lib/format'
 import { useSession } from '../lib/session'
 
 const router = useRouter()
-const { user: currentUser } = useSession()
+const route = useRoute()
+const { user: currentUser, loadSession } = useSession()
 const note = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const priceNotice = ref('')
 const isSubmitting = ref(false)
-const customerName = ref(currentUser.value?.nome ?? '')
-const customerEmail = ref(currentUser.value?.email ?? '')
 
 async function requestQuote() {
   errorMessage.value = ''
   successMessage.value = ''
-  if (!currentUser.value && (!customerName.value.trim() || !customerEmail.value.trim())) {
-    errorMessage.value = 'Informe seu nome e e-mail para enviar o orçamento como visitante.'
+
+  if (!currentUser.value) {
+    sessionStorage.setItem('cart_checkout_redirect', '/carrinho?finalizar=1')
+    await router.push({ name: 'login', query: { redirect: '/carrinho?finalizar=1' } })
     return
   }
+
   isSubmitting.value = true
   try {
     await api('/orders', {
@@ -38,19 +40,12 @@ async function requestQuote() {
       body: JSON.stringify({
         items: cartItems.value.map((item) => ({ produto_id: item.id, quantidade: item.quantidade })),
         observacao: note.value,
-        cliente_nome: currentUser.value?.nome ?? customerName.value.trim(),
-        cliente_email: currentUser.value?.email ?? customerEmail.value.trim(),
       }),
     })
     clearCart()
     note.value = ''
-    if (currentUser.value) {
-      await router.push({ name: 'meus-orcamentos', query: { enviado: '1' } })
-    } else {
-      successMessage.value = 'Solicitação enviada! Os fornecedores receberão seus dados para entrar em contato.'
-      customerName.value = ''
-      customerEmail.value = ''
-    }
+    sessionStorage.removeItem('cart_checkout_redirect')
+    await router.replace({ name: 'meus-orcamentos', query: { enviado: '1' } })
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível enviar a solicitação.'
   } finally {
@@ -76,7 +71,21 @@ async function syncCartWithCatalog() {
   }
 }
 
-onMounted(syncCartWithCatalog)
+onMounted(async () => {
+  await syncCartWithCatalog()
+  await loadSession({ force: true })
+  if (route.query.finalizar === '1' && currentUser.value?.tipo_perfil === 'cliente' && cartItems.value.length) {
+    await router.replace('/carrinho')
+    await requestQuote()
+  }
+})
+
+// Retomar solicitação de orçamento após login
+watch(currentUser, async (user) => {
+  if (route.query.finalizar === '1' && user?.tipo_perfil === 'cliente' && cartItems.value.length && !isSubmitting.value) {
+    await requestQuote()
+  }
+})
 </script>
 
 <template>
@@ -122,18 +131,6 @@ onMounted(syncCartWithCatalog)
             <div class="card mt-6 p-6">
               <label for="order-note" class="mb-2 block text-sm font-bold text-festou-dark">Observações para os fornecedores (opcional)</label>
               <textarea id="order-note" v-model="note" maxlength="500" rows="3" placeholder="Data do evento, horário, tema da festa ou detalhes importantes..." class="w-full text-sm"></textarea>
-            </div>
-
-            <div v-if="!currentUser" class="card mt-6 grid gap-4 p-6 sm:grid-cols-2">
-              <div>
-                <label for="guest-name" class="form-label">Seu nome</label>
-                <input id="guest-name" v-model="customerName" type="text" minlength="3" maxlength="120" required autocomplete="name" placeholder="Nome completo" class="form-control" />
-              </div>
-              <div>
-                <label for="guest-email" class="form-label">Seu e-mail</label>
-                <input id="guest-email" v-model="customerEmail" type="email" maxlength="254" required autocomplete="email" placeholder="voce@email.com" class="form-control" />
-              </div>
-              <p class="text-xs text-slate-500 sm:col-span-2">Esses dados serão enviados aos fornecedores para contato sobre o orçamento.</p>
             </div>
           </div>
 

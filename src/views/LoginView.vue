@@ -23,7 +23,8 @@ function handleGoogleLogin() {
   }
   try {
     sessionStorage.setItem('google_profile_type', profileType.value)
-    window.location.href = googleLoginUrl(isSupplier.value ? '/fornecedor/painel' : '/vitrine')
+    const destination = typeof route.query.redirect === 'string' ? route.query.redirect : (isSupplier.value ? '/fornecedor/painel' : '/vitrine')
+    window.location.href = googleLoginUrl(destination)
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível iniciar o login seguro com Google.'
   }
@@ -165,7 +166,7 @@ async function resendVerification() {
 
       <div class="mt-8 border-t border-slate-200/80 pt-6 text-center text-xs text-slate-500">
         Ainda não tem uma conta no Festou!?
-        <RouterLink :to="isSupplier ? '/cadastro/fornecedor' : '/cadastro/cliente'" class="ml-1 font-bold text-festou-primary hover:underline">
+        <RouterLink :to="isSupplier ? '/cadastro/fornecedor' : { path: '/cadastro/cliente', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="ml-1 font-bold text-festou-primary hover:underline">
           Cadastre-se gratuitamente
         </RouterLink>
       </div>

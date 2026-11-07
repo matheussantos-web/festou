@@ -1,5 +1,6 @@
 <script setup>
 import FestouDecor from '../components/FestouDecor.vue'
+import HomeHero from '../components/HomeHero.vue'
 
 const categories = [
   { slug: 'bolos', title: 'Bolos de Festa', desc: 'Artesanais, temáticos e confeitados para momentos inesquecíveis.', icon: '🎂', color: 'from-festou-magenta/20 to-festou-primary/20 border-festou-magenta/30' },
@@ -31,6 +32,9 @@ const steps = [
   <div id="conteudo-principal" class="min-h-screen bg-festou-soft text-slate-900">
 
     <!-- Hero Section: Noite Festiva -->
+    <HomeHero />
+
+    <template v-if="false">
     <section class="relative overflow-hidden bg-festou-dark py-16 text-white sm:py-24">
       <!-- Profundidade da noite + confetes -->
       <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-festou-dark/70 via-festou-dark/25 to-festou-dark/35"></div>
@@ -174,6 +178,7 @@ const steps = [
         </div>
       </div>
     </section>
+    </template>
 
     <!-- Seção de Categorias -->
     <section class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12">
