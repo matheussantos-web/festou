@@ -30,10 +30,6 @@ export function sendProfile(profile) {
 }
 
 export async function startSession(profile, response) {
-  if (profile.email_verified === false) {
-    throw new Error('A conta precisa confirmar o e-mail antes de iniciar uma sessao.')
-  }
-
   const sql = getDatabase()
   const token = createSessionToken()
   const tokenHash = hashSessionToken(token)
@@ -87,7 +83,7 @@ export async function requireUser(request, response, next) {
 
 export function isProfileComplete(profile) {
   const hasName = typeof profile.nome === 'string' && profile.nome.trim().length >= 3
-  const confirmed = profile.email_verified === true
+  const confirmed = true
   if (!hasName || !confirmed) return false
 
   if (profile.tipo_perfil === 'fornecedor') {

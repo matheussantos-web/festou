@@ -29,39 +29,17 @@ authRouter.post('/register', registerLimiter, async (request, response, next) =>
     const sql = getDatabase()
     const [profile] = await sql`
       insert into public.perfis (nome, email, senha_hash, tipo_perfil, telefone, cidade, segmento, whatsapp, email_verified)
-      values (${input.nome}, ${input.email}, ${passwordHash}, ${input.tipo_perfil}, ${input.telefone}, ${input.cidade}, ${input.segmento}, ${input.tipo_perfil === 'fornecedor' ? input.telefone : null}, false)
-      returning id, nome, email, tipo_perfil, avatar_url
+      values (${input.nome}, ${input.email}, ${passwordHash}, ${input.tipo_perfil}, ${input.telefone}, ${input.cidade}, ${input.segmento}, ${input.tipo_perfil === 'fornecedor' ? input.telefone : null}, true)
+      returning id, nome, email, tipo_perfil, avatar_url, whatsapp, telefone, cidade, segmento, biografia,
+                cover_url, instagram_url, facebook_url, site_url, email_verified
     `
 
-    const token = createSessionToken()
-    const tokenHash = hashSessionToken(token)
-    const expiresAt = new Date(Date.now() + emailVerificationTtlMs)
-    await sql`
-      update public.perfis
-      set email_verification_token_hash = ${tokenHash},
-          email_verification_expires_at = ${expiresAt}
-      where id = ${profile.id}
-    `
-
-    const link = `${appOrigin}/confirmar-email?token=${encodeURIComponent(token)}`
-    let emailSent = false
-    try {
-      const delivery = await sendMail({
-        to: profile.email,
-        subject: 'Confirme seu e-mail no Festou!',
-        text: `Ola, ${profile.nome}!\n\nPara confirmar seu endereco de e-mail e ativar sua conta, acesse: ${link}\n\nO link vale por 24 horas e so pode ser usado uma vez. Se voce nao criou esta conta, ignore esta mensagem.`,
-      })
-      emailSent = delivery.delivered
-    } catch (error) {
-      console.error('[confirmacao-email] falha ao enviar o e-mail', error)
-    }
-
+    const user = await startSession(profile, response)
     response.status(201).json({
       email: profile.email,
-      emailSent,
-      message: emailSent
-        ? 'Conta criada. Confira seu e-mail para confirmar o cadastro.'
-        : 'Conta criada, mas nao foi possivel enviar o e-mail agora. Tente reenviar a confirmacao mais tarde.',
+      emailSent: false,
+      user,
+      message: 'Conta criada com sucesso. Sua sessão já está ativa.',
     })
   } catch (error) {
     if (error?.code === '23505') {
@@ -98,16 +76,11 @@ authRouter.post('/login', loginLimiter, loginByEmailLimiter, async (request, res
         code: 'PERFIL_INCORRETO',
         message: input.tipo_perfil === 'fornecedor'
           ? 'Esta conta é de cliente. Use o painel de cliente para entrar.'
-          : 'Esta conta é de fornecedor. Use o painel de fornecedor para entrar.',
+          : 'Esta conta é de fornecedor. Use o painel de fornecedor para entrar.'
       })
     }
 
-    if (!profile.email_verified) {
-      return response.status(403).json({
-        code: 'EMAIL_NOT_VERIFIED',
-        message: 'Confirme seu e-mail antes de entrar. Confira sua caixa de entrada ou reenvie o link.',
-      })
-    }
+    // Verificação de e-mail suspensa temporariamente: e-mail válido e senha já são suficientes.
 
     // Hash antigo ou com parametros fora do padrao atual e refeito agora, sem
     // pedir nada ao usuario.

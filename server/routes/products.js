@@ -156,7 +156,7 @@ productsRouter.post('/', requireUser, async (request, response, next) => {
     }
 
     if (!request.user.perfil_completo) {
-      return response.status(403).json({ code: 'PERFIL_INCOMPLETO', message: 'Complete seu perfil de fornecedor e confirme seu e-mail antes de anunciar produtos.' })
+      return response.status(403).json({ code: 'PERFIL_INCOMPLETO', message: 'Complete seu perfil de fornecedor antes de anunciar produtos.' })
     }
 
     const input = productSchema.parse(request.body)

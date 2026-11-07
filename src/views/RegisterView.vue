@@ -95,7 +95,13 @@ async function signUp() {
         segmento: supplierCategory.value,
       }),
     })
-    verificationPending.value = true
+    verificationPending.value = false
+    if (result.user) {
+      setSession(result.user)
+      const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : (profileType.value === 'fornecedor' ? '/fornecedor/painel' : '/vitrine')
+      await router.replace(redirect.startsWith('/') ? redirect : '/vitrine')
+      return
+    }
     verificationMessage.value = result.message
     verificationEmailSent.value = result.emailSent
   } catch (error) {
