@@ -1,10 +1,16 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useSession } from '../lib/session'
 import { api, asArray } from '../lib/api'
 import { formatDate } from '../lib/format'
 import InvitationThemeCard from '../components/InvitationThemeCard.vue'
 import { getInvitationTheme, invitationThemes } from '../lib/invitationThemes'
 
+const route = useRoute()
+const router = useRouter()
+const { user: currentUser, loadSession } = useSession()
+const invitationDraftKey = 'festou-invitation-draft'
 const appOrigin = window.location.origin
 const invitations = ref([])
 const createdInvitation = ref(null)
@@ -109,6 +115,7 @@ function getConfirmationSummary(confirmations = []) {
 }
 
 async function loadInvitations({ silent = false } = {}) {
+  if (!currentUser.value || currentUser.value.tipo_perfil !== 'cliente') return
   if (invitationsRequestPending) return
   invitationsRequestPending = true
   if (!silent) {
@@ -138,6 +145,18 @@ async function createInvitation() {
   successMessage.value = ''
   createdInvitation.value = null
   if (!validateForm()) return
+
+  if (!currentUser.value) {
+    saveInvitationDraft()
+    await router.push({ name: 'login', query: { tipo: 'cliente', redirect: '/convites?criar=1' } })
+    return
+  }
+
+  if (currentUser.value.tipo_perfil !== 'cliente') {
+    errorMessage.value = 'Entre com uma conta de cliente para criar convites.'
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -151,6 +170,7 @@ async function createInvitation() {
 
     createdInvitation.value = invitation
     invitations.value.unshift({ ...invitation, aceita_rsvp: invitation.aceita_rsvp ?? true, confirmacoes: [] })
+    sessionStorage.removeItem(invitationDraftKey)
     successMessage.value = 'Convite criado com sucesso! Compartilhe o link com seus convidados.'
     Object.assign(form, {
       titulo: '',
@@ -275,8 +295,39 @@ async function toggleRsvp(invitation) {
   }
 }
 
-onMounted(() => {
-  loadInvitations()
+function saveInvitationDraft() {
+  sessionStorage.setItem(invitationDraftKey, JSON.stringify({ ...form }))
+}
+
+function restoreInvitationDraft() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(invitationDraftKey) ?? 'null')
+    if (draft && typeof draft === 'object') Object.assign(form, {
+      titulo: typeof draft.titulo === 'string' ? draft.titulo : '',
+      anfitriao: typeof draft.anfitriao === 'string' ? draft.anfitriao : '',
+      data_evento: typeof draft.data_evento === 'string' ? draft.data_evento : '',
+      local_evento: typeof draft.local_evento === 'string' ? draft.local_evento : '',
+      mensagem: typeof draft.mensagem === 'string' ? draft.mensagem : '',
+      tema: typeof draft.tema === 'string' ? draft.tema : 'jardim',
+    })
+  } catch {
+    sessionStorage.removeItem(invitationDraftKey)
+  }
+}
+
+onMounted(async () => {
+  restoreInvitationDraft()
+  await loadSession({ force: true })
+
+  if (currentUser.value?.tipo_perfil === 'cliente') {
+    await loadInvitations()
+  }
+
+  if (route.query.criar === '1' && currentUser.value?.tipo_perfil === 'cliente' && validateForm()) {
+    await router.replace('/convites')
+    await createInvitation()
+  }
+
   invitationsRefreshTimer = window.setInterval(refreshInvitationsWhenVisible, 20_000)
   document.addEventListener('visibilitychange', refreshInvitationsWhenVisible)
 })
@@ -284,6 +335,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.clearInterval(invitationsRefreshTimer)
   document.removeEventListener('visibilitychange', refreshInvitationsWhenVisible)
+})
+
+watch(currentUser, async (user) => {
+  if (route.query.criar === '1' && user?.tipo_perfil === 'cliente' && validateForm() && !isSubmitting.value) {
+    await router.replace('/convites')
+    await createInvitation()
+  }
 })
 </script>
 
@@ -514,6 +572,10 @@ onBeforeUnmount(() => {
                   <InvitationThemeCard :invitation="form" compact />
                 </div>
               </section>
+
+              <p v-if="!currentUser" class="rounded-xl border border-festou-pink/15 bg-festou-pink/5 px-4 py-3 text-xs leading-relaxed text-slate-600">
+                Você pode preencher e visualizar tudo agora. Ao criar o convite, pediremos Login/Cadastro e retomaremos exatamente os dados preenchidos.
+              </p>
 
               <button
                 type="submit"

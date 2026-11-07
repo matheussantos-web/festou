@@ -92,7 +92,7 @@ const router = createRouter({
     { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },
     { path: '/carrinho', name: 'carrinho', component: CartView },
     { path: '/orcamentos', name: 'meus-orcamentos', component: CustomerOrdersView, beforeEnter: requireCustomer },
-    { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
+    { path: '/convites', name: 'convites', component: InvitationsView },
     {
       path: '/convite/:slug',
       name: 'convite-publico',
