@@ -18,6 +18,8 @@ export const productSchema = z.object({
   descricao: z.string().trim().min(10).max(1000),
   preco: z.coerce.number().finite().positive().max(99999999),
   cidade: z.string().trim().max(100).optional().transform((value) => value || null),
+  locais_atendimento: z.array(z.string().trim().min(2).max(100)).min(1).max(20)
+    .optional().transform((value) => value ? [...new Set(value.map((item) => item.trim()))].filter(Boolean) : []),
   imagem_url: z.union([z.literal(''), httpsUrl])
     .optional()
     .transform((value) => value || null),

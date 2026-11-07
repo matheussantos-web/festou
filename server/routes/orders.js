@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { getDatabase } from '../db.js'
-import { requireUser } from '../middleware/session.js'
+import { findSession } from '../middleware/session.js'
 import { clientOrderSelect, findClientOrderById } from '../queries/orders.js'
 import { orderReviewSchema, orderSchema, updateOrderStatusSchema } from '../schemas/orders.js'
 import { buildPagination, readPagination } from '../schemas/pagination.js'
@@ -12,12 +12,12 @@ export const ordersRouter = Router()
 const orderIdSchema = z.string().uuid('Identificador do pedido inválido.')
 const defaultPageSize = 20
 
-ordersRouter.get('/', requireUser, async (request, response, next) => {
+ordersRouter.get('/', findSession, async (request, response, next) => {
   try {
     const sql = getDatabase()
     const { pagina, limite, offset } = readPagination(request.query, { defaultLimit: defaultPageSize })
 
-    if (request.user.tipo_perfil === 'cliente') {
+    if (request.user?.tipo_perfil === 'cliente') {
       const [{ total }] = await sql`
         select count(*)::int as total
         from public.pedidos
@@ -66,7 +66,7 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
       })
     }
 
-    if (request.user.tipo_perfil === 'fornecedor') {
+    if (request.user?.tipo_perfil === 'fornecedor') {
       const [{ total, pendentes }] = await sql`
         select
           count(distinct o.id)::int as total,
@@ -83,11 +83,10 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
           o.observacao,
           o.created_at,
           c.nome as cliente_nome,
-          -- O contato completo só é liberado depois que o pedido é confirmado;
-          -- antes disso o fornecedor vê o e-mail mascarado (LGPD).
+          -- Contato completo de visitas e contas só fica disponível conforme o fluxo do pedido.
           case
-            when o.status in ('negocio_fechado', 'servico_concluido') then c.email
-            else regexp_replace(c.email, '^(.)[^@]*(@.*)$', '\\1***\\2')
+            when o.status in ('negocio_fechado', 'servico_concluido') then coalesce(c.email, o.cliente_email)
+            else coalesce(regexp_replace(c.email, '^(.)[^@]*(@.*)$', '\\1***\\2'), o.cliente_email)
           end as cliente_email,
           sum(i.subtotal) as total_fornecedor,
           json_agg(json_build_object(
@@ -99,10 +98,10 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
             'subtotal', i.subtotal
           )) as itens
         from public.pedidos o
-        join public.perfis c on c.id = o.cliente_id
+        left join public.perfis c on c.id = o.cliente_id
         join public.itens_pedido i on i.pedido_id = o.id
         where i.fornecedor_id = ${request.user.id}
-        group by o.id, c.nome, c.email
+        group by o.id, c.nome, c.email, o.cliente_nome, o.cliente_email
         order by o.created_at desc, o.id
         limit ${limite} offset ${offset}
       `
@@ -120,9 +119,9 @@ ordersRouter.get('/', requireUser, async (request, response, next) => {
   }
 })
 
-ordersRouter.get('/notifications', requireUser, async (request, response, next) => {
+ordersRouter.get('/notifications', findSession, async (request, response, next) => {
   try {
-    if (!['cliente', 'fornecedor'].includes(request.user.tipo_perfil)) {
+    if (!['cliente', 'fornecedor'].includes(request.user?.tipo_perfil)) {
       return response.status(403).json({ message: 'Este perfil nao pode consultar notificacoes.' })
     }
 
@@ -162,19 +161,32 @@ ordersRouter.get('/notifications', requireUser, async (request, response, next) 
   }
 })
 
-ordersRouter.post('/', requireUser, async (request, response, next) => {
+ordersRouter.post('/', async (request, response, next) => {
   try {
-    if (request.user.tipo_perfil !== 'cliente') {
-      return response.status(403).json({ message: 'Somente clientes podem solicitar orcamentos.' })
-    }
-    if (!request.user.perfil_completo) {
-      return response.status(403).json({
-        code: 'PERFIL_INCOMPLETO',
-        message: 'Complete seu perfil, confirme seu e-mail e salve os dados antes de solicitar um orçamento.',
-      })
+    const profile = await findSession(request)
+    const input = orderSchema.parse(request.body)
+
+    let clienteId = null
+    let clienteNome = input.cliente_nome?.trim() || null
+    let clienteEmail = input.cliente_email?.trim().toLowerCase() || null
+
+    if (profile) {
+      if (profile.tipo_perfil !== 'cliente') {
+        return response.status(403).json({ message: 'Somente clientes podem solicitar orcamentos.' })
+      }
+      if (!profile.email_verified) {
+        return response.status(403).json({
+          code: 'PERFIL_INCOMPLETO',
+          message: 'Confirme seu e-mail antes de solicitar um orçamento.',
+        })
+      }
+      clienteId = profile.id
+      clienteNome = profile.nome
+      clienteEmail = profile.email
+    } else if (!clienteNome || !clienteEmail) {
+      return response.status(400).json({ message: 'Informe nome e e-mail para solicitar o orçamento como visitante.' })
     }
 
-    const input = orderSchema.parse(request.body)
     const quantities = new Map()
     for (const item of input.items) {
       const quantity = (quantities.get(item.produto_id) ?? 0) + item.quantidade
@@ -225,8 +237,8 @@ ordersRouter.post('/', requireUser, async (request, response, next) => {
       const supplierTotalCents = supplierItems.reduce((sum, item) => sum + item.subtotalCents, 0)
       const supplierTotal = (supplierTotalCents / 100).toFixed(2)
       statements.push(sql`
-        insert into public.pedidos (id, cliente_id, total_estimado, observacao)
-        values (${orderIds[index]}, ${request.user.id}, ${supplierTotal}, ${input.observacao})
+        insert into public.pedidos (id, cliente_id, cliente_nome, cliente_email, total_estimado, observacao)
+        values (${orderIds[index]}, ${clienteId}, ${clienteNome}, ${clienteEmail}, ${supplierTotal}, ${input.observacao})
       `)
       statements.push(...supplierItems.map(({ product, quantity, unitPrice, subtotal }) => sql`
         insert into public.itens_pedido (
@@ -250,7 +262,7 @@ ordersRouter.post('/', requireUser, async (request, response, next) => {
   }
 })
 
-ordersRouter.get('/:id/messages', requireUser, async (request, response, next) => {
+ordersRouter.get('/:id/messages', findSession, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const sql = getDatabase()
@@ -296,7 +308,7 @@ ordersRouter.get('/:id/messages', requireUser, async (request, response, next) =
   }
 })
 
-ordersRouter.post('/:id/messages', requireUser, async (request, response, next) => {
+ordersRouter.post('/:id/messages', findSession, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const texto = z.string().trim().min(1, 'Digite uma mensagem.').max(2000, 'A mensagem deve ter no maximo 2.000 caracteres.').parse(request.body?.texto)
@@ -326,7 +338,7 @@ ordersRouter.post('/:id/messages', requireUser, async (request, response, next) 
   }
 })
 
-ordersRouter.get('/:id/review', requireUser, async (request, response, next) => {
+ordersRouter.get('/:id/review', findSession, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const sql = getDatabase()
@@ -367,7 +379,7 @@ ordersRouter.get('/:id/review', requireUser, async (request, response, next) => 
   }
 })
 
-ordersRouter.post('/:id/review', requireUser, async (request, response, next) => {
+ordersRouter.post('/:id/review', findSession, async (request, response, next) => {
   try {
     if (request.user.tipo_perfil !== 'cliente') {
       return response.status(403).json({ message: 'Somente clientes podem avaliar o servico.' })
@@ -414,7 +426,7 @@ ordersRouter.post('/:id/review', requireUser, async (request, response, next) =>
   }
 })
 
-ordersRouter.patch('/:id/status', requireUser, async (request, response, next) => {
+ordersRouter.patch('/:id/status', findSession, async (request, response, next) => {
   try {
     const orderId = orderIdSchema.parse(request.params.id)
     const input = updateOrderStatusSchema.parse(request.body)

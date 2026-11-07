@@ -47,14 +47,14 @@ productsRouter.get('/', async (request, response, next) => {
 
     const products = category
       ? await sql`
-        select id, nome, descricao, categoria, preco, cidade, imagem_url, imagens_url, created_at
+        select id, nome, descricao, categoria, preco, cidade, locais_atendimento, imagem_url, imagens_url, created_at
         from public.produtos
         where ativo = true and categoria = ${category}
         order by created_at desc, id
         limit ${limite} offset ${offset}
       `
       : await sql`
-        select id, nome, descricao, categoria, preco, cidade, imagem_url, imagens_url, created_at
+        select id, nome, descricao, categoria, preco, cidade, locais_atendimento, imagem_url, imagens_url, created_at
         from public.produtos
         where ativo = true
         order by created_at desc, id
@@ -87,7 +87,7 @@ productsRouter.get('/lookup', async (request, response, next) => {
     const placeholders = ids.map((_, index) => `$${index + 1}::uuid`).join(', ')
     const sql = getDatabase()
     const products = await sql.query(
-      `select id, nome, descricao, categoria, preco, cidade, imagem_url, imagens_url, created_at
+      `select id, nome, descricao, categoria, preco, cidade, locais_atendimento, imagem_url, imagens_url, created_at
        from public.produtos
        where ativo = true and id in (${placeholders})`,
       ids,
@@ -104,7 +104,7 @@ productsRouter.get('/:id', async (request, response, next) => {
     const productId = productIdSchema.parse(request.params.id)
     const sql = getDatabase()
     const [product] = await sql`
-      select id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, created_at,
+      select id, nome, categoria, descricao, preco, cidade, locais_atendimento, imagem_url, imagens_url, created_at,
              fornecedor_id
       from public.produtos
       where id = ${productId} and ativo = true
@@ -163,12 +163,12 @@ productsRouter.post('/', requireUser, async (request, response, next) => {
     const sql = getDatabase()
     const [product] = await sql`
       insert into public.produtos (
-        fornecedor_id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url
+        fornecedor_id, nome, categoria, descricao, preco, cidade, locais_atendimento, imagem_url, imagens_url
       ) values (
         ${request.user.id}, ${input.nome}, ${input.categoria}, ${input.descricao},
-        ${input.preco}, ${input.cidade}, ${input.imagem_url}, ${input.imagens_url}
+        ${input.preco}, ${input.cidade}, ${input.locais_atendimento}, ${input.imagem_url}, ${input.imagens_url}
       )
-      returning id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, created_at
+      returning id, nome, categoria, descricao, preco, cidade, locais_atendimento, imagem_url, imagens_url, created_at
     `
 
     response.status(201).json({ product })
@@ -183,7 +183,7 @@ supplierProductsRouter.get('/', requireUser, async (request, response, next) => 
 
     const sql = getDatabase()
     const products = await sql`
-      select id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, ativo, created_at
+      select id, nome, categoria, descricao, preco, cidade, locais_atendimento, imagem_url, imagens_url, ativo, created_at
       from public.produtos
       where fornecedor_id = ${request.user.id}
       order by created_at desc
@@ -240,7 +240,7 @@ supplierProductsRouter.get('/:id', requireUser, async (request, response, next) 
     const productId = productIdSchema.parse(request.params.id)
     const sql = getDatabase()
     const [product] = await sql`
-      select id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, ativo, created_at
+      select id, nome, categoria, descricao, preco, cidade, locais_atendimento, imagem_url, imagens_url, ativo, created_at
       from public.produtos
       where id = ${productId} and fornecedor_id = ${request.user.id}
       limit 1
@@ -263,7 +263,7 @@ supplierProductsRouter.patch('/:id', requireUser, async (request, response, next
     const productId = productIdSchema.parse(request.params.id)
     const input = productUpdateSchema.parse(request.body)
     const { assignments, values } = buildUpdate(
-      ['nome', 'categoria', 'descricao', 'preco', 'cidade', 'imagem_url', 'imagens_url'],
+      ['nome', 'categoria', 'descricao', 'preco', 'cidade', 'locais_atendimento', 'imagem_url', 'imagens_url'],
       input,
     )
 
@@ -272,7 +272,7 @@ supplierProductsRouter.patch('/:id', requireUser, async (request, response, next
       `update public.produtos
        set ${assignments.join(', ')}
        where id = $${values.length + 1} and fornecedor_id = $${values.length + 2}
-       returning id, nome, categoria, descricao, preco, cidade, imagem_url, imagens_url, ativo, created_at`,
+       returning id, nome, categoria, descricao, preco, cidade, locais_atendimento, imagem_url, imagens_url, ativo, created_at`,
       [...values, productId, request.user.id],
     )
 

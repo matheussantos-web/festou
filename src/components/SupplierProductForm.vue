@@ -28,6 +28,7 @@ const emptyForm = () => ({
   cidade: '',
   imagem_url: '',
   imagens_url: [],
+  locais_atendimento: [],
 })
 
 const form = reactive(emptyForm())
@@ -52,6 +53,7 @@ function fill(product) {
     cidade: product?.cidade ?? '',
     imagem_url: product?.imagem_url ?? '',
     imagens_url: product?.imagens_url?.length ? [...product.imagens_url] : (product?.imagem_url ? [product.imagem_url] : []),
+    locais_atendimento: Array.isArray(product?.locais_atendimento) ? [...product.locais_atendimento] : (product?.cidade ? [product.cidade] : []),
   })
   imageGallery.value = form.imagens_url.map((src) => ({ src, pending: false }))
   imageError.value = ''
@@ -118,15 +120,32 @@ function openPhotoPicker() {
 }
 
 function submit() {
+  addLocation()
   emit('submit', {
     nome: form.nome,
     categoria: form.categoria,
     descricao: form.descricao,
     preco: form.preco,
     cidade: form.cidade,
+    locais_atendimento: form.locais_atendimento,
     imagem_url: form.imagem_url,
     imagens_url: form.imagens_url,
   })
+}
+
+const locationDraft = ref('')
+
+function addLocation() {
+  const location = locationDraft.value.trim()
+  if (!location) return
+  if (!form.locais_atendimento.some((item) => item.toLowerCase() === location.toLowerCase())) {
+    form.locais_atendimento.push(location)
+  }
+  locationDraft.value = ''
+}
+
+function removeLocation(location) {
+  form.locais_atendimento = form.locais_atendimento.filter((item) => item !== location)
 }
 
 defineExpose({ reset })
@@ -255,6 +274,40 @@ onBeforeUnmount(clearTemporaryPreview)
           <p v-if="imageError" role="alert" class="mt-2 text-sm font-semibold text-rose-700">{{ imageError }}</p>
         </div>
       </div>
+    </div>
+
+    <div>
+      <label for="service-locations" class="form-label">
+        Regiões de atendimento (opcional)
+      </label>
+      <div class="flex flex-wrap gap-2">
+        <div class="relative flex-1">
+          <input
+            id="service-locations"
+            v-model="locationDraft"
+            type="text"
+            maxlength="100"
+            placeholder="Ex: Zona Sul, Centro, Barra da Tijuca"
+            class="form-control pr-12"
+          />
+          <button
+            type="button"
+            @click="addLocation"
+            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-festou-primary px-3 py-1.5 text-sm font-bold text-white transition hover:brightness-95"
+            :disabled="submitting"
+            aria-label="Adicionar região de atendimento"
+          >
+            +
+          </button>
+        </div>
+        <div v-if="form.locais_atendimento.length" class="flex flex-wrap gap-2">
+          <span v-for="(location, index) in form.locais_atendimento" :key="index" class="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+            {{ location }}
+            <button type="button" class="text-rose-600 transition hover:text-rose-500" @click="removeLocation(location)" aria-label="Remover região de atendimento">×</button>
+          </span>
+        </div>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">As regiões de atendimento ajudam os clientes a saber onde o serviço está disponível.</p>
     </div>
 
     <div class="flex flex-wrap items-center gap-3">

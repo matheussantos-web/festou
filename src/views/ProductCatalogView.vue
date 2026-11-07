@@ -67,8 +67,9 @@ const filteredProducts = computed(() => {
     const nome = String(p.nome ?? '').toLowerCase()
     const descricao = String(p.descricao ?? '').toLowerCase()
     const cidade = String(p.cidade ?? '').toLowerCase()
+    const regioes = Array.isArray(p.locais_atendimento) ? p.locais_atendimento.join(' ').toLowerCase() : ''
 
-    return nome.includes(term) || descricao.includes(term) || cidade.includes(term)
+    return nome.includes(term) || descricao.includes(term) || cidade.includes(term) || regioes.includes(term)
   })
 })
 

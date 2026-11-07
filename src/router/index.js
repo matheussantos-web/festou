@@ -90,7 +90,7 @@ const router = createRouter({
     { path: '/vitrine', name: 'vitrine', component: ProductCatalogView },
     { path: '/produto/:id', name: 'produto-detalhe', component: ProductDetailView },
     { path: '/perfil', name: 'perfil', component: ProfileView, beforeEnter: requireAuthenticated },
-    { path: '/carrinho', name: 'carrinho', component: CartView, beforeEnter: requireCompleteCustomer },
+    { path: '/carrinho', name: 'carrinho', component: CartView },
     { path: '/orcamentos', name: 'meus-orcamentos', component: CustomerOrdersView, beforeEnter: requireCustomer },
     { path: '/convites', name: 'convites', component: InvitationsView, beforeEnter: requireCustomer },
     {
@@ -116,6 +116,18 @@ const router = createRouter({
       name: 'produto-editar',
       component: SupplierProductEditView,
       beforeEnter: requireCompleteSupplier,
+    },
+    {
+      path: '/chat',
+      name: 'chat',
+      component: CustomerOrdersView,
+      beforeEnter: async (to) => {
+        const { user, error } = await resolveSession()
+        if (error || !user) return { name: 'login', query: { redirect: '/chat' } }
+        if (user.tipo_perfil === 'fornecedor') return { name: 'fornecedor-painel' }
+        if (user.tipo_perfil !== 'cliente') return { name: 'vitrine' }
+        return true
+      },
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],

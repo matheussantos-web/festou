@@ -12,15 +12,25 @@ import {
   syncWithCatalog,
 } from '../lib/cart'
 import { formatPrice } from '../lib/format'
+import { useSession } from '../lib/session'
 
 const router = useRouter()
+const { user: currentUser } = useSession()
 const note = ref('')
 const errorMessage = ref('')
+const successMessage = ref('')
 const priceNotice = ref('')
 const isSubmitting = ref(false)
+const customerName = ref(currentUser.value?.nome ?? '')
+const customerEmail = ref(currentUser.value?.email ?? '')
 
 async function requestQuote() {
   errorMessage.value = ''
+  successMessage.value = ''
+  if (!currentUser.value && (!customerName.value.trim() || !customerEmail.value.trim())) {
+    errorMessage.value = 'Informe seu nome e e-mail para enviar o orçamento como visitante.'
+    return
+  }
   isSubmitting.value = true
   try {
     await api('/orders', {
@@ -28,11 +38,19 @@ async function requestQuote() {
       body: JSON.stringify({
         items: cartItems.value.map((item) => ({ produto_id: item.id, quantidade: item.quantidade })),
         observacao: note.value,
+        cliente_nome: currentUser.value?.nome ?? customerName.value.trim(),
+        cliente_email: currentUser.value?.email ?? customerEmail.value.trim(),
       }),
     })
     clearCart()
     note.value = ''
-    await router.push({ name: 'meus-orcamentos', query: { enviado: '1' } })
+    if (currentUser.value) {
+      await router.push({ name: 'meus-orcamentos', query: { enviado: '1' } })
+    } else {
+      successMessage.value = 'Solicitação enviada! Os fornecedores receberão seus dados para entrar em contato.'
+      customerName.value = ''
+      customerEmail.value = ''
+    }
   } catch (error) {
     errorMessage.value = error.message || 'Não foi possível enviar a solicitação.'
   } finally {
@@ -74,6 +92,7 @@ onMounted(syncCartWithCatalog)
       </header>
 
       <p v-if="errorMessage" role="alert" class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">{{ errorMessage }}</p>
+      <p v-if="successMessage" role="status" class="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-900">{{ successMessage }}</p>
       <p v-if="priceNotice" role="status" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">{{ priceNotice }}</p>
 
       <section class="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
@@ -103,6 +122,18 @@ onMounted(syncCartWithCatalog)
             <div class="card mt-6 p-6">
               <label for="order-note" class="mb-2 block text-sm font-bold text-festou-dark">Observações para os fornecedores (opcional)</label>
               <textarea id="order-note" v-model="note" maxlength="500" rows="3" placeholder="Data do evento, horário, tema da festa ou detalhes importantes..." class="w-full text-sm"></textarea>
+            </div>
+
+            <div v-if="!currentUser" class="card mt-6 grid gap-4 p-6 sm:grid-cols-2">
+              <div>
+                <label for="guest-name" class="form-label">Seu nome</label>
+                <input id="guest-name" v-model="customerName" type="text" minlength="3" maxlength="120" required autocomplete="name" placeholder="Nome completo" class="form-control" />
+              </div>
+              <div>
+                <label for="guest-email" class="form-label">Seu e-mail</label>
+                <input id="guest-email" v-model="customerEmail" type="email" maxlength="254" required autocomplete="email" placeholder="voce@email.com" class="form-control" />
+              </div>
+              <p class="text-xs text-slate-500 sm:col-span-2">Esses dados serão enviados aos fornecedores para contato sobre o orçamento.</p>
             </div>
           </div>
 

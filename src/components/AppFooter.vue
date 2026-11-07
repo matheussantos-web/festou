@@ -65,7 +65,7 @@ const year = new Date().getFullYear()
             </li>
             <li>
               <RouterLink to="/login" class="text-white/80 transition-colors duration-300 hover:text-white">
-                Entrar
+                Login/Cadastro
               </RouterLink>
             </li>
             <li>

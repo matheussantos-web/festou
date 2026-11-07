@@ -6,6 +6,8 @@ export const orderSchema = z.object({
     quantidade: z.number().int().min(1).max(20),
   })).min(1).max(50),
   observacao: z.string().trim().max(500).optional().transform((value) => value || null),
+  cliente_nome: z.string().trim().min(3).max(120).optional(),
+  cliente_email: z.string().trim().email().max(254).optional(),
 })
 
 export const updateOrderStatusSchema = z.object({

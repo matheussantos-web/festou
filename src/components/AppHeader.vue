@@ -164,6 +164,16 @@ onBeforeUnmount(() => {
             Anunciar produto
           </RouterLink>
         </template>
+
+        <!-- Bell icon for notifications -->
+        <RouterLink
+          :to="currentUser?.tipo_perfil === 'fornecedor' ? '/fornecedor/painel' : '/orcamentos'"
+          class="relative hidden min-h-11 min-w-11 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10 md:inline-flex"
+          aria-label="Painel de notificações"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M13.7 21h-3.4" /></svg>
+          <span v-if="pendingOrderCount > 0 || unreadMessageCount > 0" class="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-festou-pink ring-2 ring-festou-dark" aria-hidden="true"></span>
+        </RouterLink>
       </nav>
 
       <!-- Sessão desktop -->
@@ -265,12 +275,22 @@ onBeforeUnmount(() => {
         </div>
 
         <template v-else>
-          <RouterLink to="/login" class="nav-link">Entrar</RouterLink>
+          <RouterLink to="/login" class="nav-link">Login/Cadastro</RouterLink>
           <RouterLink to="/cadastro" class="btn btn-primary btn-sm shadow-festive">
             Criar conta
           </RouterLink>
         </template>
       </div>
+
+      <!-- Bell icon for notifications in mobile header -->
+      <RouterLink
+        :to="currentUser?.tipo_perfil === 'fornecedor' ? '/fornecedor/painel' : currentUser ? '/orcamentos' : '/login'"
+        class="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10 md:hidden"
+        aria-label="Painel de notificações"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M13.7 21h-3.4" /></svg>
+        <span v-if="pendingOrderCount > 0 || unreadMessageCount > 0" class="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-festou-pink ring-2 ring-festou-dark" aria-hidden="true"></span>
+      </RouterLink>
 
       <!-- Menu mobile -->
       <button
@@ -348,7 +368,7 @@ onBeforeUnmount(() => {
         </template>
         <div v-else class="flex flex-col gap-2">
           <RouterLink to="/login" class="btn btn-outline" @click="closeMobileMenu">
-            Entrar
+            Login/Cadastro
           </RouterLink>
           <RouterLink to="/cadastro" class="btn btn-primary" @click="closeMobileMenu">
             Criar conta
