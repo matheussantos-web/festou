@@ -90,9 +90,9 @@ async function resetPassword() {
             v-model="password"
             type="password"
             autocomplete="new-password"
-            minlength="12"
+            minlength="8"
             required
-            placeholder="Mínimo de 12 caracteres"
+            placeholder="Mínimo de 8 caracteres"
             class="w-full px-4 py-3 text-sm"
           />
         </div>
@@ -106,7 +106,7 @@ async function resetPassword() {
             v-model="confirmation"
             type="password"
             autocomplete="new-password"
-            minlength="12"
+            minlength="8"
             required
             placeholder="Digite novamente sua senha"
             class="w-full px-4 py-3 text-sm"

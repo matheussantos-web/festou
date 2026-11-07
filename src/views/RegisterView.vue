@@ -262,12 +262,12 @@ async function resendVerification() {
             v-model="password"
             type="password"
             autocomplete="new-password"
-            minlength="12"
+            minlength="8"
             required
-            placeholder="Mínimo de 12 caracteres"
+            placeholder="Mínimo de 8 caracteres"
             class="w-full px-4 py-3 text-sm"
           />
-          <p class="mt-1 text-[11px] text-slate-400">Pelo menos 12 caracteres para sua segurança.</p>
+          <p class="mt-1 text-[11px] text-slate-400">Pelo menos 8 caracteres para sua segurança.</p>
         </div>
 
         <div v-if="!googleSignupPending" class="grid gap-4 sm:grid-cols-2">

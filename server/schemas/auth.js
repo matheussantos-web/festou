@@ -9,7 +9,7 @@ export const registerSchema = z.object({
     .max(254, 'O e-mail pode ter no maximo 254 caracteres.')
     .transform((email) => email.toLowerCase()),
   senha: z.string()
-    .min(12, 'A senha precisa ter pelo menos 12 caracteres.')
+    .min(8, 'A senha precisa ter pelo menos 8 caracteres.')
     .max(128, 'A senha pode ter no maximo 128 caracteres.'),
   tipo_perfil: z.enum(['cliente', 'fornecedor'], {
     error: 'Selecione cliente ou fornecedor.',
@@ -35,7 +35,7 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   token: z.string().trim().min(20, 'Informe o link completo recebido por e-mail.').max(200),
   senha: z.string()
-    .min(12, 'A senha precisa ter pelo menos 12 caracteres.')
+    .min(8, 'A senha precisa ter pelo menos 8 caracteres.')
     .max(128, 'A senha pode ter no maximo 128 caracteres.'),
 })
 
